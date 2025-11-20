@@ -1,180 +1,227 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {userRegisterRequest} from "../features/Auth/authAction"
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   TextInput,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   TouchableWithoutFeedback,
   Keyboard,
+  Dimensions,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
+import BackgroundPagesOne from "../components/BackgroundPages/BackgroundPagesOne";
+import AnimatedLogo from "../components/SampleLogo/AnimatedLogo";
+
+const { width } = Dimensions.get("window");
 
 const PhoneScreen = ({ navigation }) => {
-  const [phone, setPhone] = useState("");
+  
+  const dispatch=useDispatch()
+  const [mobile_number, setMobile_number] = useState("");
+  
+  const phoneInputRef = useRef(null);
 
-  const handlePhoneChange = (text) => {
-    // Allow only numbers, max 10 digits
-    const numeric = text.replace(/[^0-9]/g, "");
-    if (numeric.length <= 10) setPhone(numeric);
-  };
+ const handlePhoneChange = (text) => {
+  const numeric = text.replace(/[^0-9]/g, "");
 
+  if (numeric.length <= 10) {
+    setMobile_number(numeric);
+    
+
+    if (numeric.length === 10) {
+     
+  
+  console.log("Login Request Sent with:", numeric);
+}
+
+  }
+};
+
+  
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
+    <BackgroundPagesOne>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <View style={styles.container}>
-            {/* 🔙 Back button */}
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Icon name="chevron-back" size={26} color="#fff" />
-            </TouchableOpacity>
+          <ScrollView
+            contentContainerStyle={styles.scrollContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.container}>
+              {/* 🔙 Back button */}
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+                activeOpacity={0.8}
+              >
+                <Icon name="chevron-back" size={26} color="#fff" />
+              </TouchableOpacity>
 
-            {/* 🪩 Logo */}
-            <View style={styles.logoContainer}>
-              <Image
-                source={{
-                  uri: "https://via.placeholder.com/100x100.png?text=Logo",
-                }}
-                style={styles.logo}
-              />
+              {/* Logo in center with margin */}
+              <View style={styles.logoSpace}>
+                <AnimatedLogo />
+              </View>
+
+              <Text style={styles.title}>Can we get your number?</Text>
+
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() =>
+                  phoneInputRef.current && phoneInputRef.current.focus()
+                
+                }
+                style={styles.inputContainer}
+              >
+                <Text style={styles.label}>Phone Number</Text>
+                <TextInput
+                  ref={phoneInputRef}
+                  style={styles.input}
+                  placeholder="Enter phone number"
+                  placeholderTextColor="#bbb"
+                  keyboardType="number-pad"
+                  value={mobile_number}
+                  onChangeText={handlePhoneChange}
+                  maxLength={10}
+                  returnKeyType="done"
+                   
+                  autoFocus
+                  
+                />
+              </TouchableOpacity>
+
+              <Text style={styles.infoText}>
+                We’ll text you a code to verify you’re really you.
+              </Text>
+              <Text style={styles.linkText}>
+                What happens if your number changes?
+              </Text>
+
+              {/* ✅ Next button */}
+              <TouchableOpacity
+                style={[
+                  styles.nextButton,
+                  mobile_number.length === 10 ? styles.nextActive : styles.nextDisabled,
+                ]}
+                disabled={mobile_number.length !== 10}
+               onPress={() => {
+                if (mobile_number.length == 10) 
+                   dispatch(userRegisterRequest({ mobile_number }));
+                  navigation.navigate("Otp", { mobile_number});
+
+                  return;
+                
+  
+}}
+
+                activeOpacity={mobile_number.length === 10 ? 0.7 : 1}
+              >
+                <Text style={styles.nextText}>Next    </Text>
+              </TouchableOpacity>
             </View>
-
-            <Text style={styles.title}>Can we get your number?</Text>
-
-            {/* 📱 Phone input field */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Phone Number</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter phone number"
-                placeholderTextColor="#666"
-                keyboardType="number-pad"
-                value={phone}
-                onChangeText={handlePhoneChange}
-                maxLength={10}
-                returnKeyType="done"
-              />
-            </View>
-
-            <Text style={styles.infoText}>
-              We’ll text you a code to verify you’re really you.
-            </Text>
-            <Text style={styles.linkText}>
-              What happens if your number changes?
-            </Text>
-
-            {/* ✅ Next button */}
-            <TouchableOpacity
-              style={[
-                styles.nextButton,
-                phone.length === 10 ? styles.nextActive : styles.nextDisabled,
-              ]}
-              disabled={phone.length !== 10}
-              onPress={() => navigation.navigate("Otp", { phone })}
-            >
-              <Text style={styles.nextText}>Next</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
+    </BackgroundPagesOne>
   );
 };
 
-export default PhoneScreen;
-
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-  },
+  scrollContainer: { flexGrow: 1 },
   container: {
-    flex: 1,
-    backgroundColor: "#000",
-    paddingHorizontal: 25,
-    paddingTop: 60,
-    paddingBottom: 40,
+    width: "92%",
+    maxWidth: 400,
+    alignSelf: "center",
+    paddingVertical: 20,
+    alignItems: "center",
+    flexGrow: 1,
   },
   backButton: {
     position: "absolute",
-    top: 40,
-    left: 20,
+    top: Platform.OS === "ios" ? 44 : 22,
+    left: 2,
+    padding: 6,
     zIndex: 10,
   },
-  logoContainer: {
+  logoSpace: {
+    marginTop: Platform.OS === "ios" ? 44 : 30,
+    marginBottom: 16,
     alignItems: "center",
-    marginTop: 80,
-    marginBottom: 40,
-  },
-  logo: {
-    width: 90,
-    height: 90,
-    borderRadius: 20,
+    width: "100%",
   },
   title: {
-    fontSize: 22,
+    fontSize: 21,
     color: "#fff",
-    fontWeight: "700",
+    fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 40,
+    marginBottom: 32,
+    marginTop: 4,
+    width: "100%",
   },
   inputContainer: {
-    marginBottom: 25,
+    width: "100%",
+    marginBottom: 4,
   },
   label: {
     color: "#fff",
     fontSize: 14,
-    marginBottom: 8,
+    marginBottom: 7,
+    fontWeight: "500",
+    marginLeft: 2,
   },
   input: {
     borderWidth: 1,
     borderColor: "#b784ff",
     borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === "ios" ? 13 : 9,
     color: "#fff",
-    fontSize: 16,
-    backgroundColor: "rgba(255,255,255,0.05)",
+    fontSize: 17,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    width: "100%",
+    textAlign: "left",
+    letterSpacing: 2,
   },
   infoText: {
     color: "#aaa",
     fontSize: 13,
-    marginTop: 15,
+    marginTop: 22,
+    textAlign: "center",
   },
   linkText: {
     color: "#b784ff",
     fontSize: 13,
-    marginTop: 5,
+    marginTop: 9,
     textDecorationLine: "underline",
+    textAlign: "center",
   },
   nextButton: {
-    marginTop: 50,
+    marginTop: 40,
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 10,
-    paddingVertical: 14,
+    paddingVertical: 15,
   },
   nextDisabled: {
     backgroundColor: "#444",
   },
   nextActive: {
-    backgroundColor: "#b784ff",
+    backgroundColor: "#bb78ee",
   },
   nextText: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+    fontSize: 17,
+    fontWeight: "bold",
+    letterSpacing: 1,
+  }
 });
+
+export default PhoneScreen;

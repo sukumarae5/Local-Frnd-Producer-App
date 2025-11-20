@@ -1,19 +1,64 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from "react-native";
-import LinearGradient from "react-native-linear-gradient";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Platform } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
+import AnimatedLogo from "../components/SampleLogo/AnimatedLogo";
+import BackgroundPagesOne from "../components/BackgroundPages/BackgroundPagesOne";
+import{userLoginRequest, userOtpRequest} from "../features/Auth/authAction"
+import { useDispatch, useSelector } from "react-redux";
+const OTP_LENGTH = 6;
 
-const OtpScreen = ({ navigation }) => {
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+const OtpScreen = ({route, navigation }) => {
+  const {success}=useSelector((state)=>state.userRegister)
+  const {mode }=useSelector((state)=>state.userRegister)
+  console.log(success) 
+  console.log(mode) 
 
-  const handleChange = (text, index) => {
+  const{mobile_number}= route.params;
+  console.log(mobile_number)
+  const dispatch=useDispatch()
+  
+    useEffect(() => {
+  if (success == false) {
+    dispatch(userLoginRequest({mobile_number}));
+  }
+}, [success, mobile_number, dispatch]);
+
+  
+  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
+  const inputRefs = useRef([...Array(OTP_LENGTH)].map(() => React.createRef()));
+console.log(otp)
+  const handleChange = (text, idx) => {
+    if (text.length > 1) text = text.charAt(text.length - 1);
     const newOtp = [...otp];
-    newOtp[index] = text;
+    newOtp[idx] = text;
     setOtp(newOtp);
+console.log(text)
+    if (text && idx < OTP_LENGTH - 1) {
+      inputRefs.current[idx + 1].current.focus();
+    }
   };
 
+  const handleKeyPress = (e, idx) => {
+  if (e.nativeEvent.key === "Backspace") {
+    // If current field is empty, move to previous and erase its value
+    if (!otp[idx] && idx > 0) {
+      const newOtp = [...otp];
+      newOtp[idx - 1] = "";
+      setOtp(newOtp);
+      inputRefs.current[idx - 1].current.focus();
+    }
+    // If current field has value, clear it
+    if (otp[idx]) {
+      const newOtp = [...otp];
+      newOtp[idx] = "";
+      setOtp(newOtp);
+    }
+  }
+};
+
+
   return (
-    <LinearGradient colors={["#000000", "#000000"]} style={styles.container}>
+    <BackgroundPagesOne>
       <View style={styles.inner}>
         <TouchableOpacity
           style={styles.backButton}
@@ -21,11 +66,8 @@ const OtpScreen = ({ navigation }) => {
         >
           <Icon name="chevron-back" size={26} color="#fff" />
         </TouchableOpacity>
-
-        <View style={styles.logoContainer}>
-          <View style={styles.logoPlaceholder}>
-            <Text style={styles.logoText}>Lq</Text>
-          </View>
+        <View style={styles.logoSpace}>
+          <AnimatedLogo />
         </View>
 
         <Text style={styles.title}>Enter the code we sent you</Text>
@@ -34,14 +76,18 @@ const OtpScreen = ({ navigation }) => {
         </Text>
 
         <View style={styles.otpContainer}>
-          {otp.map((digit, index) => (
+          {otp.map((digit, idx) => (
             <TextInput
-              key={index}
+              key={idx}
+              ref={inputRefs.current[idx]}
               style={styles.otpInput}
               maxLength={1}
               keyboardType="number-pad"
               value={digit}
-              onChangeText={(text) => handleChange(text, index)}
+              onChangeText={(text) => handleChange(text, idx)}
+  onKeyPress={(e) => handleKeyPress(e, idx)}
+              returnKeyType="done"
+              autoFocus={idx === 0}
             />
           ))}
         </View>
@@ -54,33 +100,44 @@ const OtpScreen = ({ navigation }) => {
         </View>
 
         {/* ✅ Navigate to Home */}
-        <TouchableOpacity
-          style={styles.nextButton}
-          onPress={() => navigation.navigate("Home")}
-        >
-          <Text style={styles.nextText}>Next</Text>
-        </TouchableOpacity>
+       <TouchableOpacity
+  style={styles.nextButton}
+  
+  onPress={() => {
+  
+const otpString = otp.join("");
+dispatch(userOtpRequest({ mobile_number, otp: otpString }));
+if (mode==="login"){
+  navigation.navigate("Home")
+
+}else{
+      navigation.navigate("DateofBirth")
+    } 
+
+  
+}
+    
+  }
+>
+  <Text style={styles.nextText}>Next</Text>
+</TouchableOpacity>
+
       </View>
-    </LinearGradient>
+    </BackgroundPagesOne>
   );
 };
 
 export default OtpScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   inner: { flex: 1, paddingHorizontal: 25, paddingTop: 60 },
   backButton: { position: "absolute", top: 40, left: 20, zIndex: 10 },
-  logoContainer: { alignItems: "center", marginTop: 40, marginBottom: 30 },
-  logoPlaceholder: {
-    width: 90,
-    height: 90,
-    borderRadius: 20,
-    backgroundColor: "#b784ff",
+  logoSpace: {
+    marginTop: Platform.OS === "ios" ? 44 : 30,
+    marginBottom: 16,
     alignItems: "center",
-    justifyContent: "center",
+    width: "100%",
   },
-  logoText: { color: "#fff", fontSize: 26, fontWeight: "700" },
   title: {
     fontSize: 22,
     color: "#fff",
@@ -104,6 +161,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 20,
     textAlign: "center",
+    backgroundColor: "rgba(255,255,255,0.13)",
   },
   resendContainer: { flexDirection: "row", justifyContent: "center", marginTop: 10 },
   resendText: { color: "#aaa", fontSize: 14 },

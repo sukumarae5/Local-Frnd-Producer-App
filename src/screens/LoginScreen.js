@@ -1,29 +1,28 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Platform } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  StatusBar,
+  Dimensions,
+  Platform,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import BackgroundPagesOne from "../components/BackgroundPages/BackgroundPagesOne";
+import AnimatedLogo from "../components/SampleLogo/AnimatedLogo";
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
-const LoginScreen = () => (
-  <View style={styles.outer}>
-    <LinearGradient
-      colors={['#000000', '#110019', '#240438', '#610575']}
-      start={{ x: 0.5, y: 0 }}
-      end={{ x: 0.5, y: 1 }}
-      style={styles.gradientBg}
-    >
+const LoginScreen = ({navigation}) => (
+  <BackgroundPagesOne>
+    <StatusBar barStyle="light-content" />
 
-      {/* Logo */}
-      <View style={styles.logoContainer}>
-        <View style={styles.logoOuter}>
-          <View style={styles.logoInner}>
-            <Text style={styles.logoText}>LσH</Text>
-          </View>
-        </View>
-      </View>
+    <View style={styles.container}>
+      {/* Animated Logo */}
+      <AnimatedLogo style={styles.animatedLogo} />
 
-      {/* Upward moved content */}
+      {/* Main Content stacked below logo */}
       <View style={styles.centerContent}>
         <Text style={styles.title}>Get Started</Text>
         <Text style={styles.subtitle}>
@@ -33,136 +32,88 @@ const LoginScreen = () => (
           <Text style={styles.link}>Terms & Privacy Policy</Text>
         </TouchableOpacity>
         <View style={styles.buttonGroup}>
-          <TouchableOpacity style={styles.button}>
-            <View style={styles.iconText}>
-              <Icon name="phone" size={24} color="#fff" style={styles.icon} />
-              <Text style={styles.buttonText}>Log in with Phone number</Text>
-            </View>
+          
+          <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Phone')}>
+            <Icon name="phone" size={22} color="#fff" style={styles.icon} />
+            <Text style={styles.buttonText}>Log in with Phone number</Text>
           </TouchableOpacity>
         </View>
         <TouchableOpacity>
           <Text style={styles.troubleLink}>Trouble Logging In?</Text>
         </TouchableOpacity>
       </View>
-    </LinearGradient>
-  </View>
+    </View>
+  </BackgroundPagesOne>
 );
 
 const styles = StyleSheet.create({
-  outer: {
+  container: {
     flex: 1,
-    backgroundColor: '#000000',
-  },
-  gradientBg: {
-    flex: 1,
-    position: 'relative',
-  },
-  logoContainer: {
-    position: 'absolute',
-    top: 90,
-    alignSelf: 'center',
-    zIndex: 2,
-  },
-  logoOuter: {
-    width: 120,
-    height: 120,
-    borderRadius: 20,
-    backgroundColor: '#A723F2',
-    justifyContent: 'center',
     alignItems: 'center',
-    ...Platform.select({
-      ios: {
-        shadowColor: "#250d35ff",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.7,
-        shadowRadius: 18,
-      },
-      android: {
-        elevation: 16,
-      },
-    }),
+    justifyContent: 'flex-start', // stack logo at the top
+    paddingTop: 72, // space from status bar
   },
-  logoInner: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
+  animatedLogo: {
+    marginBottom: 28, // tight space between logo and content
   },
-  logoText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#A723F2',
-    fontFamily: Platform.OS === 'ios' ? 'Times New Roman' : 'serif',
-  },
-  // This moves all items up well above center
   centerContent: {
-    flex: 1,
+    width: '88%',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    marginTop: 260, // Try 240~300 for different phones
-    paddingHorizontal: 22,
-    width: '100%',
   },
   title: {
-    fontSize: 36,
+    fontSize: 28,
     color: '#fff',
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+    marginTop: 6,
   },
   subtitle: {
     color: '#fff',
-    fontSize: 17,
+    fontSize: 15,
     textAlign: 'center',
     marginBottom: 2,
   },
   link: {
     color: '#fff',
     textDecorationLine: 'underline',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
     textAlign: 'center',
-    marginBottom: 22,
+    marginBottom: 20,
+    marginTop: 3,
   },
   buttonGroup: {
     width: '100%',
-    alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 18,
+    marginTop: 10,
   },
   button: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.91)',
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#A723F2',
-    paddingVertical: 18,
-    paddingHorizontal: 18,
-    marginVertical: 8,
-    width: width - 50,
-    justifyContent: 'center',
     alignItems: 'center',
-  },
-  iconText: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#C724C7',
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    backgroundColor: 'rgba(0,0,0,0.30)',
   },
   icon: {
-    marginRight: 15,
+    marginRight: 16,
   },
   buttonText: {
+    fontSize: 16,
     color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   troubleLink: {
     color: '#fff',
     textDecorationLine: 'underline',
-    fontSize: 16,
+    fontSize: 13.5,
     textAlign: 'center',
+    marginBottom: 2,
     fontWeight: '500',
-    marginBottom: 10,
   },
 });
 
