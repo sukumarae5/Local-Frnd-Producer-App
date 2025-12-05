@@ -175,9 +175,12 @@ const HomeScreen = () => {
           <Icon name="message-outline" size={iconSize(7)} color="#fff" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.centerBtn}>
-          <Icon name="phone" size={iconSize(8)} color="#fff" />
-        </TouchableOpacity>
+         <TouchableOpacity
+      style={styles.centerBtn}
+      onPress={() => navigation.navigate('TrainersCallpage')}
+    >
+      <Icon name="phone" size={iconSize(8)} color="#f9f7f7ff" />
+    </TouchableOpacity>
 
         <TouchableOpacity style={styles.navItem}>
           <Icon name="clock-time-eight-outline" size={iconSize(7)} color="#fff" />

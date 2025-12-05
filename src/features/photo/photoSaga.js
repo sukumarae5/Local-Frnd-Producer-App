@@ -16,27 +16,33 @@ function* handleuserphoto(action) {
     const uploadURL = `${USER_PHOTO_POST_URL}/${user_id}`;
 
     const config = {
-  headers: {
-    "Content-Type": "multipart/form-data",
-    Authorization: `Bearer ${token}`,
-  },
-};
+      headers: {
+        "Content-Type": "multipart/form-data",
+        Authorization: `Bearer ${token}`,
+      },
+    };
 
-const response = yield call(
-  axios.post,
-  uploadURL,
-  action.payload, // FormData
-  config
-);
+    const response = yield call(
+      axios.post,
+      uploadURL,
+      action.payload, // FormData
+      config
+    );
+
     console.log("✔️ FILE + FIELDS UPLOADED:", response.data);
+
     yield put(userpostphotosuccess(response.data));
+
+    // 🔥 Navigate Home AFTER success
+    if (action.callback && typeof action.callback === "function") {
+      action.callback();
+    }
 
   } catch (error) {
     console.log("❌ UPLOAD FAILED:", error.response?.data || error);
     yield put(userpostphotofailed(error));
   }
 }
-
 
 export default function* photoSaga() {
   yield takeLatest(USER_POST_PHOTO_REQUEST, handleuserphoto);

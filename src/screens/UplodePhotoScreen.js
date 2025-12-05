@@ -24,7 +24,6 @@ const UplodePhotoScreen = () => {
 
   const [photo, setPhoto] = useState(null);
 
-  // Request Camera Permission
   const requestCameraPermission = async () => {
     try {
       const granted = await PermissionsAndroid.request(
@@ -44,7 +43,6 @@ const UplodePhotoScreen = () => {
     }
   };
 
-  // Open Camera
   const openCamera = async () => {
     const permitted = await requestCameraPermission();
     if (!permitted) {
@@ -64,7 +62,6 @@ const UplodePhotoScreen = () => {
     );
   };
 
-  // Open Gallery
   const openGallery = () => {
     launchImageLibrary(
       { mediaType: "photo", includeBase64: true, quality: 0.7 },
@@ -79,7 +76,6 @@ const UplodePhotoScreen = () => {
     );
   };
 
-  // SHOW OPTIONS POPUP
   const openSelectOption = () => {
     Alert.alert(
       "Select Option",
@@ -93,11 +89,11 @@ const UplodePhotoScreen = () => {
     );
   };
 
-  // Send Photo
+  // ======= UPDATED UPLOAD FUNCTION WITH NAVIGATION =======
   const handlesendphoto = () => {
     if (!photo) {
       Alert.alert("Please select an image first");
-      return;
+      return; // don't navigate
     }
 
     const formData = new FormData();
@@ -111,21 +107,23 @@ const UplodePhotoScreen = () => {
     formData.append("is_primary", true);
     formData.append("status", "active");
 
-    dispatch(userpostphotorequest(formData));
+    // Dispatch with callback
+    dispatch(
+      userpostphotorequest(formData, () => {
+        navigation.navigate("Home"); // navigate after successful upload
+      })
+    );
   };
 
   return (
     <LinearGradient colors={["#4a0f4aff", "#2f0738ff"]} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        
-        {/* BACK BUTTON */}
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
 
         <Text style={styles.title}>Profile Setup (2/2)</Text>
 
-        {/* PHOTO CIRCLE */}
         <TouchableOpacity style={styles.photoCircle} onPress={openSelectOption}>
           {photo ? (
             <Image source={{ uri: photo }} style={styles.photoPreview} />
@@ -133,32 +131,22 @@ const UplodePhotoScreen = () => {
             <Text style={styles.bigCameraIcon}>📷</Text>
           )}
 
-          {/* SMALL CAMERA BUTTON */}
-          <TouchableOpacity
-            style={styles.smallCameraBtn}
-            onPress={openSelectOption}
-          >
+          <TouchableOpacity style={styles.smallCameraBtn} onPress={openSelectOption}>
             <Text style={styles.smallCameraIcon}>📷</Text>
           </TouchableOpacity>
         </TouchableOpacity>
 
-        {/* TEXT */}
         <Text style={styles.smileText}>Show us your smile!</Text>
         <Text style={styles.coinText}>
           Upload now and instantly get{" "}
           <Text style={styles.boldCoin}>50 Coins! 💰</Text>
         </Text>
 
-        {/* UPLOAD BUTTON */}
         <TouchableOpacity style={styles.uploadBtn} onPress={handlesendphoto}>
           <Text style={styles.uploadBtnText}>Upload Photo (+50 Coins)</Text>
         </TouchableOpacity>
 
-        {/* SKIP */}
-        <TouchableOpacity
-          style={{ marginTop: 15 }}
-          onPress={() => navigation.navigate("Home")}
-        >
+        <TouchableOpacity style={{ marginTop: 15 }} onPress={() => navigation.navigate("Home")}>
           <Text style={styles.skipText}>Skip for now</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -167,6 +155,7 @@ const UplodePhotoScreen = () => {
 };
 
 export default UplodePhotoScreen;
+
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -193,16 +182,9 @@ const styles = StyleSheet.create({
     position: "relative",
   },
 
-  bigCameraIcon: {
-    fontSize: 50,
-    opacity: 0.4,
-  },
+  bigCameraIcon: { fontSize: 50, opacity: 0.4 },
 
-  photoPreview: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 100,
-  },
+  photoPreview: { width: "100%", height: "100%", borderRadius: 100 },
 
   smallCameraBtn: {
     position: "absolute",
@@ -217,27 +199,13 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  smallCameraIcon: {
-    fontSize: 22,
-  },
+  smallCameraIcon: { fontSize: 22 },
 
-  smileText: {
-    fontSize: 22,
-    color: "#fff",
-    marginTop: 35,
-    fontWeight: "600",
-  },
+  smileText: { fontSize: 22, color: "#fff", marginTop: 35, fontWeight: "600" },
 
-  coinText: {
-    fontSize: 16,
-    color: "#fff",
-    marginTop: 8,
-    textAlign: "center",
-  },
+  coinText: { fontSize: 16, color: "#fff", marginTop: 8, textAlign: "center" },
 
-  boldCoin: {
-    fontWeight: "bold",
-  },
+  boldCoin: { fontWeight: "bold" },
 
   uploadBtn: {
     backgroundColor: "#fff",
@@ -249,16 +217,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  uploadBtnText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#000",
-  },
+  uploadBtnText: { fontSize: 18, fontWeight: "600", color: "#000" },
 
-  skipText: {
-    color: "#fff",
-    textDecorationLine: "underline",
-    fontSize: 16,
-    marginBottom: 20,
-  },
+  skipText: { color: "#fff", textDecorationLine: "underline", fontSize: 16, marginBottom: 20 },
 });

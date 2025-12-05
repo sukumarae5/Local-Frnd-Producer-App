@@ -2,11 +2,12 @@ import { USER_POST_PHOTO_REQUEST,USER_POST_PHOTO_SUCCESS,USER_POST_PHOTO_FAILED 
 import { USER_UPDATE_PHOTO_REQUEST,USER_UPDATE_PHOTO_SUCCESS,USER_UPDATE_PHOTO_FAILED } from "./photoType";
 import { USER_DELETE_PHOTO_REQUEST,USER_DELETE_PHOTO_SUCCESS,USER_DELETE_PHOTO_FAILED } from "./photoType";
 // ---------------------------POST-----------------------
-export const userpostphotorequest=(data)=>({
+export const userpostphotorequest = (payload, callback) => ({
+  type: USER_POST_PHOTO_REQUEST,
+  payload,
+  callback, // callback passed to saga
+});
 
-    type:USER_POST_PHOTO_REQUEST,
-    payload:data
-})
 export const userpostphotosuccess=(data)=>({
 
     type:USER_POST_PHOTO_SUCCESS,
