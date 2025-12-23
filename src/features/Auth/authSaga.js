@@ -14,8 +14,9 @@ function* handleUserRegister(action) {
     console.log("🌐 API URL:", user_Register);
     const response = yield call(() =>
       axios.post(user_Register, action.payload)
+    
     );
-    console.log("📥 API Response:", response.data);
+    console.log("📥 API Response:", response);
     yield put(userRegisterSuccess(response.data));
 
   } catch (error) {
@@ -70,11 +71,7 @@ function* handleUserOtp(action) {
 
 
 
-
-
-
-
-export default function* userSaga() {
+export default function* authSaga() {
   yield takeLatest(USER_REGISTER_FETCH_REQUEST,handleUserRegister);
   yield takeLatest(USER_LOGIN_FETCH_REQUEST,handleUserLogin)
   yield takeLatest(USER_OTP_FETCH_REQUEST,handleUserOtp);

@@ -3,11 +3,32 @@ import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import BackgroundPagesOne from '../components/BackgroundPages/BackgroundPagesOne';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useDispatch } from 'react-redux';
+import { userlogoutrequest } from '../features/user/userAction';
 
 
 const ProfileScreen = () => {
   const [tab, setTab] = useState("Safety");
+  const dispatch=useDispatch()
 const navigation = useNavigation();
+const handlelogoubutton = async () => {
+  try {
+    await AsyncStorage.multiRemove(["twittoke", "user_id"]);
+
+    dispatch(userlogoutrequest());
+
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Login" }],
+    });
+
+  } catch (error) {
+    console.log("Logout error:", error);
+  }
+};
+
+
 
   return (
     <BackgroundPagesOne>
@@ -102,7 +123,7 @@ const navigation = useNavigation();
 
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Logout</Text>
+          <Text style={styles.logoutText} onPress={handlelogoubutton}>Logout</Text>
         </TouchableOpacity>
 
       </View>

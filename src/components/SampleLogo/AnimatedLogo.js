@@ -1,7 +1,14 @@
 import React, { useRef, useEffect } from "react";
-import { View, Text, StyleSheet, Animated, Easing } from "react-native";
+import {
+  View,
+  StyleSheet,
+  Animated,
+  Easing,
+  Image,
+} from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 
+/* ================= ANIMATED CIRCLE ================= */
 const AnimatedCircle = ({ delay }) => {
   const scale = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(1)).current;
@@ -38,6 +45,7 @@ const AnimatedCircle = ({ delay }) => {
         ])
       ).start();
     };
+
     const timeout = setTimeout(animate, delay);
     return () => clearTimeout(timeout);
   }, [delay, scale, opacity]);
@@ -55,21 +63,33 @@ const AnimatedCircle = ({ delay }) => {
   );
 };
 
+/* ================= ANIMATED LOGO ================= */
 const AnimatedLogo = ({ style }) => (
   <View style={[styles.center, style]}>
-    {/* Animated circles behind the logo */}
-    <AnimatedCircle delay={0} />
+    {/* Animated circles */}
+    {/* <AnimatedCircle delay={0} />
     <AnimatedCircle delay={800} />
-    <AnimatedCircle delay={1600} />
-    {/* Centered gradient and logo */}
-    <LinearGradient colors={["#C724C7", "#C724C7"]} style={styles.gradient}>
-      <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>L🤝F</Text>
-      </View>
-    </LinearGradient>
+    <AnimatedCircle delay={1600} /> */}
+
+    {/* Gradient ring */}
+    {/* <LinearGradient
+      // colors={["#ff00ff", "#c724c7", "#7b2cff"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.gradient}
+    > */}
+      {/* 🔥 ONLY IMAGE – NO WHITE BACKGROUND */}
+      <Image
+        source={require("../BackgroundPages/log4.png")}
+        style={styles.logo}
+      />
+    {/* </LinearGradient> */}
   </View>
 );
 
+export default AnimatedLogo;
+
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
   center: {
     alignItems: "center",
@@ -78,43 +98,36 @@ const styles = StyleSheet.create({
     height: 300,
     position: "relative",
   },
+
   gradient: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 160,        // ⬆ increased
+    height: 160,       // ⬆ increased
+    borderRadius: 80,
     alignItems: "center",
     justifyContent: "center",
     position: "absolute",
-    top: 80,
-    left: 80,
+    top: 70,
+    left: 70,
     shadowColor: "#C724C7",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 14,
-    elevation: 4,
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 5,
   },
+
   circle: {
     position: "absolute",
-    width: 240,
-    height: 240,
-    borderRadius: 120,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
     backgroundColor: "rgba(255,255,255,0.2)",
-    top: 30,
-    left: 30,
+    top: 20,
+    left: 20,
   },
-  logoContainer: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-  },
-  logoText: {
-    fontSize: 42,
-    fontWeight: "bold",
-    color: "#000",
+
+  logo: {
+    width: 110,       // ⬆ increased image size
+    height: 110,      // ⬆ increased image size
+    resizeMode: "contain",
   },
 });
-
-export default AnimatedLogo;

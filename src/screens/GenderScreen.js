@@ -1,136 +1,168 @@
 import React, { useState } from "react";
-import { View, Text, Image, Pressable, FlatList, StyleSheet, Dimensions } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  Pressable,
+  StyleSheet,
+  Dimensions,
+} from "react-native";
+import AnimatedLogo from "../components/SampleLogo/AnimatedLogo";
+import BackgroundPagesOne from "../components/BackgroundPages/BackgroundPagesOne";
 
 const { width } = Dimensions.get("window");
 
 const GenderScreen = ({ navigation }) => {
-  const [selectedAvatar, setSelectedAvatar] = useState(null);
+  const [selectedGender, setSelectedGender] = useState(null);
 
-  // Mixed Avatars
-  const avatars = [
-    { id: 1, img: require("../assets/boy1.jpg") },
-    { id: 2, img: require("../assets/girl1.jpg") },
-    { id: 3, img: require("../assets/boy2.jpg") },
-    { id: 4, img: require("../assets/girl2.jpg") },
-    { id: 5, img: require("../assets/boy3.jpg") },
-    { id: 6, img: require("../assets/girl3.jpg") },
-    { id: 7, img: require("../assets/boy4.jpg") },
-    { id: 8, img: require("../assets/girl4.jpg") },
-    { id: 9, img: require("../assets/boy5.jpg") },
-    { id: 10, img: require("../assets/girl5.jpg") },
-    { id: 1, img: require("../assets/boy1.jpg") },
-    { id: 2, img: require("../assets/girl1.jpg") },
-    { id: 3, img: require("../assets/boy2.jpg") },
-    { id: 4, img: require("../assets/girl2.jpg") },
-     { id: 7, img: require("../assets/boy4.jpg") },
-    { id: 8, img: require("../assets/girl4.jpg") },
-     { id: 9, img: require("../assets/boy5.jpg") },
-    { id: 10, img: require("../assets/girl5.jpg") },
-    // Avoid duplicate ids if possible
-  ];
+  /* ---------- HANDLE CONTINUE ---------- */
+  const handleContinue = () => {
+    if (selectedGender === "male") {
+      navigation.navigate("BoysavatarScreen");
+    } else if (selectedGender === "female") {
+      navigation.navigate("GirlsavatarScreen");
+    }
+  };
 
   return (
-    <View style={styles.container}>
+    <BackgroundPagesOne>
+      <View style={styles.container}>
+        {/* Logo */}
+        <AnimatedLogo />
 
-      {/* Title */}
-      <Text style={styles.title}>Choose Your Avatar</Text>
+        {/* Title */}
+        <Text style={styles.title}>Select your gender</Text>
 
-      {/* Avatar Grid */}
-      <FlatList
-        data={avatars}
-        numColumns={3}
-        keyExtractor={(item) => item.id.toString()}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <Pressable onPress={() => setSelectedAvatar(item.id)}>
+        {/* Gender Cards */}
+        <View style={styles.cardRow}>
+          {/* MALE */}
+          <Pressable onPress={() => setSelectedGender("male")}>
             <View
               style={[
-                styles.avatarBox,
-                selectedAvatar === item.id && styles.avatarSelected,
+                styles.card,
+                selectedGender === "male" && styles.selectedCard,
               ]}
             >
-              <Image source={item.img} style={styles.avatarImage} />
+              <Image
+                source={require("../assets/boy1.jpg")}
+                style={styles.avatar}
+              />
             </View>
+            <Text style={styles.label}>Male</Text>
           </Pressable>
-        )}
-      />
 
-      {/* Continue Button */}
-      <Pressable
-        style={[
-          styles.button,
-          !selectedAvatar && { opacity: 0.4 },
-        ]}
-        disabled={!selectedAvatar}
-        onPress={() => navigation.navigate("Home")}
-      >
-        <Text style={styles.buttonText}>Continue</Text>
-      </Pressable>
+          {/* FEMALE */}
+          <Pressable onPress={() => setSelectedGender("female")}>
+            <View
+              style={[
+                styles.card,
+                selectedGender === "female" && styles.selectedCard,
+              ]}
+            >
+              <Image
+                source={require("../assets/girl1.jpg")}
+                style={styles.avatar}
+              />
+            </View>
+            <Text style={styles.label}>Female</Text>
+          </Pressable>
+        </View>
 
-    </View>
+        {/* Continue Button */}
+        <Pressable
+          style={[
+            styles.button,
+            selectedGender ? styles.buttonActive : styles.buttonDisabled,
+          ]}
+          disabled={!selectedGender}
+          onPress={handleContinue}
+        >
+          <Text style={styles.buttonText}>Continue</Text>
+        </Pressable>
+      </View>
+    </BackgroundPagesOne>
   );
 };
 
 export default GenderScreen;
 
-const ITEM_SIZE = width / 3.8; // Responsive size
+/* ================= STYLES ================= */
+
+const CARD_SIZE = width / 2.8;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
-    paddingTop: 40,
-    paddingHorizontal: 15,
+    paddingHorizontal: 24,
   },
 
   title: {
     color: "#fff",
-    fontSize: 26,
-    fontWeight: "700",
+    fontSize: 31,
+    fontWeight: "600",
     textAlign: "center",
-    marginBottom: 25,
+    marginTop: -55,
+    marginBottom: 50,
   },
 
-  row: {
+  cardRow: {
+    flexDirection: "row",
     justifyContent: "space-between",
+    marginTop: 8,
   },
 
-  avatarBox: {
-    width: ITEM_SIZE,
-    height: ITEM_SIZE,
-    backgroundColor: "#111",
-    borderRadius: 16,
-    marginBottom: 18,
-    overflow: "hidden",
+  card: {
+    width: CARD_SIZE,
+    height: CARD_SIZE,
+    backgroundColor: "#fff",
+    borderRadius: 19,
     justifyContent: "center",
     alignItems: "center",
+    elevation: 6,
   },
 
-  avatarSelected: {
+  selectedCard: {
     borderWidth: 3,
-    borderColor: "#b56fff",
+    borderColor: "#db0afc",
     transform: [{ scale: 1.05 }],
   },
 
-  avatarImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
+  avatar: {
+    width: "95%",
+    height: "95%",
+    resizeMode: "contain",
+  },
+
+  label: {
+    color: "#fff",
+    textAlign: "center",
+    marginTop: 20,
+    fontSize: 20,
+    fontWeight: "500",
   },
 
   button: {
+    marginTop: "auto",
+    marginLeft: 20,
+    paddingVertical: 15,
+    borderRadius: 14,
+    marginBottom: 60,
+    width: "90%",
+    height: "7%",
+  },
+
+  buttonActive: {
     backgroundColor: "#db0afc",
-    paddingVertical: 14,
-    borderRadius: 16,
-    marginBottom: 25,
+  },
+
+  buttonDisabled: {
+    backgroundColor: "#444",
   },
 
   buttonText: {
     color: "#fff",
     textAlign: "center",
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "600",
   },
 });
