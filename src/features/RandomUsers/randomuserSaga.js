@@ -22,7 +22,7 @@ function* fetchRandomUser() {
       },
     });
 
-    console.log("API RESPONSE => ", response.data);
+    console.log("API RESPONSE => ", response);
 
     // 3️⃣ Success dispatch
     yield put({

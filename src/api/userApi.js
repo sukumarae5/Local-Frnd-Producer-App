@@ -10,3 +10,4 @@ export const random_users_data=`${MAIN_BASE_URL}/api/user/random-users`;
 export const random_calls=`${MAIN_BASE_URL}/api/call/random-connect`;
 export const languages=`${MAIN_BASE_URL}/api/language/getlanguages`;
 export const newuserapi=`${MAIN_BASE_URL}/api/user/profile`
+export const avatarsapi=`${MAIN_BASE_URL}/api/avatars`

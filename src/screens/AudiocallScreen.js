@@ -3,296 +3,229 @@ import {
   View,
   Text,
   StyleSheet,
-  Image,
   TouchableOpacity,
-  Dimensions,
+  PermissionsAndroid,
+  Platform,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import Feather from "react-native-vector-icons/Feather";
 import io from "socket.io-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import InCallManager from "react-native-incall-manager";
+import {
+  mediaDevices,
+  RTCView,
+} from "react-native-webrtc";
+ 
+import { createPC } from "../utils/webrtc";
+import  MAIN_BASE_URL  from "../api/baseUrl1";
 
-import { createPC, getAudioStream } from "../utils/webrtc";
-import { MAIN_BASE_URL } from "../api/baseUrl1";
-
-const { width } = Dimensions.get("window");
 
 const AudiocallScreen = ({ route, navigation }) => {
-  // ---------------------------
-  //      ROUTE PARAMS
-  // ---------------------------
-  const { session_id, target_id } = route?.params || {};
+  const { session_id, role } = route.params;
 
-  const [token, setToken] = useState(null);
-  const [user_id, setUserId] = useState(null);
+  const socketRef = useRef(null);
+  const pcRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const remoteStreamRef = useRef(null);
+  const startedRef = useRef(false);
 
-  const socket = useRef(null);
-  const pc = useRef(null);
-  const localStream = useRef(null);
+  const [state, setState] = useState(
+    role === "caller" ? "calling" : "incoming"
+  );
 
-  const [callConnected, setCallConnected] = useState(false);
-
-  // ---------------------------
-  // LOAD TOKEN + USER_ID
-  // ---------------------------
-  useEffect(() => {
-    const loadUser = async () => {
-      const t = await AsyncStorage.getItem("twittoke");
-      const uid = await AsyncStorage.getItem("user_id");
-
-      setToken(t);
-      setUserId(uid);
-
-      console.log("TOKEN =>", t);
-      console.log("USER_ID =>", uid);
-    };
-    loadUser();
-  }, []);
-
-  // ---------------------------
-  // CREATE SOCKET
-  // ---------------------------
-  useEffect(() => {
-    if (!token) return;
-
-    socket.current = io(MAIN_BASE_URL, {
-      transports: ["websocket"],
-      auth: { token },
-    });
-
-    console.log("SOCKET CONNECTED");
-
-    return () => socket.current?.disconnect();
-  }, [token]);
-
-  // ---------------------------
-  // INIT WEBRTC WHEN READY
-  // ---------------------------
-  useEffect(() => {
-    if (!token || !socket.current || !session_id || !target_id) return;
-
-    initializeWebRTC();
-
-    return () => cleanupCall();
-  }, [token, socket.current]);
-
-  const cleanupCall = () => {
-    try {
-      localStream.current?.getTracks().forEach((t) => t.stop());
-      pc.current?.close();
-    } catch (err) {}
+  /* ================= PERMISSIONS ================= */
+  const requestPermission = async () => {
+    if (Platform.OS === "android") {
+      await PermissionsAndroid.requestMultiple([
+        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+        PermissionsAndroid.PERMISSIONS.MODIFY_AUDIO_SETTINGS,
+      ]);
+    }
   };
 
-  // ---------------------------
-  // WEBRTC INITIALIZATION
-  // ---------------------------
-  const initializeWebRTC = async () => {
-    pc.current = createPC();
+  /* ================= SOCKET ================= */
+  useEffect(() => {
+    let mounted = true;
 
-    // ICE CANDIDATE
-    pc.current.onicecandidate = (event) => {
-      if (event.candidate) {
-        socket.current.emit("audio_ice_candidate", {
+    const init = async () => {
+      await requestPermission();
+
+      const token = await AsyncStorage.getItem("twittoke");
+      if (!token || !mounted) return;
+
+      socketRef.current = io(MAIN_BASE_URL, {
+        transports: ["websocket"],
+        auth: { token },
+      });
+
+      socketRef.current.on("connect", () => {
+        socketRef.current.emit("audio_join", { session_id });
+
+        // 🔥 CRITICAL ANDROID AUDIO SETUP
+        InCallManager.start({ media: "audio" });
+        InCallManager.setForceSpeakerphoneOn(true);
+        InCallManager.setSpeakerphoneOn(true);
+        InCallManager.setMicrophoneMute(false);
+        InCallManager.setKeepScreenOn(true);
+
+        role === "caller"
+          ? InCallManager.startRingback()
+          : InCallManager.startRingtone("_DEFAULT_");
+      });
+
+      socketRef.current.on("audio_accepted", startWebRTC);
+      socketRef.current.on("audio_call_ended", cleanup);
+    };
+
+    init();
+
+    return () => {
+      mounted = false;
+      cleanup(true);
+    };
+  }, []);
+
+  /* ================= ACCEPT / END ================= */
+  const acceptCall = () => {
+    socketRef.current.emit("audio_accept", { session_id });
+  };
+
+  const endCall = () => {
+    socketRef.current.emit("audio_call_hangup", { session_id });
+    cleanup();
+  };
+
+  /* ================= WEBRTC ================= */
+  const startWebRTC = async () => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+
+    setState("connected");
+
+    InCallManager.stopRingback();
+    InCallManager.stopRingtone();
+
+    pcRef.current = createPC();
+
+    /* 🔍 CONNECTION DEBUG */
+    pcRef.current.onconnectionstatechange = () => {
+      console.log("📡 WebRTC:", pcRef.current.connectionState);
+    };
+
+    /* ICE */
+    pcRef.current.onicecandidate = (e) => {
+      if (e.candidate) {
+        socketRef.current.emit("audio_ice_candidate", {
           session_id,
-          target_id,
-          candidate: event.candidate,
+          candidate: e.candidate,
         });
       }
     };
 
-    // MICROPHONE STREAM
-    localStream.current = await getAudioStream();
-    localStream.current.getTracks().forEach((track) =>
-      pc.current.addTrack(track, localStream.current)
-    );
+    /* 🔥 REMOTE AUDIO */
+    pcRef.current.ontrack = (event) => {
+      remoteStreamRef.current = event.streams[0];
+      console.log("🎧 Remote audio received");
+    };
 
-    listenSocketEvents();
+    /* LOCAL AUDIO */
+    localStreamRef.current = await mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+      video: false,
+    });
 
-    // CALLER SENDS OFFER
-    if (user_id !== target_id) {
-      createOffer();
+    localStreamRef.current.getTracks().forEach((track) => {
+      pcRef.current.addTrack(track, localStreamRef.current);
+    });
+
+    /* SIGNALING */
+    socketRef.current.on("audio_offer", async ({ offer }) => {
+      await pcRef.current.setRemoteDescription(offer);
+      const answer = await pcRef.current.createAnswer();
+      await pcRef.current.setLocalDescription(answer);
+      socketRef.current.emit("audio_answer", { session_id, answer });
+    });
+
+    socketRef.current.on("audio_answer", async ({ answer }) => {
+      await pcRef.current.setRemoteDescription(answer);
+    });
+
+    socketRef.current.on("audio_ice_candidate", async ({ candidate }) => {
+      await pcRef.current.addIceCandidate(candidate);
+    });
+
+    if (role === "caller") {
+      const offer = await pcRef.current.createOffer({
+        offerToReceiveAudio: true,
+      });
+      await pcRef.current.setLocalDescription(offer);
+      socketRef.current.emit("audio_offer", { session_id, offer });
     }
   };
 
-  // ---------------------------
-  // SOCKET EVENTS
-  // ---------------------------
-  const listenSocketEvents = () => {
-    // RECEIVER GETS OFFER
-    socket.current.on("audio_offer", async ({ offer, from }) => {
-      await pc.current.setRemoteDescription(offer);
+  /* ================= CLEANUP ================= */
+  const cleanup = (silent = false) => {
+    InCallManager.stop();
 
-      const answer = await pc.current.createAnswer();
-      await pc.current.setLocalDescription(answer);
+    localStreamRef.current?.getTracks().forEach((t) => t.stop());
+    remoteStreamRef.current?.getTracks().forEach((t) => t.stop());
 
-      socket.current.emit("audio_answer", {
-        session_id,
-        target_id: from,
-        answer,
-      });
-    });
+    pcRef.current?.close();
+    socketRef.current?.removeAllListeners();
+    socketRef.current?.disconnect();
 
-    // CALLER GETS ANSWER
-    socket.current.on("audio_answer", async ({ answer }) => {
-      await pc.current.setRemoteDescription(answer);
-    });
-
-    // ICE CANDIDATE
-    socket.current.on("audio_ice_candidate", async ({ candidate }) => {
-      await pc.current.addIceCandidate(candidate);
-    });
-
-    // CALL CONNECTED
-    socket.current.on("audio_call_connected", () => {
-      setCallConnected(true);
-    });
-
-    // CALL ENDED
-    socket.current.on("audio_call_ended", () => {
-      navigation.goBack();
-    });
+    if (!silent) navigation.goBack();
   };
 
-  // ---------------------------
-  // CALLER CREATES OFFER
-  // ---------------------------
-  const createOffer = async () => {
-    const offer = await pc.current.createOffer();
-    await pc.current.setLocalDescription(offer);
-
-    socket.current.emit("audio_offer", {
-      session_id,
-      target_id,
-      offer,
-    });
-  };
-
-  // ---------------------------
-  // END CALL
-  // ---------------------------
-  const hangupCall = () => {
-    socket.current.emit("audio_call_hangup", { session_id });
-    navigation.goBack();
-  };
-
-  // ---------------------------
-  // UI
-  // ---------------------------
+  /* ================= UI ================= */
   return (
     <LinearGradient colors={["#5e007a", "#0d0017"]} style={styles.container}>
-      
-      {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={28} color="#fff" />
-        </TouchableOpacity>
+      <Text style={styles.title}>
+        {state === "calling"
+          ? "Calling…"
+          : state === "incoming"
+          ? "Incoming Call"
+          : "Connected"}
+      </Text>
 
-        <View>
-          <Text style={styles.userName}>User {target_id}</Text>
-          <Text style={styles.duration}>
-            {callConnected ? "Connected" : "Ringing..."}
-          </Text>
-        </View>
-
-        <View style={{ width: 40 }} />
-      </View>
-
-      {/* AVATARS */}
-      <View style={styles.avatarContainer}>
-        <View style={styles.avatarBox}>
-          <Image source={require("../assets/boy1.jpg")} style={styles.avatarImg} />
-        </View>
-
-        <View style={styles.avatarBox2}>
-          <Image source={require("../assets/girl1.jpg")} style={styles.avatarImg} />
-        </View>
-      </View>
-
-      {/* CALL BUTTON */}
-      <View style={styles.bottomButtons}>
-        <TouchableOpacity style={styles.endCallBtn} onPress={hangupCall}>
+      {state === "incoming" && (
+        <TouchableOpacity style={styles.acceptBtn} onPress={acceptCall}>
           <Ionicons name="call" size={30} color="#fff" />
         </TouchableOpacity>
-      </View>
+      )}
 
+      {state === "connected" && (
+        <TouchableOpacity style={styles.endBtn} onPress={endCall}>
+          <Ionicons name="call" size={30} color="#fff" />
+        </TouchableOpacity>
+      )}
     </LinearGradient>
   );
 };
 
 export default AudiocallScreen;
 
-// ------------------ STYLES ------------------
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-
-  header: {
-    marginTop: 50,
-    paddingHorizontal: 25,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  userName: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "600",
-  },
-
-  duration: {
-    color: "#ccc",
-    marginTop: 2,
-  },
-
-  avatarContainer: {
-    marginTop: 90,
-    width: "100%",
-    alignItems: "center",
-    position: "relative",
-    height: 350,
-  },
-
-  avatarBox: {
-    width: 160,
-    height: 160,
-    backgroundColor: "#fff",
-    borderRadius: 20,
+  container: { flex: 1, justifyContent: "center", alignItems: "center" },
+  title: { color: "#fff", fontSize: 22, marginBottom: 40 },
+  acceptBtn: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "green",
     justifyContent: "center",
     alignItems: "center",
   },
-
-  avatarBox2: {
-    width: 160,
-    height: 160,
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    position: "absolute",
-    top: 130,
-    right: width * 0.18,
-  },
-
-  avatarImg: {
-    width: "95%",
-    height: "95%",
-    borderRadius: 20,
-  },
-
-  bottomButtons: {
-    position: "absolute",
-    bottom: 40,
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "center",
-  },
-
-  endCallBtn: {
-    width: 75,
-    height: 75,
+  endBtn: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     backgroundColor: "red",
-    borderRadius: 50,
     justifyContent: "center",
     alignItems: "center",
   },

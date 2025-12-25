@@ -7,14 +7,15 @@ import {
   Pressable,
   Image,
   Linking,
+  Platform,
 } from "react-native";
 import Geolocation from "@react-native-community/geolocation";
 import { useDispatch, useSelector } from "react-redux";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import { userEditRequest } from "../features/user/userAction";
+import { newUserDataRequest, userEditRequest } from "../features/user/userAction";
 import BackgroundPagesOne from "../components/BackgroundPages/BackgroundPagesOne";
 
-/* ================= UX POPUP (NO HOOKS INSIDE) ================= */
+/* ================= UX POPUP ================= */
 const PermissionTimePopup = ({ visible, onAllow, onDeny }) => {
   if (!visible) return null;
 
@@ -44,59 +45,82 @@ const PermissionTimePopup = ({ visible, onAllow, onDeny }) => {
 
 /* ================= MAIN SCREEN ================= */
 const LocationScreen = () => {
-  /* ---------- HOOKS (TOP LEVEL – CORRECT) ---------- */
+  /* ---------- HOOKS (TOP LEVEL – SAFE) ---------- */
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const route = useRoute();
 
   const { success, loading } = useSelector((state) => state.user);
-  const { name, gender, date_of_birth, age } = route.params;
+
+  // ✅ SAFE PARAMS (no crash)
+  const { name, gender, date_of_birth, age } = route.params || {};
 
   const [location, setLocation] = useState(null);
   const [permissionStatus, setPermissionStatus] = useState("idle");
   const [showPopup, setShowPopup] = useState(false);
+const [submitted, setSubmitted] = useState(false); // ✅ FIX
 
-  /* ---------- SYSTEM PERMISSION ---------- */
+  /* ---------- ASK PERMISSION ---------- */
   const requestLocationPermission = async () => {
+    if (Platform.OS !== "android") return;
+
     const granted = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
     );
 
     if (granted === PermissionsAndroid.RESULTS.GRANTED) {
       setPermissionStatus("granted");
-
-      Geolocation.getCurrentPosition(
-        (pos) => setLocation(pos.coords),
-        () => setPermissionStatus("denied"),
-        { enableHighAccuracy: true, timeout: 15000 }
-      );
+      fetchLocation();
     } else {
       setPermissionStatus("denied");
     }
   };
 
+  /* ---------- FETCH GPS ---------- */
+  const fetchLocation = () => {
+    Geolocation.getCurrentPosition(
+      (pos) => {
+        setLocation(pos.coords);
+      },
+      (error) => {
+        console.log("GPS ERROR:", error);
+        setPermissionStatus("denied");
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 20000,
+        maximumAge: 0,
+        forceRequestLocation: true,
+        showLocationDialog: true,
+      }
+    );
+  };
+
   /* ---------- SUBMIT ---------- */
   const handleContinue = () => {
-    if (!location) return;
-
+    if (!location || loading) return;
+ setSubmitted(true);
     dispatch(
-      userEditRequest({
-        name,
-        gender,
-        date_of_birth,
-        age,
-        location_lat: location.latitude,
-        location_log: location.longitude,
-      })
+      newUserDataRequest({ location_lat: location.latitude,
+        location_log: location.longitude,})
+     
     );
   };
 
   /* ---------- NAVIGATION ---------- */
-  useEffect(() => {
-    if (success === true) {
-      navigation.navigate("GenderScreen");
-    }
-  }, [success, navigation]);
+ useEffect(() => {
+  if (submitted && success === true) {
+    navigation.replace("GenderScreen");
+  }
+}, [submitted, success, navigation]);
+
+
+  /* ---------- CLEANUP ---------- */
+  // useEffect(() => {
+  //   return () => {
+  //     Geolocation.stopObserving();
+  //   };
+  // }, []);
 
   return (
     <BackgroundPagesOne>
@@ -114,6 +138,7 @@ const LocationScreen = () => {
           We need access to your location to show nearby people and updates.
         </Text>
 
+        {/* ALLOW BUTTON */}
         {permissionStatus !== "granted" && (
           <Pressable
             style={styles.allowBtn}
@@ -123,17 +148,28 @@ const LocationScreen = () => {
           </Pressable>
         )}
 
+        {/* DENIED STATE */}
         {permissionStatus === "denied" && (
           <>
-            <Text style={styles.deniedText}>Location permission denied</Text>
+            <Text style={styles.deniedText}>
+              Location permission denied
+            </Text>
             <Pressable onPress={() => Linking.openSettings()}>
               <Text style={styles.retryText}>OPEN SETTINGS</Text>
             </Pressable>
           </>
         )}
 
+        {/* CONTINUE */}
         {location && (
-          <Pressable style={styles.submitBtn} onPress={handleContinue}>
+          <Pressable
+            style={[
+              styles.submitBtn,
+              loading && { opacity: 0.6 },
+            ]}
+            disabled={loading}
+            onPress={handleContinue}
+          >
             <Text style={styles.submitText}>
               {loading ? "Submitting..." : "CONTINUE"}
             </Text>
@@ -161,8 +197,17 @@ export default LocationScreen;
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: "center", justifyContent: "center" },
-  title: { color: "#fff", fontSize: 22, fontWeight: "700", marginBottom: 20 },
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 20,
+  },
   circle: {
     width: 200,
     height: 200,
@@ -172,11 +217,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  icon: { width: 80, height: 80 },
+  icon: {
+    width: 80,
+    height: 80,
+  },
   description: {
     color: "#ccc",
     textAlign: "center",
     marginVertical: 20,
+    paddingHorizontal: 30,
   },
   allowBtn: {
     backgroundColor: "#fff",
@@ -184,19 +233,34 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     width: "80%",
   },
-  allowText: { color: "#7a1fa2", textAlign: "center", fontWeight: "700" },
-  deniedText: { color: "#ffb3b3", marginTop: 10 },
-  retryText: { color: "#b784ff", textDecorationLine: "underline" },
+  allowText: {
+    color: "#7a1fa2",
+    textAlign: "center",
+    fontWeight: "700",
+  },
+  deniedText: {
+    color: "#ffb3b3",
+    marginTop: 10,
+  },
+  retryText: {
+    color: "#b784ff",
+    textDecorationLine: "underline",
+  },
   submitBtn: {
     backgroundColor: "#ff1983",
     padding: 14,
     borderRadius: 30,
     width: "80%",
-    marginTop: 10,
+    marginTop: 15,
   },
-  submitText: { color: "#fff", textAlign: "center", fontWeight: "700" },
+  submitText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "700",
+  },
 });
 
+/* ================= POPUP STYLES ================= */
 const popupStyles = StyleSheet.create({
   overlay: {
     position: "absolute",
@@ -214,8 +278,19 @@ const popupStyles = StyleSheet.create({
     borderRadius: 14,
     padding: 20,
   },
-  title: { fontSize: 16, marginBottom: 16 },
-  option: { paddingVertical: 14 },
-  optionText: { color: "#1A73E8", fontSize: 15 },
-  denyText: { color: "#D93025", fontSize: 15 },
+  title: {
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  option: {
+    paddingVertical: 14,
+  },
+  optionText: {
+    color: "#1A73E8",
+    fontSize: 15,
+  },
+  denyText: {
+    color: "#D93025",
+    fontSize: 15,
+  },
 });

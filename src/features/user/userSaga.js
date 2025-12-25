@@ -15,7 +15,7 @@ import { user_Edit, USER_DATA, newuserapi } from "../../api/userApi";
 import { USER_LOGOUT_REQUEST } from "./userType";
 import { cancel, take, race } from "redux-saga/effects";
 
-
+console.log(USER_DATA)
 // ------------------ EDIT USER ------------------
 function* handleUserEdit(action) {
   try {

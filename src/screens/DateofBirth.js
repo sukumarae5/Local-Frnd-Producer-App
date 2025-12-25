@@ -13,10 +13,11 @@ import { useDispatch } from "react-redux";
 import { newUserDataRequest } from "../features/user/userAction";
 
 const DobScreen = ({ navigation }) => {
+  const dispatch=useDispatch()
   const [month, setMonth] = useState("");
   const [day, setDay] = useState("");
   const [year, setYear] = useState("");
-  const dispatch=useDispatch();
+  
 
   const isValid =
     month.length === 2 &&
@@ -25,15 +26,11 @@ const DobScreen = ({ navigation }) => {
     Number(year) <= new Date().getFullYear() - 18;
 
   const handleContinue = () => {
-    const dob = `${day}-${month}-${year}`;
-     dispatch(
-                  newUserDataRequest({dob
-                    
-                  })
-                );
-    console.log(dob)
-    navigation.navigate("LocationScreen", { dob });
-  };
+  const date_of_birth = `${day}-${month}-${year}`;
+  dispatch(newUserDataRequest({ date_of_birth }));
+  navigation.navigate("LocationScreen", {date_of_birth });
+};
+
 
   return (
     <BackgroundPagesOne>

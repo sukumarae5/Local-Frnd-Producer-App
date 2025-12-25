@@ -23,7 +23,6 @@ const UplodePhotoScreen = () => {
   const navigation = useNavigation();
 
   const [photo, setPhoto] = useState(null);
-  
 
   const requestCameraPermission = async () => {
     try {
@@ -58,20 +57,20 @@ const UplodePhotoScreen = () => {
       },
       (response) => {
         if (response.didCancel || response.errorCode) return;
-        if (response.assets?.length > 0) setPhoto(response.assets[0].uri);
+        if (response.assets?.length > 0) {
+          setPhoto(response.assets[0]); // ✅ FIX
+        }
       }
     );
   };
 
   const openGallery = () => {
     launchImageLibrary(
-      { mediaType: "photo", includeBase64: true, quality: 0.7 },
+      { mediaType: "photo", quality: 0.7 }, // ✅ FIX (no base64)
       (response) => {
         if (response.didCancel || response.errorMessage) return;
-
         if (response.assets?.length > 0) {
-const base64 = `data:${response.assets[0].type};base64,${response.assets[0].base64}`;
-          setPhoto(base64);
+          setPhoto(response.assets[0]); // ✅ FIX
         }
       }
     );
@@ -90,29 +89,27 @@ const base64 = `data:${response.assets[0].type};base64,${response.assets[0].base
     );
   };
 
-  // ======= UPDATED UPLOAD FUNCTION WITH NAVIGATION =======
+  // ======= FIXED UPLOAD FUNCTION (MULTER SAFE) =======
   const handlesendphoto = () => {
     if (!photo) {
       Alert.alert("Please select an image first");
-      return; // don't navigate
+      return;
     }
 
     const formData = new FormData();
-    formData.append("photo", {
-      uri: photo,
-      type: "image/jpeg",
-      name: `photo_${Date.now()}.jpg`,
 
+    formData.append("photo", {
+      uri: photo.uri,
+      type: photo.type || "image/jpeg",
+      name: photo.fileName || `photo_${Date.now()}.jpg`,
     });
 
-    formData.append("photo_url", photo);
-    formData.append("is_primary", true);
+    formData.append("is_primary", "true");
     formData.append("status", "active");
 
-    // Dispatch with callback
     dispatch(
       userpostphotorequest(formData, () => {
-        navigation.navigate("Home"); // navigate after successful upload
+        navigation.navigate("Home");
       })
     );
   };
@@ -120,20 +117,29 @@ const base64 = `data:${response.assets[0].type};base64,${response.assets[0].base
   return (
     <LinearGradient colors={["#4a0f4aff", "#2f0738ff"]} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+        >
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
 
         <Text style={styles.title}>Profile Setup (2/2)</Text>
 
-        <TouchableOpacity style={styles.photoCircle} onPress={openSelectOption}>
+        <TouchableOpacity
+          style={styles.photoCircle}
+          onPress={openSelectOption}
+        >
           {photo ? (
-            <Image source={{ uri: photo }} style={styles.photoPreview} />
+            <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
           ) : (
             <Text style={styles.bigCameraIcon}>📷</Text>
           )}
 
-          <TouchableOpacity style={styles.smallCameraBtn} onPress={openSelectOption}>
+          <TouchableOpacity
+            style={styles.smallCameraBtn}
+            onPress={openSelectOption}
+          >
             <Text style={styles.smallCameraIcon}>📷</Text>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -148,7 +154,10 @@ const base64 = `data:${response.assets[0].type};base64,${response.assets[0].base
           <Text style={styles.uploadBtnText}>Upload Photo (+50 Coins)</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={{ marginTop: 15 }} onPress={() => navigation.navigate("Home")}>
+        <TouchableOpacity
+          style={{ marginTop: 15 }}
+          onPress={() => navigation.navigate("Home")}
+        >
           <Text style={styles.skipText}>Skip for now</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -158,6 +167,7 @@ const base64 = `data:${response.assets[0].type};base64,${response.assets[0].base
 
 export default UplodePhotoScreen;
 
+/* ===================== STYLES ===================== */
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -203,9 +213,19 @@ const styles = StyleSheet.create({
 
   smallCameraIcon: { fontSize: 22 },
 
-  smileText: { fontSize: 22, color: "#fff", marginTop: 35, fontWeight: "600" },
+  smileText: {
+    fontSize: 22,
+    color: "#fff",
+    marginTop: 35,
+    fontWeight: "600",
+  },
 
-  coinText: { fontSize: 16, color: "#fff", marginTop: 8, textAlign: "center" },
+  coinText: {
+    fontSize: 16,
+    color: "#fff",
+    marginTop: 8,
+    textAlign: "center",
+  },
 
   boldCoin: { fontWeight: "bold" },
 
@@ -219,7 +239,16 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  uploadBtnText: { fontSize: 18, fontWeight: "600", color: "#000" },
+  uploadBtnText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000",
+  },
 
-  skipText: { color: "#fff", textDecorationLine: "underline", fontSize: 16, marginBottom: 20 },
+  skipText: {
+    color: "#fff",
+    textDecorationLine: "underline",
+    fontSize: 16,
+    marginBottom: 20,
+  },
 });

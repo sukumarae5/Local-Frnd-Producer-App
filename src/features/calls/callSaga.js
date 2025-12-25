@@ -14,6 +14,7 @@ import { random_calls } from "../../api/userApi"; // <- API URL (change if neede
 function* createAudioCallSession(action) {
   try {
     const { payload } = action;
+    console.log(action.payload)
 
     // 1️⃣ GET TOKEN
     const token = yield call(AsyncStorage.getItem, "twittoke");

@@ -9,17 +9,26 @@ import {
 } from "react-native";
 import AnimatedLogo from "../components/SampleLogo/AnimatedLogo";
 import BackgroundPagesOne from "../components/BackgroundPages/BackgroundPagesOne";
+import { useDispatch } from "react-redux";
+import { newUserDataRequest } from "../features/user/userAction";
+import{ useravatarapifetchrequest} from"../features/Avatars/avatarsAction"
 
 const { width } = Dimensions.get("window");
 
 const GenderScreen = ({ navigation }) => {
+  const dispatch=useDispatch()
   const [selectedGender, setSelectedGender] = useState(null);
 
   /* ---------- HANDLE CONTINUE ---------- */
   const handleContinue = () => {
-    if (selectedGender === "male") {
+    if (selectedGender === "Male") {
+      dispatch(newUserDataRequest({ gender:selectedGender }));
+      dispatch(useravatarapifetchrequest(selectedGender))
       navigation.navigate("BoysavatarScreen");
-    } else if (selectedGender === "female") {
+    } else if (selectedGender === "Female") {
+            dispatch(newUserDataRequest({ gender:selectedGender }));
+      dispatch(useravatarapifetchrequest(selectedGender))
+
       navigation.navigate("GirlsavatarScreen");
     }
   };
@@ -36,11 +45,11 @@ const GenderScreen = ({ navigation }) => {
         {/* Gender Cards */}
         <View style={styles.cardRow}>
           {/* MALE */}
-          <Pressable onPress={() => setSelectedGender("male")}>
+          <Pressable onPress={() => setSelectedGender("Male")}>
             <View
               style={[
                 styles.card,
-                selectedGender === "male" && styles.selectedCard,
+                selectedGender === "Male" && styles.selectedCard,
               ]}
             >
               <Image
@@ -52,11 +61,11 @@ const GenderScreen = ({ navigation }) => {
           </Pressable>
 
           {/* FEMALE */}
-          <Pressable onPress={() => setSelectedGender("female")}>
+          <Pressable onPress={() => setSelectedGender("Female")}>
             <View
               style={[
                 styles.card,
-                selectedGender === "female" && styles.selectedCard,
+                selectedGender === "Female" && styles.selectedCard,
               ]}
             >
               <Image

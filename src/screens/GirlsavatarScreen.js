@@ -7,47 +7,56 @@ import {
   Image,
   FlatList,
   StatusBar,
-  SafeAreaView,
+  Dimensions,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import { useDispatch, useSelector } from "react-redux";
+import { newUserDataRequest } from "../features/user/userAction";
 
-/* ✅ 15 avatars – SAME images, UNIQUE ids */
-const AVATARS = [
-  { id: 1, image: require("../assets/girl1.jpg") },
-  { id: 2, image: require("../assets/girl2.jpg") },
-  { id: 3, image: require("../assets/girl3.jpg") },
-  { id: 4, image: require("../assets/girl4.jpg") },
-  { id: 5, image: require("../assets/girl5.jpg") },
-  { id: 6, image: require("../assets/girl1.jpg") },
-  { id: 7, image: require("../assets/girl2.jpg") },
-  { id: 8, image: require("../assets/girl3.jpg") },
-  { id: 9, image: require("../assets/girl4.jpg") },
-  { id: 10, image: require("../assets/girl5.jpg") },
-  { id: 11, image: require("../assets/girl1.jpg") },
-  { id: 12, image: require("../assets/girl2.jpg") },
-  { id: 13, image: require("../assets/girl3.jpg") },
-  { id: 14, image: require("../assets/girl4.jpg") },
-  { id: 15, image: require("../assets/girl5.jpg") },
-];
+const { width } = Dimensions.get("window");
+const ITEM_SIZE = (width - 40) / 3;
 
 const ChooseAvatarScreen = () => {
-  // ✅ useNavigation must be inside the component
   const navigation = useNavigation();
+  const dispatch = useDispatch();
+
+  const { avatars } = useSelector((state) => state.avatars);
   const [selectedAvatar, setSelectedAvatar] = useState(null);
 
   const renderAvatar = ({ item }) => {
-    const isSelected = selectedAvatar === item.id;
+    const isSelected = selectedAvatar?.avatar_id === item.avatar_id;
 
     return (
       <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() => setSelectedAvatar(item.id)}
-        style={[styles.avatarWrapper, isSelected && styles.avatarSelected]}
+        activeOpacity={1} // ✅ no dim / no disable
+        onPress={() => setSelectedAvatar(item)}
+        style={[
+          styles.avatarWrapper,
+          isSelected && styles.avatarSelected,
+        ]}
       >
-        <Image source={item.image} style={styles.avatarImage} />
+        <Image
+          source={{ uri: item.image_url }}
+          style={styles.avatarImage}
+        />
       </TouchableOpacity>
     );
+  };
+
+  const handleContinue = () => {
+    if (!selectedAvatar) return;
+
+    // ✅ DISPATCH SELECTED AVATAR ID
+    dispatch(
+      newUserDataRequest({
+        avatar_id: selectedAvatar.avatar_id,
+      })
+    );
+
+    // ✅ NAVIGATE AFTER DISPATCH
+    navigation.navigate("ReciverHomeScreen");
   };
 
   return (
@@ -72,19 +81,23 @@ const ChooseAvatarScreen = () => {
 
         {/* AVATAR GRID */}
         <FlatList
-          data={AVATARS}
+          data={avatars}
           renderItem={renderAvatar}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item) => item.avatar_id.toString()}
           numColumns={3}
+          extraData={selectedAvatar}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.grid}
         />
 
         {/* CONTINUE BUTTON */}
         <TouchableOpacity
-          style={styles.continueButton}
-          onPress={() => navigation.navigate("ReciverHomeScreen")}
-          disabled={!selectedAvatar} 
+          style={[
+            styles.continueButton,
+            !selectedAvatar && styles.continueDisabled,
+          ]}
+          disabled={!selectedAvatar}
+          onPress={handleContinue}
         >
           <Text style={styles.continueText}>Continue</Text>
         </TouchableOpacity>
@@ -95,16 +108,85 @@ const ChooseAvatarScreen = () => {
 
 export default ChooseAvatarScreen;
 
+/* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 20 },
-  header: { flexDirection: "row", alignItems: "center", marginTop: 20, marginBottom: 30 },
-  backButton: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: "#555", justifyContent: "center", alignItems: "center" },
-  backIcon: { color: "#fff", fontSize: 24 },
-  title: { color: "#fff", fontSize: 20, fontWeight: "600", marginLeft: 15 },
-  grid: { paddingBottom: 120 },
-  avatarWrapper: { width: "30%", aspectRatio: 1, margin: "1.66%", borderRadius: 14, overflow: "hidden", backgroundColor: "#000" },
-  avatarSelected: { borderWidth: 3, borderColor: "#d62edc" },
-  avatarImage: { width: "100%", height: "100%", resizeMode: "cover" },
-  continueButton: { position: "absolute", bottom: 25, left: 20, right: 20, height: 55, borderRadius: 28, backgroundColor: "#d62edc", justifyContent: "center", alignItems: "center" },
-  continueText: { color: "#fff", fontSize: 18, fontWeight: "600" },
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 20,
+    marginBottom: 30,
+  },
+
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#555",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  backIcon: {
+    color: "#fff",
+    fontSize: 24,
+  },
+
+  title: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "600",
+    marginLeft: 15,
+  },
+
+  grid: {
+    paddingBottom: 120,
+  },
+
+  avatarWrapper: {
+    width: ITEM_SIZE,
+    height: ITEM_SIZE,
+    margin: 6,
+    borderRadius: 14,
+    backgroundColor: "#000",
+  },
+
+  avatarSelected: {
+    borderWidth: 3,
+    borderColor: "#d62edc",
+  },
+
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+
+  continueButton: {
+    position: "absolute",
+    bottom: 25,
+    left: 20,
+    right: 20,
+    height: 55,
+    borderRadius: 28,
+    backgroundColor: "#d62edc",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  continueDisabled: {
+    opacity: 0.4,
+  },
+
+  continueText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
+  },
 });

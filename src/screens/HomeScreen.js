@@ -55,6 +55,7 @@ const HomeScreen = () => {
   useEffect(() => {
     dispatch(userDatarequest());
   }, []);
+  
 useEffect(() => {
   const connectSocketIO = async () => {
     const token = await AsyncStorage.getItem("twittoke");
@@ -67,52 +68,49 @@ useEffect(() => {
     socket = io(MAIN_BASE_URL, {
       transports: ["websocket"],
       auth: { token },
+      
     }); 
     
 
     // When socket successfully connects
     socket.on("connect", () => {
       console.log("✅ Socket connected:", socket.id);
-      socket.emit("userOnline");
-    });
-
-    // When backend rejects connection
-    socket.on("connect_error", (error) => {
-      console.log("❌ Socket connect error:", error.message);
-    });
-
-    // When socket disconnects
-    socket.on("disconnect", (reason) => {
-      console.log("⚠️ Socket disconnected:", reason);
+      socket.emit("get_online_users");
     });
 
     // When server sends list of online users
     socket.on("onlineUsers", (list) => {
       console.log("🟢 Online users:", list);
     });
+
+    socket.on("onlineUsers", (list) => {
+      console.log("🟢 Online users:", list.user_id, list.gender);
+    });
+    
+    socket.on("user_offline", (data) => {
+      console.log("🟢 user offline:", data.user_id);
+    });
+    // When backend rejects connection
+    socket.on("connect_error", (error) => {
+      console.log("❌ Socket connect error:", error.message);
+    });
+    
+
+    interval=setInterval(()=>{
+      socket.emit("presence_ping")
+    },25000)
   };
 
   connectSocketIO();
 
   return () => {
+    if (interval) clearInterval(interval)
     if (socket) {
-      socket.emit("userOffline");
       socket.disconnect();
       console.log("🔴 Socket manually disconnected");
     }
   };
 }, []);
-
-  // ⛔ Prevent crash while data loads
-  // if (!userdata || loading) {
-  //   return (
-  //     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-  //       <Text style={{ color: "#fff", fontSize: 18 }}>
-  //         Loading user data...
-  //       </Text>
-  //     </View>
-  //   );
-  // }
 
   return (
     <View style={{ flex: 1, backgroundColor: "#0A001A" }}>
@@ -130,7 +128,7 @@ useEffect(() => {
           <View style={styles.rightHeader}>
          <TouchableOpacity
   style={{ marginRight: wp(3) }}
-  onPress={() => navigation.navigate("LanguageScreen")}
+  // onPress={() => navigation.navigate("GenderScreen")}
 >
   <Icon name="bell-outline" size={iconSize(6)} color="#fff" />
 </TouchableOpacity>

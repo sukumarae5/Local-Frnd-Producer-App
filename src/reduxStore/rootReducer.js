@@ -5,13 +5,15 @@ import photoReducer from "../features/photo/photoReducer";
 import randomuserReduce from "../features/RandomUsers/randomuserReducer";
 import callReducer from "../features/calls/callReducer"
 import languageReducer from "../features/language/languageReducer";
+import avatarsReducer from"../features/Avatars/avatarsReducer"
 const rootReducer = combineReducers({
   auth:authReducer,
   user: userReducer,
   photo:photoReducer,
   randomusers:randomuserReduce,
   calls:callReducer,
-  language:languageReducer
+  language:languageReducer,
+  avatars:avatarsReducer
   
 });
 

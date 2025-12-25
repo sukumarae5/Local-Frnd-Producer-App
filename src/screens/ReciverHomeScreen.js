@@ -1,113 +1,102 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   SafeAreaView,
   Modal,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
-
+import { useDispatch, useSelector } from "react-redux";
+import { audioCallRequest } from "../features/calls/callAction";
+import { io } from "socket.io-client";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { MAIN_BASE_URL } from "../api/baseUrl1";
 
 const ReciverHomeScreen = () => {
+  const navigation = useNavigation();
+  const dispatch = useDispatch();
+  const socketRef = useRef(null);
   const [showModal, setShowModal] = useState(false);
-const navigation = useNavigation();
+
+  const gender = useSelector((state) => state.auth?.Otp?.user?.gender);
+
+  /* SOCKET (JWT AUTH – REQUIRED) */
+  useEffect(() => {
+    AsyncStorage.getItem("twittoke").then((token) => {
+      if (!token) return;
+
+      socketRef.current = io(MAIN_BASE_URL, {
+        transports: ["websocket"],
+        auth: { token },
+      });
+
+      socketRef.current.on("call_ready", (data) => {
+        navigation.navigate("AudiocallScreen", {
+          session_id: data.session_id,
+          role: data.role,
+        });
+      });
+    });
+
+    return () => socketRef.current?.disconnect();
+  }, []);
+
+  const handleAudio = () => {
+    setShowModal(false);
+    dispatch(audioCallRequest({ call_type: "AUDIO", gender }));
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* 🔝 HEADER */}
+      {/* HEADER */}
       <LinearGradient colors={["#6a007a", "#3b003f"]} style={styles.header}>
-        <View style={styles.headerLeft}>
+        <View style={styles.headerRow}>
           <Text style={styles.appName}>Local Friend</Text>
-          <Text style={styles.tagline}>
-            Start with charm, stay for connection!
-          </Text>
-        </View>
-
-        <View style={styles.headerRight}>
-          <View style={styles.walletBox}>
-            <Icon name="wallet-outline" size={18} color="#FFD700" />
-            <Text style={styles.walletText}>₹ 2</Text>
+          <View style={styles.statusPill}>
+            <Icon name="radio-outline" size={16} color="#00FF9C" />
+            <Text style={styles.statusText}>Online</Text>
           </View>
-
-          <Icon name="notifications-outline" size={22} color="#fff" />
-          <Image
-            source={{ uri: "https://i.pravatar.cc/100" }}
-            style={styles.avatar}
-          />
         </View>
       </LinearGradient>
 
-      {/* 🟣 MIDDLE */}
+      {/* CENTER */}
       <View style={styles.middle}>
         <TouchableOpacity onPress={() => setShowModal(true)}>
           <LinearGradient
             colors={["#ff2fd2", "#b000ff"]}
             style={styles.onlineBtn}
           >
-            <Icon name="radio" size={34} color="#fff" />
+            <Icon name="radio" size={36} color="#fff" />
             <Text style={styles.onlineText}>GO ONLINE</Text>
           </LinearGradient>
         </TouchableOpacity>
+
+        <Text style={styles.subText}>
+          Stay online to receive random audio calls
+        </Text>
       </View>
 
-      {/* 🔻 BOTTOM TAB */}
-      <View style={styles.bottomTab}>
-        <Icon name="home" size={24} color="#fff" />
-        <Icon name="chatbubble-ellipses-outline" size={24} color="#fff" />
-       <View style={styles.centerTab}>
-  <Icon name="call" size={28} color="#fff" />
-</View>
-
-        <Icon name="time-outline" size={24} color="#fff" />
-        <Icon name="person-outline" size={24} color="#fff" />
-      </View>
-
-      {/* 🚨 CUSTOM ALERT MODAL */}
-      <Modal transparent animationType="fade" visible={showModal}>
+      {/* MODAL */}
+      <Modal transparent visible={showModal} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            {/* TOP */}
-            <LinearGradient
-              colors={["#ff2fd2", "#b000ff"]}
-              style={styles.modalHeader}
+            <Text style={styles.modalTitle}>Choose Call Type</Text>
+
+            <TouchableOpacity style={styles.callBtn} onPress={handleAudio}>
+              <Icon name="call-outline" size={26} color="#fff" />
+              <Text style={styles.callText}>Audio Call</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.closeBtn}
+              onPress={() => setShowModal(false)}
             >
-              <Icon name="call" size={28} color="#fff" />
-              <Text style={styles.modalTitle}>Choose Call Type</Text>
-
-              <TouchableOpacity
-                style={styles.closeBtn}
-                onPress={() => setShowModal(false)}
-              >
-                <Icon name="close" size={22} color="#fff" />
-              </TouchableOpacity>
-            </LinearGradient>
-
-            {/* BODY */}
-          <View style={styles.modalBody}>
-  {/* Audio Call → Home Screen */}
-  <TouchableOpacity
-    style={styles.callBtn}
-    onPress={() => navigation.navigate("AudiocallScreen")}
-  >
-    <Icon name="call-outline" size={26} color="#fff" />
-    <Text style={styles.callText}>Audio Call</Text>
-  </TouchableOpacity>
-
-  {/* Video Call → Boys Screen */}
-  <TouchableOpacity
-    style={styles.callBtn}
-    onPress={() => navigation.navigate("VideocallCsreen")}
-  >
-    <Icon name="videocam-outline" size={26} color="#fff" />
-    <Text style={styles.callText}>Video Call</Text>
-  </TouchableOpacity>
-</View>
-
+              <Text style={styles.closeText}>Close</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -117,8 +106,8 @@ const navigation = useNavigation();
 
 export default ReciverHomeScreen;
 
-/* ================= STYLES ================= */
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
@@ -127,57 +116,54 @@ const styles = StyleSheet.create({
 
   /* HEADER */
   header: {
-    paddingHorizontal: 16,
-    paddingTop: 28,
+    paddingTop: 30,
     paddingBottom: 20,
+    paddingHorizontal: 16,
+  },
+
+  headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
   },
-  headerLeft: { flex: 1 },
+
   appName: {
     color: "#fff",
     fontSize: 22,
     fontWeight: "700",
   },
-  tagline: {
-    color: "#d3a6dd",
-    fontSize: 12,
-    marginTop: 6,
-  },
-  headerRight: {
+
+  statusPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-  },
-  walletBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#4c0055",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: "#2e0040",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 20,
-    gap: 6,
-  },
-  walletText: { color: "#fff", fontWeight: "700" },
-  avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
   },
 
-  /* MIDDLE */
+  statusText: {
+    color: "#00FF9C",
+    fontSize: 12,
+    marginLeft: 6,
+  },
+
+  /* CENTER */
   middle: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
+
   onlineBtn: {
     width: 220,
     height: 220,
     borderRadius: 110,
     justifyContent: "center",
     alignItems: "center",
+    elevation: 6,
   },
+
   onlineText: {
     color: "#fff",
     fontSize: 18,
@@ -185,70 +171,59 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 
-  /* BOTTOM TAB */
-  bottomTab: {
-    height: 72,
-    backgroundColor: "#3b003f",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-  },
-  centerTab: {
-    backgroundColor: "#ff2fd2",
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 26,
+  subText: {
+    marginTop: 25,
+    color: "#d3a6dd",
+    fontSize: 13,
+    textAlign: "center",
+    paddingHorizontal: 40,
   },
 
   /* MODAL */
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.65)",
     justifyContent: "center",
     alignItems: "center",
   },
+
   modalBox: {
     width: "85%",
     backgroundColor: "#2a002d",
     borderRadius: 20,
-    overflow: "hidden",
-  },
-  modalHeader: {
-    padding: 16,
+    padding: 22,
     alignItems: "center",
   },
+
   modalTitle: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "700",
-    marginTop: 6,
+    marginBottom: 20,
   },
-  closeBtn: {
-    position: "absolute",
-    right: 12,
-    top: 12,
-  },
-  modalBody: {
-    padding: 20,
-    gap: 16,
-  },
+
   callBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    padding: 14,
-    borderRadius: 14,
     backgroundColor: "#4c0055",
+    paddingVertical: 14,
+    paddingHorizontal: 26,
+    borderRadius: 16,
   },
+
   callText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+    marginLeft: 10,
+  },
+
+  closeBtn: {
+    marginTop: 18,
+  },
+
+  closeText: {
+    color: "#aaa",
+    fontSize: 14,
   },
 });

@@ -22,6 +22,9 @@ const {width}=Dimensions.get("window")
 const OTP_LENGTH = 6;
 
 const OtpScreen = ({ route, navigation }) => {
+    const { userdata, loading } = useSelector((state) => state.user);
+//   console.log(userdata.user.gender
+// )
     const { success, mode, Otp } = useSelector((state) => state.auth);
     if (!route.params) return null;   // ✔️ SAFE (after hooks)
 
@@ -108,10 +111,15 @@ const OtpScreen = ({ route, navigation }) => {
           await AsyncStorage.setItem("user_id", `${Otp.user.user_id}`);
 
           if (mode === "login") {
-            navigation.navigate("Home");
-          } else {
-            navigation.navigate("LanguageScreen");
-          }
+            console.log(Otp.user.gender)
+  if (Otp.user.gender === "Male") {
+    navigation.navigate("Home");
+  } else {
+    navigation.navigate("ReciverHomeScreen");
+  }
+} else {
+  navigation.navigate("LanguageScreen");
+}
         } catch (err) {
           console.log("Error saving token:", err);
         }
