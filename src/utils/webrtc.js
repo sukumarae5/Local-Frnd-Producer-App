@@ -1,19 +1,19 @@
-import {
-  RTCPeerConnection,
-  mediaDevices,
-} from "react-native-webrtc";
+import { RTCPeerConnection } from "react-native-webrtc";
 
 const ICE_SERVERS = {
-  iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+  ],
 };
 
 export const createPC = () => {
-  return new RTCPeerConnection(ICE_SERVERS);
-};
+  const pc = new RTCPeerConnection(ICE_SERVERS);
+  console.log(pc)
 
-export const getAudioStream = async () => {
-  return await mediaDevices.getUserMedia({
-    audio: true,
-    video: false,
-  });
+  pc.onconnectionstatechange = () => {
+    console.log("📡 WebRTC state:", pc.connectionState);
+  };
+
+  return pc;
 };
