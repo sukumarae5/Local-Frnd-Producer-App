@@ -9,69 +9,91 @@ import {
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Ionicons";
-import { useNavigation } from "@react-navigation/native";
 import { useDispatch } from "react-redux";
 import { audioCallRequest } from "../features/calls/callAction";
 import { getSocket } from "../socket/globalSocket";
 
-const WAIT_TIMEOUT = 60 * 1000;
+const WAIT_TIMEOUT = 60000;
 
-const ReciverHomeScreen = () => {
-  const navigation = useNavigation();
+const ReciverHomeScreen = ({ navigation }) => {
+  /* ================= HOOKS (ORDER MUST NEVER CHANGE) ================= */
   const dispatch = useDispatch();
 
-  const [showModal, setShowModal] = useState(false);
-  const [waiting, setWaiting] = useState(false);
-  const [incoming, setIncoming] = useState(null);
-
+  const socketRef = useRef(null);
   const timeoutRef = useRef(null);
+  const navigatingRef = useRef(false);
+
+  const [waiting, setWaiting] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   /* ================= SOCKET ================= */
   useEffect(() => {
     let mounted = true;
 
-    (async () => {
+    const initSocket = async () => {
       const socket = await getSocket();
       if (!socket || !mounted) return;
 
-      socket.on("incoming_call", (data) => {
+      socketRef.current = socket;
+
+      // wait until socket is connected
+      if (!socket.connected) {
+        await new Promise((resolve) => socket.once("connect", resolve));
+      }
+
+      // remove old listeners
+      socket.off("call_matched");
+
+      socket.on("call_matched", (data) => {
+        if (navigatingRef.current) return;
+
+        navigatingRef.current = true;
+
+        console.log("📥 FE(FEMALE) call_matched:", data);
+
         clearTimeout(timeoutRef.current);
         setWaiting(false);
-        setIncoming(data);
+
+        navigation.replace("AudiocallScreen", {
+          session_id: data.session_id,
+          role: data.role || "receiver",
+        });
       });
-    })();
+    };
+
+    initSocket();
 
     return () => {
       mounted = false;
+      socketRef.current?.off("call_matched");
+      clearTimeout(timeoutRef.current);
     };
   }, []);
 
   /* ================= GO ONLINE ================= */
   const handleGoOnline = () => {
+    const socket = socketRef.current;
+    if (!socket || !socket.connected || waiting) return;
+
+    navigatingRef.current = false;
     setShowModal(false);
     setWaiting(true);
 
-    dispatch(audioCallRequest({ call_type: "AUDIO", gender: "Female" }));
+    console.log("📤 FE(FEMALE) → AUDIO_CALL_REQUEST");
+
+    dispatch(
+      audioCallRequest({
+        call_type: "AUDIO",
+        gender: "Female",
+      })
+    );
 
     timeoutRef.current = setTimeout(() => {
       setWaiting(false);
     }, WAIT_TIMEOUT);
   };
 
-  /* ================= ACCEPT ================= */
-  const acceptCall = () => {
-    navigation.navigate("AudiocallScreen", {
-      session_id: incoming.session_id,
-      role: "receiver",
-    });
-    setIncoming(null);
-  };
-
-  const rejectCall = () => {
-    setIncoming(null);
-    setWaiting(false);
-  };
-
+  /* ================= UI ================= */
   return (
     <SafeAreaView style={styles.safe}>
       <LinearGradient colors={["#6a007a", "#3b003f"]} style={styles.header}>
@@ -79,7 +101,7 @@ const ReciverHomeScreen = () => {
       </LinearGradient>
 
       <View style={styles.middle}>
-        {!waiting && !incoming && (
+        {!waiting ? (
           <TouchableOpacity onPress={() => setShowModal(true)}>
             <LinearGradient
               colors={["#ff2fd2", "#b000ff"]}
@@ -89,12 +111,12 @@ const ReciverHomeScreen = () => {
               <Text style={styles.onlineText}>GO ONLINE</Text>
             </LinearGradient>
           </TouchableOpacity>
+        ) : (
+          <Text style={styles.waitingText}>Waiting for call… 📞</Text>
         )}
-
-        {waiting && <Text style={styles.waitingText}>Waiting for call… 📞</Text>}
       </View>
 
-      {/* MODALS */}
+      {/* MODAL */}
       <Modal transparent visible={showModal}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
@@ -111,28 +133,94 @@ const ReciverHomeScreen = () => {
           </View>
         </View>
       </Modal>
-
-      <Modal transparent visible={!!incoming}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.incomingBox}>
-            <Text style={styles.modalTitle}>Incoming Call 📞</Text>
-
-            <View style={styles.row}>
-              <TouchableOpacity style={styles.acceptBtn} onPress={acceptCall}>
-                <Icon name="call" size={26} color="#fff" />
-                <Text style={styles.btnText}>Accept</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.rejectBtn} onPress={rejectCall}>
-                <Icon name="close" size={26} color="#fff" />
-                <Text style={styles.btnText}>Reject</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };
 
 export default ReciverHomeScreen;
+
+/* ================= STYLES ================= */
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: "#0A001A",
+  },
+
+  header: {
+    padding: 20,
+    alignItems: "center",
+  },
+
+  appName: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "800",
+  },
+
+  middle: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  onlineBtn: {
+    paddingHorizontal: 40,
+    paddingVertical: 20,
+    borderRadius: 40,
+    alignItems: "center",
+  },
+
+  onlineText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+    marginTop: 10,
+  },
+
+  waitingText: {
+    color: "#fff",
+    fontSize: 18,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  modalBox: {
+    backgroundColor: "#1a0033",
+    padding: 25,
+    borderRadius: 20,
+    width: "80%",
+    alignItems: "center",
+  },
+
+  modalTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 20,
+  },
+
+  callBtn: {
+    flexDirection: "row",
+    backgroundColor: "#ff00ff",
+    padding: 15,
+    borderRadius: 30,
+    alignItems: "center",
+    marginBottom: 15,
+  },
+
+  callText: {
+    color: "#fff",
+    fontSize: 16,
+    marginLeft: 10,
+  },
+
+  closeText: {
+    color: "#aaa",
+    marginTop: 10,
+  },
+});

@@ -1,5 +1,4 @@
-import React, { useEffect } from "react";
-import { MAIN_BASE_URL } from "../api/baseUrl1";
+import React, { useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -13,21 +12,16 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import { userDatarequest } from "../features/user/userAction";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import {io} from "socket.io-client"
+import { getSocket } from "../socket/globalSocket";
 
 const { width, height } = Dimensions.get("window");
 
-
-// RESPONSIVE HELPERS
+/* ================= RESPONSIVE HELPERS ================= */
 const wp = (v) => (width * v) / 100;
 const hp = (v) => (height * v) / 100;
-const iconSize = (v) => wp(v); // UNIVERSAL ICON SCALER
+const iconSize = (v) => wp(v);
 
-// ACTIVE PAL DIMENSIONS (DEVELOPER LOGIC)
-const palCardWidth = width < 380 ? wp(34) : width < 440 ? wp(30) : wp(27);
-const palImageHeight = width < 380 ? wp(32) : wp(30);
-
+/* ================= DUMMY ACTIVE PALS ================= */
 const activePals = [
   { id: 1, name: "Aadhya", img: require("../assets/girl1.jpg") },
   { id: 2, name: "Yuvaan", img: require("../assets/boy1.jpg") },
@@ -36,81 +30,65 @@ const activePals = [
 ];
 
 const HomeScreen = () => {
-  let socket;
-
-  const dispatch = useDispatch();
   const navigation = useNavigation();
+  const dispatch = useDispatch();
+  const socketRef = useRef(null);
+  const pingRef = useRef(null);
 
-  const { userdata, loading } = useSelector((state) => state.user);
-  const profilePhotoURL = userdata?.primary_image
-?.photo_url;
+  const { userdata } = useSelector((state) => state.user);
 
-  // ⭐ FINAL IMAGE SOURCE
+  const profilePhotoURL = userdata?.primary_image?.photo_url;
+
   const imageUrl = profilePhotoURL
     ? { uri: profilePhotoURL }
-    : require(".././assets/boy2.jpg");
- 
+    : require("../assets/boy2.jpg");
 
-
+  /* ================= LOAD USER ================= */
   useEffect(() => {
     dispatch(userDatarequest());
   }, []);
-  
-useEffect(() => {
-  const connectSocketIO = async () => {
-    const token = await AsyncStorage.getItem("twittoke");
 
-    if (!token) {
-      console.log("❌ No token — socket will not connect");
-      return;
-    }
+  /* ================= SOCKET (GLOBAL) ================= */
+  useEffect(() => {
+    let mounted = true;
 
-    socket = io(MAIN_BASE_URL, {
-      transports: ["websocket"],
-      auth: { token },
-      
-    }); 
-    
+    const initSocket = async () => {
+      const socket = await getSocket();
+      if (!socket || !mounted) return;
 
-    // When socket successfully connects
-    socket.on("connect", () => {
-      console.log("✅ Socket connected:", socket.id);
+      socketRef.current = socket;
+
+      /* Request online users */
       socket.emit("get_online_users");
-    });
 
-    // When server sends list of online users
-    socket.on("onlineUsers", (list) => {
-      console.log("🟢 Online users:", list);
-    });
+      socket.off("online_users");
+      socket.on("online_users", (list) => {
+        console.log("🟢 Online users:", list);
+      });
 
-    socket.on("onlineUsers", (list) => {
-      console.log("🟢 Online users:", list.user_id, list.gender);
-    });
-    
-    socket.on("user_offline", (data) => {
-      console.log("🟢 user offline:", data.user_id);
-    });
-    // When backend rejects connection
-    socket.on("connect_error", (error) => {
-      console.log("❌ Socket connect error:", error.message);
-    });
-    
+      socket.off("user_online");
+      socket.on("user_online", (data) => {
+        console.log("🟢 User online:", data.user_id);
+      });
 
-    interval=setInterval(()=>{
-      socket.emit("presence_ping")
-    },25000)
-  };
+      socket.off("user_offline");
+      socket.on("user_offline", (data) => {
+        console.log("🔴 User offline:", data.user_id);
+      });
 
-  connectSocketIO();
+      /* Presence heartbeat */
+      pingRef.current = setInterval(() => {
+        socket.emit("presence_ping");
+      }, 25000);
+    };
 
-  return () => {
-    if (interval) clearInterval(interval)
-    if (socket) {
-      socket.disconnect();
-      console.log("🔴 Socket manually disconnected");
-    }
-  };
-}, []);
+    initSocket();
+
+    return () => {
+      mounted = false;
+      if (pingRef.current) clearInterval(pingRef.current);
+    };
+  }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#0A001A" }}>
@@ -118,25 +96,30 @@ useEffect(() => {
         style={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        {/* HEADER */}
+        {/* ================= HEADER ================= */}
         <View style={styles.header}>
           <View>
             <Text style={styles.appTitle}>Local Friend</Text>
-            <Text style={styles.subText}>Start with charm, stay for connection!</Text>
+            <Text style={styles.subText}>
+              Start with charm, stay for connection!
+            </Text>
           </View>
 
           <View style={styles.rightHeader}>
-         <TouchableOpacity
-  style={{ marginRight: wp(3) }}
-  // onPress={() => navigation.navigate("GenderScreen")}
->
-  <Icon name="bell-outline" size={iconSize(6)} color="#fff" />
-</TouchableOpacity>
+            <TouchableOpacity style={{ marginRight: wp(3) }}>
+              <Icon name="bell-outline" size={iconSize(6)} color="#fff" />
+            </TouchableOpacity>
 
             {/* COINS */}
             <View style={styles.coinBox}>
-              <Icon name="currency-eth" size={iconSize(5)} color="#FFD700" />
-              <Text style={styles.coinText}> {userdata?.user?.coin_balance ?? 0}</Text>
+              <Icon
+                name="currency-eth"
+                size={iconSize(5)}
+                color="#FFD700"
+              />
+              <Text style={styles.coinText}>
+                {userdata?.user?.coin_balance ?? 0}
+              </Text>
             </View>
 
             {/* PROFILE PIC */}
@@ -148,7 +131,7 @@ useEffect(() => {
           </View>
         </View>
 
-        {/* OFFER CARD */}
+        {/* ================= OFFER ================= */}
         <View style={styles.offerCard}>
           <Text style={styles.offerTag}>Special offer for 1 day</Text>
           <Text style={styles.offerTitle}>
@@ -159,20 +142,13 @@ useEffect(() => {
           </TouchableOpacity>
         </View>
 
-        {/* ACTIVE PALS */}
+        {/* ================= ACTIVE PALS ================= */}
         <Text style={styles.sectionTitle}>Active Pals</Text>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {activePals.map((user) => (
-            <View
-              key={user.id}
-              style={[styles.palCard, { width: palCardWidth }]}
-            >
-              <Image
-                source={user.img}
-                style={[styles.avatar, { height: palImageHeight }]}
-              />
-
+            <View key={user.id} style={styles.palCard}>
+              <Image source={user.img} style={styles.avatar} />
               <Text style={styles.palName}>{user.name}</Text>
 
               <View style={styles.palActionsRow}>
@@ -185,18 +161,25 @@ useEffect(() => {
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.actionBtn}>
-                  <Icon name="message-text" size={iconSize(4)} color="#fff" />
+                  <Icon
+                    name="message-text"
+                    size={iconSize(4)}
+                    color="#fff"
+                  />
                 </TouchableOpacity>
               </View>
             </View>
           ))}
         </ScrollView>
 
-        {/* START CONNECTING */}
+        {/* ================= START CONNECTING ================= */}
         <Text style={styles.sectionTitle}>Start connecting</Text>
 
         <View style={styles.connectRow}>
-          <TouchableOpacity style={styles.connectBox}>
+          <TouchableOpacity
+            style={styles.connectBox}
+            onPress={() => navigation.navigate("TrainersCallpage")}
+          >
             <Icon name="dice-5" size={iconSize(6)} color="#fff" />
             <Text style={styles.connectText}>Random Calls</Text>
           </TouchableOpacity>
@@ -212,19 +195,10 @@ useEffect(() => {
           </TouchableOpacity>
         </View>
 
-        {/* EXPERT SECTION */}
-        <TouchableOpacity style={styles.expertCard}>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Icon name="account-group" size={iconSize(6)} color="#fff" />
-            <Text style={styles.expertText}> Experts</Text>
-          </View>
-          <Icon name="chevron-right" size={iconSize(6.5)} color="#fff" />
-        </TouchableOpacity>
-
         <View style={{ height: hp(15) }} />
       </ScrollView>
 
-      {/* Bottom Nav */}
+      {/* ================= BOTTOM NAV ================= */}
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem}>
           <Icon name="home-outline" size={iconSize(7)} color="#fff" />
@@ -234,22 +208,30 @@ useEffect(() => {
           <Icon name="message-outline" size={iconSize(7)} color="#fff" />
         </TouchableOpacity>
 
-         <TouchableOpacity
-      style={styles.centerBtn}
-      onPress={() => navigation.navigate('TrainersCallpage')}
-    >
-      <Icon name="phone" size={iconSize(8)} color="#f9f7f7ff" />
-    </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.centerBtn}
+          onPress={() => navigation.navigate("TrainersCallpage")}
+        >
+          <Icon name="phone" size={iconSize(8)} color="#fff" />
+        </TouchableOpacity>
 
         <TouchableOpacity style={styles.navItem}>
-          <Icon name="clock-time-eight-outline" size={iconSize(7)} color="#fff" />
+          <Icon
+            name="clock-time-eight-outline"
+            size={iconSize(7)}
+            color="#fff"
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigation.navigate("ProfileScreen")}
         >
-          <Icon name="account-circle-outline" size={iconSize(7.5)} color="#fff" />
+          <Icon
+            name="account-circle-outline"
+            size={iconSize(7.5)}
+            color="#fff"
+          />
         </TouchableOpacity>
       </View>
     </View>
@@ -258,8 +240,7 @@ useEffect(() => {
 
 export default HomeScreen;
 
-
-/* STYLES */
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
   container: { paddingHorizontal: wp(5), paddingTop: hp(5) },
 
@@ -341,9 +322,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  claimText: { color: "#fff", fontWeight: "800", fontSize: wp(4) },
+  claimText: {
+    color: "#fff",
+    fontWeight: "800",
+    fontSize: wp(4),
+  },
 
-  /* SECTION TITLE */
   sectionTitle: {
     color: "#fff",
     fontSize: wp(5),
@@ -352,7 +336,6 @@ const styles = StyleSheet.create({
     marginBottom: hp(1.5),
   },
 
-  /* ACTIVE PALS */
   palCard: {
     backgroundColor: "#1a0033",
     borderRadius: wp(4),
@@ -364,7 +347,8 @@ const styles = StyleSheet.create({
   },
 
   avatar: {
-    width: "100%",
+    width: wp(27),
+    height: wp(30),
     borderRadius: wp(3),
     resizeMode: "cover",
   },
@@ -374,27 +358,20 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginTop: hp(1),
     fontSize: wp(3.8),
-    textAlign: "center",
   },
 
   palActionsRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     marginTop: hp(1.3),
-    width: "100%",
   },
 
   actionBtn: {
     backgroundColor: "#32004E",
     padding: wp(2),
     borderRadius: wp(3),
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
     marginHorizontal: wp(0.7),
   },
 
-  /* Connect Row */
   connectRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -423,24 +400,6 @@ const styles = StyleSheet.create({
     marginTop: hp(1),
     fontSize: wp(3.5),
     fontWeight: "700",
-  },
-
-  expertCard: {
-    marginTop: hp(3),
-    backgroundColor: "#1a0033",
-    borderRadius: wp(5),
-    padding: wp(5),
-    borderWidth: 1,
-    borderColor: "#5b009e",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  expertText: {
-    color: "#fff",
-    fontSize: wp(4.5),
-    fontWeight: "800",
   },
 
   bottomNav: {

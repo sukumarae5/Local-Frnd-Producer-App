@@ -15,7 +15,7 @@ export const getSocket = async () => {
     auth: { token },
     reconnection: true,
     reconnectionAttempts: Infinity,
-    reconnectionDelay: 1000,
+    
   });
 
   socket.on("connect", () => {
