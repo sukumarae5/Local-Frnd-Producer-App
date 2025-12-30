@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useContext } from "react";
 import {
   View,
   Text,
@@ -11,84 +11,79 @@ import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useDispatch } from "react-redux";
 import { audioCallRequest } from "../features/calls/callAction";
-import { getSocket } from "../socket/globalSocket";
+import { SocketContext } from "../socket/SocketProvider";
 
 const WAIT_TIMEOUT = 60000;
 
 const ReciverHomeScreen = ({ navigation }) => {
   /* ================= HOOKS (ORDER MUST NEVER CHANGE) ================= */
   const dispatch = useDispatch();
+  const socketRef = useContext(SocketContext);
+  const socket = socketRef?.current;
 
-  const socketRef = useRef(null);
   const timeoutRef = useRef(null);
   const navigatingRef = useRef(false);
 
   const [waiting, setWaiting] = useState(false);
   const [showModal, setShowModal] = useState(false);
 
-  /* ================= SOCKET ================= */
+  /* ================= PRESENCE ================= */
   useEffect(() => {
-    let mounted = true;
+    if (!socket) return;
 
-    const initSocket = async () => {
-      const socket = await getSocket();
-      if (!socket || !mounted) return;
-
-      socketRef.current = socket;
-
-      // wait until socket is connected
-      if (!socket.connected) {
-        await new Promise((resolve) => socket.once("connect", resolve));
-      }
-
-      // remove old listeners
-      socket.off("call_matched");
-
-      socket.on("call_matched", (data) => {
-        if (navigatingRef.current) return;
-
-        navigatingRef.current = true;
-
-        console.log("📥 FE(FEMALE) call_matched:", data);
-
-        clearTimeout(timeoutRef.current);
-        setWaiting(false);
-
-        navigation.replace("AudiocallScreen", {
-          session_id: data.session_id,
-          role: data.role || "receiver",
-        });
-      });
+    const onPresence = (data) => {
+      console.log("👤 FE(FEMALE) Presence:", data.user_id, data.status);
     };
 
-    initSocket();
+    socket.on("presence_update", onPresence);
+
+    return () => socket.off("presence_update", onPresence);
+  }, [socket]);
+
+  /* ================= CALL MATCHED ================= */
+  useEffect(() => {
+    if (!socket) return;
+
+    const onMatched = (data) => {
+      if (navigatingRef.current) return;
+
+      navigatingRef.current = true;
+
+      console.log("📥 FE(FEMALE) call_matched:", data);
+
+      clearTimeout(timeoutRef.current);
+      setWaiting(false);
+
+      navigation.replace("AudiocallScreen", data);
+    };
+
+    socket.on("call_matched", onMatched);
 
     return () => {
-      mounted = false;
-      socketRef.current?.off("call_matched");
+      socket.off("call_matched", onMatched);
       clearTimeout(timeoutRef.current);
     };
-  }, []);
+  }, [socket, navigation]);
 
   /* ================= GO ONLINE ================= */
   const handleGoOnline = () => {
-    const socket = socketRef.current;
     if (!socket || !socket.connected || waiting) return;
 
     navigatingRef.current = false;
     setShowModal(false);
     setWaiting(true);
 
-    console.log("📤 FE(FEMALE) → AUDIO_CALL_REQUEST");
+    console.log("📤 FE(FEMALE) → dispatch random-connect");
 
     dispatch(
       audioCallRequest({
         call_type: "AUDIO",
-        gender: "Female",
+        gender: "Female", // 🔥 EXPLICIT & INTENTIONAL
       })
     );
 
     timeoutRef.current = setTimeout(() => {
+      console.log("⏳ FE(FEMALE) wait timeout");
       setWaiting(false);
     }, WAIT_TIMEOUT);
   };
@@ -117,7 +112,7 @@ const ReciverHomeScreen = ({ navigation }) => {
       </View>
 
       {/* MODAL */}
-      <Modal transparent visible={showModal}>
+      <Modal transparent visible={showModal} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>Go Online?</Text>
@@ -145,50 +140,42 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#0A001A",
   },
-
   header: {
     padding: 20,
     alignItems: "center",
   },
-
   appName: {
     color: "#fff",
     fontSize: 22,
     fontWeight: "800",
   },
-
   middle: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-
   onlineBtn: {
     paddingHorizontal: 40,
     paddingVertical: 20,
     borderRadius: 40,
     alignItems: "center",
   },
-
   onlineText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "700",
     marginTop: 10,
   },
-
   waitingText: {
     color: "#fff",
     fontSize: 18,
   },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     alignItems: "center",
   },
-
   modalBox: {
     backgroundColor: "#1a0033",
     padding: 25,
@@ -196,14 +183,12 @@ const styles = StyleSheet.create({
     width: "80%",
     alignItems: "center",
   },
-
   modalTitle: {
     color: "#fff",
     fontSize: 20,
     fontWeight: "700",
     marginBottom: 20,
   },
-
   callBtn: {
     flexDirection: "row",
     backgroundColor: "#ff00ff",
@@ -212,13 +197,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 15,
   },
-
   callText: {
     color: "#fff",
     fontSize: 16,
     marginLeft: 10,
   },
-
   closeText: {
     color: "#aaa",
     marginTop: 10,

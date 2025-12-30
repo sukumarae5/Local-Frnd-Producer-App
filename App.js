@@ -29,11 +29,13 @@ import ChoosePlanScreen from './src/screens/ChoosePlanScreen';
 import OnboardScreen from './src/screens/OnboardScreen'
 import LanguageScreen from './src/screens/LanguageScreen'
 import ReciverHomeScreen from './src/screens/ReciverHomeScreen'
+import SocketProvider from './src/socket/SocketProvider';   
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
     <Provider store={store}>
+      <SocketProvider>
       <NavigationContainer>
         <Stack.Navigator
           initialRouteName="Landing"
@@ -63,6 +65,7 @@ export default function App() {
 
    </Stack.Navigator>
       </NavigationContainer>
+      </SocketProvider>
     </Provider>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useContext, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import { userDatarequest } from "../features/user/userAction";
-import { getSocket } from "../socket/globalSocket";
+import { SocketContext } from "../socket/SocketProvider";
 
 const { width, height } = Dimensions.get("window");
 
@@ -32,8 +32,8 @@ const activePals = [
 const HomeScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const socketRef = useRef(null);
-  const pingRef = useRef(null);
+const socketRef=useContext(SocketContext)
+const socket= socketRef?.current;
 
   const { userdata } = useSelector((state) => state.user);
 
@@ -49,46 +49,19 @@ const HomeScreen = () => {
   }, []);
 
   /* ================= SOCKET (GLOBAL) ================= */
-  useEffect(() => {
-    let mounted = true;
+ useEffect(() => {
+    if (!socket) return;
 
-    const initSocket = async () => {
-      const socket = await getSocket();
-      if (!socket || !mounted) return;
-
-      socketRef.current = socket;
-
-      /* Request online users */
-      socket.emit("get_online_users");
-
-      socket.off("online_users");
-      socket.on("online_users", (list) => {
-        console.log("🟢 Online users:", list);
-      });
-
-      socket.off("user_online");
-      socket.on("user_online", (data) => {
-        console.log("🟢 User online:", data.user_id);
-      });
-
-      socket.off("user_offline");
-      socket.on("user_offline", (data) => {
-        console.log("🔴 User offline:", data.user_id);
-      });
-
-      /* Presence heartbeat */
-      pingRef.current = setInterval(() => {
-        socket.emit("presence_ping");
-      }, 25000);
+    const onPresence = (data) => {
+      console.log("👤 Presence:", data.user_id, data.status);
     };
 
-    initSocket();
+    socket.on("presence_update", onPresence);
 
     return () => {
-      mounted = false;
-      if (pingRef.current) clearInterval(pingRef.current);
+      socket.off("presence_update", onPresence);
     };
-  }, []);
+  }, [socket]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#0A001A" }}>

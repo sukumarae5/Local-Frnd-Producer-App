@@ -1,45 +1,34 @@
-// import { RTCPeerConnection, mediaDevices } from "react-native-webrtc";
-
-// /* ================= ICE CONFIG ================= */
-// export const RTC_CONFIG = {
-//   iceServers: [
-//     { urls: "stun:stun.l.google.com:19302" },
-//     { urls: "stun:stun1.l.google.com:19302" },
-//   ],
-//   bundlePolicy: "max-bundle",
-//   rtcpMuxPolicy: "require",
-// };
-
-// /* ================= PEER CONNECTION ================= */
-// export const createPC = () => {
-//   return new RTCPeerConnection(RTC_CONFIG);
-// };
-
-// /* ================= AUDIO STREAM ================= */
-// export const getAudioStream = async () => {
-//   return await mediaDevices.getUserMedia({
-//     audio: {
-//       echoCancellation: true,
-//       noiseSuppression: true,
-//       autoGainControl: true,
-//     },
-//     video: false,
-//   });
-// };
-  import { RTCPeerConnection } from "react-native-webrtc";
-
-const ICE_SERVERS = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-  ],
-};
+import { RTCPeerConnection } from "react-native-webrtc";
 
 export const createPC = () => {
-  const pc = new RTCPeerConnection(ICE_SERVERS);
+  const pc = new RTCPeerConnection({
+    iceServers: [
+      // STUN
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+
+      // FREE TURN (debug / dev)
+      {
+        urls: "turn:openrelay.metered.ca:80",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
+      {
+        urls: "turn:openrelay.metered.ca:443",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
+    ],
+    bundlePolicy: "max-bundle",
+    rtcpMuxPolicy: "require",
+  });
 
   pc.onconnectionstatechange = () => {
-    console.log("📡 WebRTC state:", pc.connectionState);
+    console.log("📡 PC connectionState:", pc.connectionState);
+  };
+
+  pc.onsignalingstatechange = () => {
+    console.log("📶 Signaling:", pc.signalingState);
   };
 
   return pc;

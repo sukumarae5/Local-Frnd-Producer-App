@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,70 +12,40 @@ import Icon from "react-native-vector-icons/Ionicons";
 import Feather from "react-native-vector-icons/Feather";
 import { useDispatch, useSelector } from "react-redux";
 import { audioCallRequest } from "../features/calls/callAction";
-import { getSocket } from "../socket/globalSocket";
+import { SocketContext } from "../socket/SocketProvider";
 
 const TrainersCallPage = ({ navigation }) => {
+  /* ================= HOOKS (ORDER MATTERS) ================= */
   const dispatch = useDispatch();
-  const socketRef = useRef(null);
+  const socketRef = useContext(SocketContext);
+  const socket = socketRef?.current;
 
-  /* ================= REDUX ================= */
-  const callState = useSelector((state) => state.calls);
   const { userdata } = useSelector((state) => state.user);
 
+  /* ================= DERIVED DATA ================= */
   const myId = userdata?.user?.user_id;
-  const gender = userdata?.user?.gender;
-
-  console.log("MY ID:", myId);
-  console.log("MY GENDER:", gender);
-  console.log("CALL STATE:", callState);
+  const gender = userdata?.user?.gender; // "Male"
 
   /* ================= LOCAL STATE ================= */
-  const [onlineUsers, setOnlineUsers] = useState([]);
   const [callingRandom, setCallingRandom] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState([]);
 
-  /* ================= SOCKET (ONLY FOR PRESENCE) ================= */
+  /* ================= SOCKET: CALL MATCHED ================= */
   useEffect(() => {
-    let mounted = true;
+    if (!socket) return;
 
-    const initSocket = async () => {
-      const socket = await getSocket();
-      if (!socket || !mounted) return;
-
-      socketRef.current = socket;
-
-      socket.emit("get_online_users");
-
-      socket.off("online_users");
-      socket.on("online_users", (users) => {
-        setOnlineUsers(users);
-      });
+    const onMatched = (data) => {
+      console.log("📥 FE(MALE) call_matched:", data);
+      setCallingRandom(false); // reset state
+      navigation.replace("AudiocallScreen", data);
     };
 
-    initSocket();
+    socket.on("call_matched", onMatched);
 
     return () => {
-      mounted = false;
-      socketRef.current?.off("online_users");
+      socket.off("call_matched", onMatched);
     };
-  }, []);
-
-useEffect(() => {
-  const initSocket = async () => {
-    const socket = await getSocket();
-
-    socket.off("call_matched");
-    socket.on("call_matched", (data) => {
-      console.log("📥 FE(MALE) ← socket call_matched", data);
-
-      navigation.navigate("AudiocallScreen", data);
-    });
-  };
-
-  initSocket();
-}, []);
-
-
- 
+  }, [socket, navigation]);
 
   /* ================= RANDOM AUDIO CALL ================= */
   const startRandomAudioCall = () => {
@@ -88,23 +58,23 @@ useEffect(() => {
       );
       return;
     }
-    console.log("📤 FE → REST random-connect", {
-    user: myId,
-    gender,
-    type: "AUDIO",
-  });
 
     setCallingRandom(true);
+
+    console.log("📤 FE → dispatch audioCallRequest", {
+      gender,
+      type: "AUDIO",
+    });
 
     dispatch(
       audioCallRequest({
         call_type: "AUDIO",
-        gender,
+        gender, // "Male"
       })
     );
   };
 
-  /* ================= DIRECT CALL ================= */
+  /* ================= DIRECT CALL (OPTIONAL) ================= */
   const startCallWithUser = (targetUserId) => {
     dispatch(
       audioCallRequest({
@@ -114,7 +84,7 @@ useEffect(() => {
     );
   };
 
-  /* ================= UI ================= */
+  /* ================= UI HELPERS ================= */
   const renderUser = ({ item }) => (
     <TouchableOpacity
       style={styles.callBox}
@@ -125,6 +95,7 @@ useEffect(() => {
     </TouchableOpacity>
   );
 
+  /* ================= UI ================= */
   return (
     <View style={styles.container}>
       {/* HEADER */}
@@ -156,7 +127,7 @@ useEffect(() => {
         </TouchableOpacity>
       </View>
 
-      {/* ONLINE USERS */}
+      {/* ONLINE USERS (OPTIONAL) */}
       <View style={styles.listWrapper}>
         {onlineUsers.length === 0 ? (
           <Text style={styles.emptyText}>

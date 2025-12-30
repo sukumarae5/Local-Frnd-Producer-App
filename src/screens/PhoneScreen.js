@@ -36,7 +36,7 @@ const PhoneScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-  dispatch(authReset());   // 🧹 Clear old login/register results
+  dispatch(authReset());   
 }, []);
 
 

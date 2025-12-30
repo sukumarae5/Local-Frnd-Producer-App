@@ -61,10 +61,21 @@ const OnboardScreen = ({ navigation }) => {
     const timer = setTimeout(async () => {
       const token = await AsyncStorage.getItem("twittoke");
       const user_id = await AsyncStorage.getItem("user_id");
+      const gender = await AsyncStorage.getItem("gender"); // "Male" | "Female"
+
+      let routeName = "Login";
+
+      if (token && user_id) {
+        if (gender === "Male") {
+          routeName = "Home";
+        } else if (gender === "Female") {
+          routeName = "ReciverHomeScreen"; // ✅ MATCHES STACK NAME
+        }
+      }
 
       navigation.reset({
         index: 0,
-        routes: [{ name: token && user_id ? "Home" : "Login" }],
+        routes: [{ name: routeName }],
       });
     }, 3000);
 
@@ -144,14 +155,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   centerWrapper: {
     width: 320,
     height: 320,
     alignItems: "center",
     justifyContent: "center",
   },
-
   outerRing: {
     width: 180,
     height: 180,
@@ -162,7 +171,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     zIndex: 1,
   },
-
   innerRing: {
     width: 120,
     height: 120,
@@ -171,15 +179,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   mainAvatar: {
     width: 90,
     height: 90,
     borderRadius: 45,
     resizeMode: "cover",
   },
-
-  /* ===== SMALL AVATARS ===== */
   smallAvatar: {
     position: "absolute",
     width: AVATAR_SIZE,
@@ -189,20 +194,17 @@ const styles = StyleSheet.create({
     borderColor: "#fff",
     zIndex: 10,
   },
-
   textContainer: {
     marginTop: 60,
     paddingHorizontal: 20,
     alignItems: "center",
   },
-
   title: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 10,
   },
-
   subtitle: {
     color: "#ccc",
     fontSize: 13,

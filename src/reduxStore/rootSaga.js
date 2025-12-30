@@ -16,6 +16,5 @@ export default function* rootSaga() {
     languageSaga(),
     avatarsSaga()
 
-
   ]);
 }

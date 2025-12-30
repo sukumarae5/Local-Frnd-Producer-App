@@ -17,14 +17,15 @@ import BackgroundPagesOne from "../components/BackgroundPages/BackgroundPagesOne
 import { userLoginRequest, userOtpRequest } from "../features/Auth/authAction";
 import { useDispatch, useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { connectSocketAfterLogin } from "../socket/globalSocket";
+
 
 const {width}=Dimensions.get("window")
 const OTP_LENGTH = 6;
 
 const OtpScreen = ({ route, navigation }) => {
     const { userdata, loading } = useSelector((state) => state.user);
-//   console.log(userdata.user.gender
-// )
+
     const { success, mode, Otp } = useSelector((state) => state.auth);
     if (!route.params) return null;   // ✔️ SAFE (after hooks)
 
@@ -107,20 +108,32 @@ const OtpScreen = ({ route, navigation }) => {
       if (Otp.success === true && Otp.token) { 
         
         try {
-          await AsyncStorage.setItem("twittoke", (Otp.token));
-          await AsyncStorage.setItem("user_id", `${Otp.user.user_id}`);
+         await AsyncStorage.setItem("twittoke", Otp.token);
+await AsyncStorage.setItem("user_id", `${Otp.user.user_id}`);
+await AsyncStorage.setItem("gender", Otp.user.gender)
+// 🔥 CONNECT SOCKET WITH NEW TOKEN
+await connectSocketAfterLogin();
 
-          if (mode === "login") {
-            console.log(Otp.user.gender)
+// 🔥 THEN NAVIGATE
+if (mode === "login") {
   if (Otp.user.gender === "Male") {
-    navigation.navigate("Home");
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Home" }],
+    });
   } else {
-    navigation.navigate("ReciverHomeScreen");
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "ReciverHomeScreen" }],
+    });
   }
 } else {
-  navigation.navigate("LanguageScreen");
+  navigation.reset({
+    index: 0,
+    routes: [{ name: "LanguageScreen" }],
+  });
 }
-        } catch (err) {
+     } catch (err) {
           console.log("Error saving token:", err);
         }
       }
