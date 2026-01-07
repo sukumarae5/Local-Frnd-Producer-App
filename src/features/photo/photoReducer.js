@@ -5,6 +5,7 @@ const initialState={
     error:null
 }
 
+
 export default function photoReducer(state=initialState,action){
    console.log(action.payload)
     switch (action.type) {
