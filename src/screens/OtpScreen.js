@@ -95,7 +95,8 @@ const OtpScreen = ({ route, navigation }) => {
               {
                 name:
                   Otp.user.gender === "Male"
-                    ? "Home" : "ReciverHomeScreen",
+                    ? "MaleHomeTabs"
+                    : "ReceiverBottomTabs",
               },
             ],
             });

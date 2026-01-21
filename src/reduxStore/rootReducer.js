@@ -3,10 +3,13 @@ import  authReducer  from "../features/Auth/authReducer";
 import  userReducer  from "../features/user/userReducer";
 import photoReducer from "../features/photo/photoReducer";
 import randomuserReduce from "../features/RandomUsers/randomuserReducer";
-import callReducer from "../features/calls/callReducer"
 import languageReducer from "../features/language/languageReducer";
 import avatarsReducer from"../features/Avatars/avatarsReducer"
 import loccationReducer from"../features/Countries/locationReducer"
+import callReducer from"../features/calls/callReducer"
+import friendReducer from"../features/friend/friendReducer"
+
+
 const rootReducer = combineReducers({
   auth:authReducer,
   user: userReducer,
@@ -15,6 +18,8 @@ const rootReducer = combineReducers({
   calls:callReducer,
   language:languageReducer,
   avatars:avatarsReducer,
+  friends:friendReducer,
+  
   location:loccationReducer
 });
 

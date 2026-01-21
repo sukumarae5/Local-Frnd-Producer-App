@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useContext } from "react";
+import React, { useEffect, useRef, useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -6,20 +6,20 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Modal,
-} from "react-native";
-import LinearGradient from "react-native-linear-gradient";
-import Icon from "react-native-vector-icons/Ionicons";
-import { useDispatch } from "react-redux";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { CommonActions } from "@react-navigation/native";
+} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { useDispatch } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CommonActions } from '@react-navigation/native';
+import { useSelector } from "react-redux";
 
-import { audioCallRequest } from "../features/calls/callAction";
-import { SocketContext } from "../socket/SocketProvider";
+import { startCallRequest } from '../features/calls/callAction';
+import { SocketContext } from '../socket/SocketProvider';
 
 const WAIT_TIMEOUT = 60000;
 
 const ReciverHomeScreen = ({ navigation }) => {
-  /* ================= HOOKS (ALWAYS FIRST) ================= */
   const dispatch = useDispatch();
   const { socketRef, connected } = useContext(SocketContext);
 
@@ -27,60 +27,66 @@ const ReciverHomeScreen = ({ navigation }) => {
   const navigatingRef = useRef(false);
 
   const [waiting, setWaiting] = useState(false);
+  const [callType, setCallType] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+const { incoming } = useSelector((state) => state.friends);
 
-  /* ================= CALL MATCHED ================= */
+  /* ================= SOCKET MATCH ================= */
   useEffect(() => {
-    if (!connected) return;
-    if (!socketRef.current) return;
+    if (!connected || !socketRef.current) return;
 
     const socket = socketRef.current;
 
-    const onMatched = (data) => {
+    const onMatched = data => {
       if (navigatingRef.current) return;
 
       navigatingRef.current = true;
       clearTimeout(timeoutRef.current);
       setWaiting(false);
 
-      console.log("📥 Call matched (FEMALE):", data);
-
-      navigation.replace("AudiocallScreen", {
-        session_id: data.session_id,
-        role: data.role,
-        peer_id: data.peer_id,
-      });
+      if (data.call_type === 'VIDEO') {
+        navigation.replace('VideocallScreen', {
+          session_id: data.session_id,
+          role: data.role,
+          peer_id: data.peer_id,
+        });
+      } else {
+        navigation.replace('AudiocallScreen', {
+          session_id: data.session_id,
+          role: data.role,
+          peer_id: data.peer_id,
+        });
+      }
     };
 
-    socket.on("call_matched", onMatched);
+    socket.on('call_matched', onMatched);
 
     return () => {
-      socket.off("call_matched", onMatched);
+      socket.off('call_matched', onMatched);
       clearTimeout(timeoutRef.current);
     };
   }, [connected, navigation]);
 
   /* ================= GO ONLINE ================= */
-  const handleGoOnline = () => {
-    if (!connected) return;
-    if (!socketRef.current) return;
-    if (waiting) return;
+  const handleGoOnline = type => {
+    if (!connected || !socketRef.current || waiting) return;
 
     navigatingRef.current = false;
     setWaiting(true);
+    setCallType(type);
     setShowModal(false);
 
     dispatch(
-      audioCallRequest({
-        call_type: "AUDIO",
-        gender: "Female",
-      })
+      startCallRequest({
+        call_type: type,
+        gender: 'Female',
+      }),
     );
 
     timeoutRef.current = setTimeout(() => {
-      console.log("⏳ Wait timeout");
       setWaiting(false);
+      setCallType(null);
     }, WAIT_TIMEOUT);
   };
 
@@ -88,40 +94,66 @@ const ReciverHomeScreen = ({ navigation }) => {
   const handleLogout = async () => {
     try {
       clearTimeout(timeoutRef.current);
-
-
       await AsyncStorage.clear();
 
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
-          routes: [{ name: "Login" }],
-        })
+          routes: [{ name: 'Login' }],
+        }),
       );
     } catch (err) {
-      console.error("❌ Logout error:", err);
+      console.error('Logout error:', err);
     }
   };
 
   /* ================= UI ================= */
   return (
     <SafeAreaView style={styles.safe}>
-      <LinearGradient colors={["#6a007a", "#3b003f"]} style={styles.header}>
-        <Text style={styles.appName}>Local Friend</Text>
+      {/* HEADER */}
+      <LinearGradient colors={['#6a007a', '#3b003f']} style={styles.header}>
+        <View style={styles.headerRow}>
+          {/* LEFT PLACEHOLDER */}
+          <View style={{ width: 40 }} />
 
-        <TouchableOpacity
-          style={styles.logoutBtn}
-          onPress={() => setShowLogoutModal(true)}
-        >
-          <Icon name="log-out-outline" size={22} color="#fff" />
-        </TouchableOpacity>
+          {/* TITLE */}
+          <Text style={styles.appName}>Local Friend</Text>
+
+          {/* RIGHT ICONS */}
+          <View style={styles.headerIcons}>
+            <View>
+  <TouchableOpacity
+    style={styles.iconBtn}
+    onPress={() => navigation.navigate("FriendRequestsScreen")}
+  >
+    <Icon name="notifications-outline" size={26} color="#fff" />
+  </TouchableOpacity>
+
+  {incoming.length > 0 && (
+    <View style={styles.badge}>
+      <Text style={styles.badgeText}>{incoming.length}</Text>
+    </View>
+  )}    
+</View>
+
+
+            {/* 🚪 LOGOUT */}
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => setShowLogoutModal(true)}
+            >
+              <Icon name="log-out-outline" size={26} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
       </LinearGradient>
 
+      {/* BODY */}
       <View style={styles.middle}>
         {!waiting ? (
           <TouchableOpacity onPress={() => setShowModal(true)}>
             <LinearGradient
-              colors={["#ff2fd2", "#b000ff"]}
+              colors={['#ff2fd2', '#b000ff']}
               style={styles.onlineBtn}
             >
               <Icon name="radio" size={34} color="#fff" />
@@ -129,19 +161,32 @@ const ReciverHomeScreen = ({ navigation }) => {
             </LinearGradient>
           </TouchableOpacity>
         ) : (
-          <Text style={styles.waitingText}>Waiting for call… 📞</Text>
+          <Text style={styles.waitingText}>
+            Waiting for {callType === 'VIDEO' ? 'VIDEO' : 'AUDIO'} call… 📞
+          </Text>
         )}
       </View>
 
-      {/* CALL MODAL */}
+      {/* CALL TYPE MODAL */}
       <Modal transparent visible={showModal} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Go Online?</Text>
+            <Text style={styles.modalTitle}>Go Online</Text>
 
-            <TouchableOpacity style={styles.callBtn} onPress={handleGoOnline}>
+            <TouchableOpacity
+              style={styles.callBtn}
+              onPress={() => handleGoOnline('AUDIO')}
+            >
               <Icon name="call-outline" size={26} color="#fff" />
               <Text style={styles.callText}>Audio Call</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.callBtn, styles.videoBtn]}
+              onPress={() => handleGoOnline('VIDEO')}
+            >
+              <Icon name="videocam-outline" size={26} color="#fff" />
+              <Text style={styles.callText}>Video Call</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => setShowModal(false)}>
@@ -161,7 +206,7 @@ const ReciverHomeScreen = ({ navigation }) => {
               style={styles.logoutConfirm}
               onPress={handleLogout}
             >
-              <Icon name="log-out-outline" size={22} color="#fff" />
+              <Icon name="log-out-outline" size={24} color="#fff" />
               <Text style={styles.callText}>Yes, Logout</Text>
             </TouchableOpacity>
 
@@ -177,57 +222,137 @@ const ReciverHomeScreen = ({ navigation }) => {
 
 export default ReciverHomeScreen;
 
-
-
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#0A001A" },
+  safe: { flex: 1, backgroundColor: '#0A001A' },
+
   header: {
-    padding: 20,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingVertical: 20,
+    paddingHorizontal: 15,
   },
-  appName: { color: "#fff", fontSize: 22, fontWeight: "800" },
-  logoutBtn: { position: "absolute", right: 20, top: 20 },
-  middle: { flex: 1, justifyContent: "center", alignItems: "center" },
+
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  appName: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+
+  headerIcons: {
+    flexDirection: 'row',
+    gap: 14,
+  },
+
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 20,
+  },
+badge: {
+  position: "absolute",
+  top: -6,
+  right: -6,
+  backgroundColor: "#ff0044",
+  borderRadius: 10,
+  minWidth: 20,
+  height: 20,
+  justifyContent: "center",
+  alignItems: "center",
+  paddingHorizontal: 6,
+},
+
+badgeText: {
+  color: "#fff",
+  fontSize: 12,
+  fontWeight: "bold",
+},
+
+  middle: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
   onlineBtn: {
     paddingHorizontal: 40,
     paddingVertical: 20,
     borderRadius: 40,
-    alignItems: "center",
+    alignItems: 'center',
   },
-  onlineText: { color: "#fff", fontSize: 18, fontWeight: "700", marginTop: 10 },
-  waitingText: { color: "#fff", fontSize: 18 },
+
+  onlineText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 10,
+  },
+
+  waitingText: {
+    color: '#fff',
+    fontSize: 18,
+  },
+
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+
   modalBox: {
-    backgroundColor: "#1a0033",
+    backgroundColor: '#1a0033',
     padding: 25,
     borderRadius: 20,
-    width: "80%",
-    alignItems: "center",
+    width: '80%',
+    alignItems: 'center',
   },
-  modalTitle: { color: "#fff", fontSize: 20, fontWeight: "700", marginBottom: 20 },
+
+  modalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 20,
+  },
+
   callBtn: {
-    flexDirection: "row",
-    backgroundColor: "#ff00ff",
+    flexDirection: 'row',
+    backgroundColor: '#ff00ff',
     padding: 15,
     borderRadius: 30,
-    alignItems: "center",
+    alignItems: 'center',
     marginBottom: 15,
+    width: '100%',
+    justifyContent: 'center',
   },
+
+  videoBtn: {
+    backgroundColor: '#ff005c',
+  },
+
   logoutConfirm: {
-    flexDirection: "row",
-    backgroundColor: "#ff0044",
+    flexDirection: 'row',
+    backgroundColor: '#ff0044',
     padding: 15,
     borderRadius: 30,
-    alignItems: "center",
+    alignItems: 'center',
     marginBottom: 15,
+    width: '100%',
+    justifyContent: 'center',
   },
-  callText: { color: "#fff", fontSize: 16, marginLeft: 10 },
-  closeText: { color: "#aaa", marginTop: 10 },
+
+  callText: {
+    color: '#fff',
+    fontSize: 16,
+    marginLeft: 10,
+  },
+
+  closeText: {
+    color: '#aaa',
+    marginTop: 10,
+  },
 });

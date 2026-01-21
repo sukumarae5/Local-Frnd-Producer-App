@@ -8,7 +8,16 @@ export const USER_DATA=`${MAIN_BASE_URL}/api/userprofile/profile`;
 export const random_users_data=`${MAIN_BASE_URL}/api/user/random-users`;
 export const random_calls=`${MAIN_BASE_URL}/api/call/random-connect`;
 export const languages=`${MAIN_BASE_URL}/api/language/getlanguages`;
-export const newuserapi=`${MAIN_BASE_URL}/api/user/profile`;
-export const avatarsapi=`${MAIN_BASE_URL}/api/avatars`;
+export const newuserapi=`${MAIN_BASE_URL}/api/user/profile`
+export const avatarsapi=`${MAIN_BASE_URL}/api/avatars`
+export const recent_calls = `${MAIN_BASE_URL}/api/calls/recent-users`;
+export const friendrequest = `${MAIN_BASE_URL}/api/friend/request`;
+export const friendList = `${MAIN_BASE_URL}/api/friend/list`;
+export const friendAccept = `${MAIN_BASE_URL}/api/friend/accept`;
+export const friendPending  = `${MAIN_BASE_URL}/api/friend/pending`;
+export const friendStatus =  `${MAIN_BASE_URL}/api/friend/status`;
+export const friendUnfriend = `${MAIN_BASE_URL}/api/friend/unfriend`;
+
+
 export const Locationapi=`${MAIN_BASE_URL}/api/location/countries`;
 console.log(Locationapi)

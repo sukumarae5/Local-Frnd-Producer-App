@@ -214,12 +214,15 @@ const AudiocallScreen = ({ route, navigation }) => {
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     pcRef.current?.close();
 
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: "ReciverHomeScreen" }],
-      })
-    );
+    const nextScreen =
+    role === "caller" ? "TrainersCallpage" : "ReciverHomeScreen";
+
+  navigation.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [{ name: nextScreen }],
+    })
+  );
   };
 
   /* ================= UI ================= */

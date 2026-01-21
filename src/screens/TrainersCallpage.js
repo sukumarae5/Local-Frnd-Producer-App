@@ -11,11 +11,11 @@ import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Ionicons";
 import Feather from "react-native-vector-icons/Feather";
 import { useDispatch, useSelector } from "react-redux";
-import { audioCallRequest } from "../features/calls/callAction";
+import { startCallRequest } from "../features/calls/callAction";
 import { SocketContext } from "../socket/SocketProvider";
 
 const TrainersCallPage = ({ navigation }) => {
-  /* ================= HOOKS ================= */
+  /* ================= HOOKS (ORDER MUST NEVER CHANGE) ================= */
   const dispatch = useDispatch();
   const { socketRef, connected } = useContext(SocketContext);
   const { userdata } = useSelector((state) => state.user);
@@ -23,22 +23,32 @@ const TrainersCallPage = ({ navigation }) => {
   const hasNavigatedRef = useRef(false);
 
   const [callingRandom, setCallingRandom] = useState(false);
+  const [callingRandomVideo, setCallingRandomVideo] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
 
   const gender = userdata?.user?.gender;
   const myId = userdata?.user?.user_id;
 
+  /* ================= RESET WHEN SCREEN IS SHOWN ================= */
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      hasNavigatedRef.current = false;
+      setCallingRandom(false);
+      setCallingRandomVideo(false);
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
   /* ================= SOCKET DEBUG ================= */
   useEffect(() => {
     if (!connected || !socketRef.current) return;
-
-    console.log("🧪 Male socket connected:", socketRef.current.id);
+    console.log("🧪 Socket connected:", socketRef.current.id);
   }, [connected]);
 
-  /* ================= call_matched ================= */
+  /* ================= CALL MATCHED ================= */
   useEffect(() => {
-    if (!connected) return;
-    if (!socketRef.current) return;
+    if (!connected || !socketRef.current) return;
 
     const socket = socketRef.current;
 
@@ -48,14 +58,25 @@ const TrainersCallPage = ({ navigation }) => {
 
       hasNavigatedRef.current = true;
       setCallingRandom(false);
+      setCallingRandomVideo(false);
 
-      console.log("📥 Call matched (MALE):", data);
+      const callType = data.call_type || data.type || "AUDIO";
 
-      navigation.replace("AudiocallScreen", {
-        session_id: data.session_id,
-        peer_id: data.peer_id,
-        role: "caller",
-      });
+      console.log("📥 Call matched:", data);
+
+      if (callType === "VIDEO") {
+        navigation.navigate("VideocallScreen", {
+          session_id: data.session_id,
+          peer_id: data.peer_id,
+          role: "caller",
+        });
+      } else {
+        navigation.navigate("AudiocallScreen", {
+          session_id: data.session_id,
+          peer_id: data.peer_id,
+          role: "caller",
+        });
+      }
     };
 
     socket.on("call_matched", onMatched);
@@ -65,11 +86,11 @@ const TrainersCallPage = ({ navigation }) => {
     };
   }, [connected, navigation]);
 
-  /* ================= START RANDOM ================= */
+  /* ================= AUDIO CALL ================= */
   const startRandomAudioCall = () => {
     if (callingRandom) return;
 
-    if (!connected || !socketRef.current) {
+    if (!connected) {
       Alert.alert("Connecting", "Please wait, connecting to server...");
       return;
     }
@@ -83,8 +104,33 @@ const TrainersCallPage = ({ navigation }) => {
     setCallingRandom(true);
 
     dispatch(
-      audioCallRequest({
+      startCallRequest({
         call_type: "AUDIO",
+        gender,
+      })
+    );
+  };
+
+  /* ================= VIDEO CALL ================= */
+  const startRandomVideoCall = () => {
+    if (callingRandomVideo) return;
+
+    if (!connected) {
+      Alert.alert("Connecting", "Please wait, connecting to server...");
+      return;
+    }
+
+    if (!gender) {
+      Alert.alert("Profile incomplete", "Update gender first");
+      return;
+    }
+
+    hasNavigatedRef.current = false;
+    setCallingRandomVideo(true);
+
+    dispatch(
+      startCallRequest({
+        call_type: "VIDEO",
         gender,
       })
     );
@@ -114,6 +160,21 @@ const TrainersCallPage = ({ navigation }) => {
             {callingRandom ? "Connecting…" : "Random Audio Call"}
           </Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.randomButton,
+            styles.videoButton,
+            callingRandomVideo && { opacity: 0.6 },
+          ]}
+          onPress={startRandomVideoCall}
+          disabled={callingRandomVideo}
+        >
+          <Feather name="video" size={26} color="#fff" />
+          <Text style={styles.randomText}>
+            {callingRandomVideo ? "Connecting…" : "Random Video Call"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.listWrapper}>
@@ -139,7 +200,7 @@ const TrainersCallPage = ({ navigation }) => {
 export default TrainersCallPage;
 
 
-/* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -180,6 +241,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
+    marginBottom: 15,
+  },
+  videoButton: {
+    backgroundColor: "#FF005C",
   },
   randomText: {
     color: "#fff",

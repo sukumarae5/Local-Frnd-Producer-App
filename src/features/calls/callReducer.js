@@ -1,35 +1,41 @@
+
 import {
-  AUDIO_CALL_REQUEST,
-  AUDIO_CALL_SUCCESS,
-  AUDIO_CALL_FAILED,
-  AUDIO_CALL_RESET,
+  CALL_REQUEST,
+  CALL_SUCCESS,
+  CALL_FAILED,
+  CALL_RESET,
+  RECENT_CALL_REQUEST,
+  RECENT_CALL_SUCCESS,
+  RECENT_CALL_FAILED,
+  RECENT_CALL_RESET,
 } from "./callType";
 
 const initialState = {
   loading: false,
-  call: null,     // 👈 MATCHED DATA STORED HERE
+  list: [],
+  call: null,
   error: null,
 };
 
 export default function callReducer(state = initialState, action) {
   switch (action.type) {
-    case AUDIO_CALL_REQUEST:
+    case CALL_REQUEST:
       return {
         ...state,
         loading: true,
         error: null,
-        call: null, // reset previous call
+        call: null,
       };
 
-    case AUDIO_CALL_SUCCESS:
+    case CALL_SUCCESS:
       return {
         ...state,
         loading: false,
-        call: action.payload, // { status, session_id, peer_id }
+        call: action.payload,
         error: null,
       };
 
-    case AUDIO_CALL_FAILED:
+    case CALL_FAILED:
       return {
         ...state,
         loading: false,
@@ -37,11 +43,34 @@ export default function callReducer(state = initialState, action) {
         call: null,
       };
 
-    case AUDIO_CALL_RESET:
+    case CALL_RESET:
+      return initialState;
+    
+    case RECENT_CALL_REQUEST:
       return {
-        ...initialState,
+        ...state,
+        loading: true,
+        error: null,
       };
 
+    case RECENT_CALL_SUCCESS:
+      return {
+        ...state,
+        loading: false,
+        list: action.payload,
+        error: null,
+      };
+
+    case RECENT_CALL_FAILED:
+      return {
+        ...state,
+        loading: false,
+        error: action.payload,
+      };
+
+    case RECENT_CALL_RESET:
+      return initialState;
+      
     default:
       return state;
   }
