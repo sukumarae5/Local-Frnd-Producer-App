@@ -43,7 +43,7 @@ import MaleHomeTabs from './src/navigation/MaleHomeTabs';
 import MessagesScreen from './src/screens/MessagesScreen';   
 import ReceiverBottomTabs from './src/navigation/ReceiverBottomTabs';   
 import FriendRequestsScreen from './src/screens/FriendRequestsScreen';   
-
+import AboutScreen from './src/screens/AboutScreen'
 
 const Stack = createNativeStackNavigator();
 
@@ -93,6 +93,7 @@ export default function App() {
 <Stack.Screen name='MessagesScreen' component={MessagesScreen}/>
 <Stack.Screen name="MaleHomeTabs" component={MaleHomeTabs} options={{ headerShown: false }}/>
 <Stack.Screen name="ReceiverBottomTabs" component={ReceiverBottomTabs} options={{ headerShown: false }}/>
+<Stack.Screen name="AboutScreen" component={AboutScreen}/>
 <Stack.Screen
   name="FriendRequestsScreen"
   component={FriendRequestsScreen}

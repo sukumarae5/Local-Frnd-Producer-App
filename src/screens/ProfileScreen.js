@@ -116,11 +116,13 @@ const handlelogoubutton = async () => {
             <Icon name="chevron-forward" size={20} color="#ccc" />
           </View>
 
-          <View style={styles.listItem}>
+          <TouchableOpacity style={styles.listItem} onPress={()=>{
+            navigation.navigate("AboutScreen")
+          }}>
             <Icon name="information-circle-outline" size={24} color="#ccc" />
             <Text style={styles.listText}>About</Text>
             <Icon name="chevron-forward" size={20} color="#ccc" />
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Logout */}
