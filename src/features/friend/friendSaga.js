@@ -80,7 +80,6 @@ function* fetchFriendListSaga() {
   }
 }
 
-/* ================= INCOMING (PENDING) ================= */
 function* fetchPendingSaga() {
   try {
     const token = yield call(AsyncStorage.getItem, "twittoke");
@@ -97,7 +96,6 @@ console.log("Pending Friends Response:", response);
   }
 }
 
-/* ================= ACCEPT FRIEND ================= */
 function* acceptFriendSaga(action) {
   try {
     const token = yield call(AsyncStorage.getItem, "twittoke");

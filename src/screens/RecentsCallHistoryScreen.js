@@ -42,7 +42,6 @@ console.log("RecentsCallHistoryScreen Rendered", list);
   console.log("Friend Status from Redux:", friendStatus, incoming);
   const [tab, setTab] = useState(TABS.RECENT);
 
-  /* ===== Load recents & pending ===== */
   useEffect(() => {
     dispatch({ type: RECENT_CALL_REQUEST });
     dispatch(friendPendingRequest());
@@ -82,7 +81,6 @@ console.log("RecentsCallHistoryScreen Rendered", list);
     ]);
   };
 
-  /* ===== Friend Actions ===== */
 
   const handleAddFriend = (userId) => {
     dispatch(friendRequest(userId));
@@ -103,12 +101,10 @@ console.log("RecentsCallHistoryScreen Rendered", list);
     ]);
   };
 
-  /* ===== Friend Button ===== */
 
   const renderFriendButton = (item) => {
     const status = friendStatus[item.other_user_id]?.state;
 
-    // FRIEND
     if (status === "FRIEND") {
       return (
         <TouchableOpacity onPress={() => handleUnfriend(item.other_user_id)}>
@@ -117,12 +113,10 @@ console.log("RecentsCallHistoryScreen Rendered", list);
       );
     }
 
-    // SENT
     if (status === "PENDING_SENT") {
       return <Text style={{ color: "#aaa" }}>Pending</Text>;
     }
 
-    // RECEIVED
     if (status === "PENDING_RECEIVED") {
       const req = incoming.find(
         (r) => r.user_id === item.other_user_id
@@ -139,7 +133,7 @@ console.log("RecentsCallHistoryScreen Rendered", list);
       );
     }
 
-    // NONE
+ 
     return (
       <TouchableOpacity onPress={() => handleAddFriend(item.other_user_id)}>
         <Ionicons name="person-add-outline" size={22} color="#00ffcc" />
@@ -207,7 +201,6 @@ console.log("RecentsCallHistoryScreen Rendered", list);
 
 export default RecentsCallHistoryScreen;
 
-/* ================= TAB ================= */
 const Tab = ({ label, active, onPress }) => (
   <TouchableOpacity
     onPress={onPress}
@@ -219,7 +212,6 @@ const Tab = ({ label, active, onPress }) => (
   </TouchableOpacity>
 );
 
-/* ================= STYLES ================= */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#120018" },
 

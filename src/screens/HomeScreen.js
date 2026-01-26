@@ -195,28 +195,6 @@ const HomeScreen = () => {
           <View style={{ height: hp(12) }} />
         </ScrollView>
 
-        {/* BOTTOM NAV */}
-        <View style={styles.bottomNav}>
-          <TouchableOpacity style={styles.navItem}>
-            <Icon name="home-outline" size={iconSize(7)} color="#8B5CF6" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.navItem}>
-            <Icon name="magnify" size={iconSize(7)} color="#8E8E93" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.navItem}>
-            <Icon name="bell-outline" size={iconSize(7)} color="#8E8E93" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.navItem}
-            onPress={() => navigation.navigate("ProfileScreen")}
-          >
-            <Icon name="account-circle-outline" size={iconSize(8)} color="#8E8E93" />
-          </TouchableOpacity>
-        </View>
-
       </View>
     </WelcomeScreenbackgroungpage>
   );

@@ -19,7 +19,9 @@ const TrainersCallPage = ({ navigation }) => {
   const dispatch = useDispatch();
   const { socketRef, connected } = useContext(SocketContext);
   const { userdata } = useSelector((state) => state.user);
-
+ console.log("TrainersCallPage Rendered");
+ console.log("Socket Connected:", connected);
+ console.log("Socket ID:", socketRef?.current?.id);
   const hasNavigatedRef = useRef(false);
 
   const [callingRandom, setCallingRandom] = useState(false);
@@ -29,7 +31,6 @@ const TrainersCallPage = ({ navigation }) => {
   const gender = userdata?.user?.gender;
   const myId = userdata?.user?.user_id;
 
-  /* ================= RESET WHEN SCREEN IS SHOWN ================= */
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
       hasNavigatedRef.current = false;
@@ -91,6 +92,7 @@ const TrainersCallPage = ({ navigation }) => {
     if (callingRandom) return;
 
     if (!connected) {
+       setCallingRandom(true);
       Alert.alert("Connecting", "Please wait, connecting to server...");
       return;
     }

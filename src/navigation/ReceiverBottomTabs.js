@@ -11,7 +11,6 @@ import ProfileScreen from "../screens/ProfileScreen";
 
 const Tab = createBottomTabNavigator();
 
-/* 🌸 CENTER CALL BUTTON (Female Style) */
 const CallTabButton = ({ children, onPress }) => (
   <TouchableOpacity
     onPress={onPress}

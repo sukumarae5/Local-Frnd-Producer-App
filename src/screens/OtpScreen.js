@@ -17,7 +17,6 @@ import Svg, { Path } from "react-native-svg";
 import { userOtpRequest } from "../features/Auth/authAction";
 import { useDispatch, useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { connectSocketAfterLogin } from "../socket/globalSocket";
 
 const { width, height } = Dimensions.get("window");
 const OTP_LENGTH = 6;
@@ -26,11 +25,12 @@ const OtpScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
   const { mode, Otp } = useSelector((state) => state.auth);
 
+  console.log("📩 OTP STATE:", Otp);
+
   const mobile_number = route?.params?.mobile_number;
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
   const inputRefs = useRef([]);
 
-  // Safety: If mobile missing, go back
   useEffect(() => {
     if (!mobile_number) {
       Alert.alert("Error", "Mobile number missing");
@@ -70,7 +70,6 @@ const OtpScreen = ({ route, navigation }) => {
     dispatch(userOtpRequest({ mobile_number, otp: otpString }));
   };
 
-  // OTP Response Logic
   useEffect(() => {
     if (!Otp) return;
 
@@ -79,19 +78,35 @@ const OtpScreen = ({ route, navigation }) => {
       return;
     }
 
+    if (!Otp.success) return;
+
     const handleSuccess = async () => {
       try {
+        console.log("✅ OTP VERIFIED SUCCESSFULLY");
+
+        // 1️⃣ Save auth data
         await AsyncStorage.setItem("twittoke", Otp.token ?? "");
         await AsyncStorage.setItem("user_id", String(Otp.user?.user_id ?? ""));
         await AsyncStorage.setItem("gender", Otp.user?.gender ?? "");
 
-        connectSocketAfterLogin();
+        // 2️⃣ Confirm token is really stored
+        const savedToken = await AsyncStorage.getItem("twittoke");
+        console.log("🔑 TOKEN IN STORAGE:", savedToken);
 
-        setTimeout(() => {
-          if (mode === "login") {
-            navigation.reset({
-              index: 0,
-             routes: [
+        if (!savedToken) {
+          console.log("❌ TOKEN NOT SAVED — STOPPING SOCKET CONNECT");
+          Alert.alert("Error", "Login failed. Please try again.");
+          return;
+        }
+
+        // 3️⃣ Connect socket AFTER login (VERY IMPORTANT)
+        console.log("🔌 Connecting socket after login...");
+        
+        // 4️⃣ Navigate to correct home screen
+        if (mode === "login") {
+          navigation.reset({
+            index: 0,
+            routes: [
               {
                 name:
                   Otp.user.gender === "Male"
@@ -99,21 +114,22 @@ const OtpScreen = ({ route, navigation }) => {
                     : "ReceiverBottomTabs",
               },
             ],
-            });
-          } else {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "SelectYourCountryScreen" }],
-            });
-          }
-        }, 200);
+          });
+        } else {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "SelectYourCountryScreen" }],
+          });
+        }
+
       } catch (err) {
-        console.error("OTP flow error:", err);
+        console.error("❌ OTP FLOW ERROR:", err);
         Alert.alert("Error", "Something went wrong");
       }
     };
 
     handleSuccess();
+
   }, [Otp]);
 
   return (
@@ -121,7 +137,10 @@ const OtpScreen = ({ route, navigation }) => {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+      >
         <Icon name="chevron-back" size={26} color="#000" />
       </TouchableOpacity>
 
@@ -129,9 +148,18 @@ const OtpScreen = ({ route, navigation }) => {
         {/* TOP SECTION */}
         <View style={styles.topWrapper}>
           <View style={styles.topPurple}>
-            <Image source={require("../assets/leftheart.png")} style={styles.leftHeart} />
-            <Image source={require("../assets/rightheart.png")} style={styles.rightHeart} />
-            <Image source={require("../components/BackgroundPages/main_log1.png")} style={styles.logo} />
+            <Image
+              source={require("../assets/leftheart.png")}
+              style={styles.leftHeart}
+            />
+            <Image
+              source={require("../assets/rightheart.png")}
+              style={styles.rightHeart}
+            />
+            <Image
+              source={require("../components/BackgroundPages/main_log1.png")}
+              style={styles.logo}
+            />
           </View>
 
           <Svg width={width} height={140} style={{ position: "absolute", bottom: -1 }}>
@@ -170,7 +198,10 @@ const OtpScreen = ({ route, navigation }) => {
 
           <Text style={styles.resendText}>Resend in 10 Sec.</Text>
 
-          <TouchableOpacity style={styles.continueButton} onPress={handleOtpSubmit}>
+          <TouchableOpacity
+            style={styles.continueButton}
+            onPress={handleOtpSubmit}
+          >
             <Text style={styles.continueText}>CONTINUE</Text>
           </TouchableOpacity>
         </View>

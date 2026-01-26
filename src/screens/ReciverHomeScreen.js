@@ -22,7 +22,9 @@ const WAIT_TIMEOUT = 60000;
 const ReciverHomeScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { socketRef, connected } = useContext(SocketContext);
-
+console.log("ReciverHomeScreen Rendered");
+console.log("Socket Connected:", connected);
+console.log("Socket ID:", socketRef?.current?.id);
   const timeoutRef = useRef(null);
   const navigatingRef = useRef(false);
 

@@ -1,24 +1,37 @@
-// src/socket/globalSocket.js
 import { io } from "socket.io-client";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MAIN_BASE_URL } from "../api/baseUrl1";
 
 let socket = null;
 
-export const createSocket = async () => {
+export const createSocket = (token) => {
   if (socket) return socket;
 
-  const token = await AsyncStorage.getItem("twittoke");
-  if (!token) return null;
+  if (!token) {
+    console.log("⛔ No token, socket not created");
+    return null;
+  }
+
+  console.log("🆕 Creating socket...");
 
   socket = io(MAIN_BASE_URL, {
-    transports: ["websocket"],
+    transports: ["websocket"], // 🔥 REQUIRED
     auth: { token },
+    forceNew: true,
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 2000,
-    pingInterval: 25000,
-    pingTimeout: 60000,
+  });
+
+  socket.on("connect", () => {
+    console.log("✅ SOCKET CONNECTED:", socket.id);
+  });
+
+  socket.on("disconnect", (reason) => {
+    console.log("🔴 SOCKET DISCONNECTED:", reason);
+  });
+
+  socket.on("connect_error", (err) => {
+    console.log("❌ SOCKET ERROR:", err.message);
   });
 
   return socket;
@@ -28,25 +41,9 @@ export const getSocket = () => socket;
 
 export const destroySocket = () => {
   if (socket) {
-    socket.disconnect();
-    socket = null;
-  }
-};
-
-
-export const disconnectSocketOnLogout = () => {
-  if (socket) {
     socket.removeAllListeners();
     socket.disconnect();
     socket = null;
+    console.log("👋 Socket destroyed");
   }
-};
-
-
-export const connectSocketAfterLogin = async () => {
-  if (socket) {
-    socket.disconnect();
-    socket = null;
-  }
-  return await getSocket();
 };
