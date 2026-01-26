@@ -69,9 +69,10 @@ function* handleNewUserData(action) {
         },
       })
     );
-
+console.log(response)
     yield put(newUserDataSuccess(response.data));
   } catch (error) {
+    console.log(error)
     yield put(
       newUserDataFailed(
         error.response?.data?.message || error.message

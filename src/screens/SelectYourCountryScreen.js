@@ -12,14 +12,18 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
-import { FETCH_COUNTRIES_REQUEST } from "../features/Countries/locationTypes";
-
+import {
+  FETCH_COUNTRIES_REQUEST,
+  
+} from "../features/Countries/locationTypes";
+import {fetchStatesRequest} from "../features/Countries/locationActions"
+import WelcomeScreenbackgroungpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
+import { newUserDataRequest } from "../features/user/userAction";
 const { width } = Dimensions.get("window");
 
 export default function SelectYourCountryScreen({ navigation }) {
   const dispatch = useDispatch();
 
-  // Safe selector
   const location = useSelector((state) => state.location ?? {});
   const countries = location.countries ?? [];
   const loading = location.loading ?? false;
@@ -27,9 +31,9 @@ export default function SelectYourCountryScreen({ navigation }) {
 
   const [selected, setSelected] = useState(null);
   const [query, setQuery] = useState("");
-
   useEffect(() => {
     dispatch({ type: FETCH_COUNTRIES_REQUEST });
+    dispatch(newUserDataRequest());
   }, []);
 
   const filteredData = countries.filter((item) =>
@@ -37,7 +41,11 @@ export default function SelectYourCountryScreen({ navigation }) {
   );
 
   return (
+        <WelcomeScreenbackgroungpage>
+
+
     <View style={styles.container}>
+      
       {/* Back Button */}
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Icon name="chevron-back" size={26} color="#000" />
@@ -46,7 +54,7 @@ export default function SelectYourCountryScreen({ navigation }) {
       {/* Title */}
       <Text style={styles.title}>Select Your Country</Text>
 
-      {/* Search Box */}
+      {/* Search */}
       <View style={styles.searchBox}>
         <Icon name="search-outline" size={20} color="#999" style={{ marginLeft: 8 }} />
         <TextInput
@@ -55,78 +63,74 @@ export default function SelectYourCountryScreen({ navigation }) {
           style={styles.searchInput}
           value={query}
           onChangeText={setQuery}
-        />
+          />
       </View>
 
       {/* Loading */}
-      {loading && (
-        <ActivityIndicator size="large" color="#B45BFA" style={{ marginTop: 50 }} />
-      )}
+      {loading && <ActivityIndicator size="large" color="#B45BFA" style={{ marginTop: 50 }} />}
 
       {/* Error */}
       {!loading && error && (
-        <Text style={{ textAlign: "center", color: "red", marginTop: 20 }}>
-          {error}
-        </Text>
+        <Text style={{ textAlign: "center", color: "red", marginTop: 20 }}>{error}</Text>
       )}
 
-      {/* Country List */}
+      {/* List */}
       {!loading && !error && (
         <FlatList
-          data={filteredData}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={{ paddingBottom: 120 }}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.row,
-                selected?.iso_code === item.iso_code && styles.rowActive,
-              ]}
-              onPress={() => setSelected(item)} // store full object
-            >
-              {/* Flag Image */}
+        data={filteredData}
+        keyExtractor={(item) => item.id.toString()}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+          style={[
+            styles.row,
+            selected?.id === item.id && styles.rowActive,
+          ]}
+          onPress={() => setSelected(item)}
+          >
               <Image
                 source={{ uri: item.flag_url }}
                 style={{ width: 32, height: 24, borderRadius: 4, marginRight: 10 }}
-              />
-
-              {/* Country Name */}
+                />
               <Text style={styles.countryName}>{item.name}</Text>
 
               {/* Radio */}
               <View style={styles.radioOuter}>
-                {selected?.iso_code === item.iso_code && <View style={styles.radioInner} />}
+                {selected?.id === item.id && <View style={styles.radioInner} />}
               </View>
             </TouchableOpacity>
           )}
-        />
-      )}
+          />
+        )}
 
       {/* Continue Button */}
       <TouchableOpacity
         style={styles.continueButton}
         onPress={() => {
           if (!selected) return;
+          console.log(selected.id)
+          dispatch(fetchStatesRequest(selected.id ));
+          // dispatch(newUserDataRequest({Country_id:selected.id}));
           navigation.navigate("FillYourProfileScreen", {
-            // country_id: selected.id,
-            // country_name: selected.name,
-            // iso_code: selected.iso_code,
+            country_id: selected.id,
+           
           });
         }}
-      >
+        
+        >
         <Text style={styles.continueText}>CONTINUE</Text>
       </TouchableOpacity>
 
-      {/* Bottom Indicator */}
       <View style={styles.bottomIndicator} />
     </View>
+        </WelcomeScreenbackgroungpage>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F0FF",
+    // backgroundColor: "#F7F0FF",
     paddingTop: 60,
     paddingHorizontal: 20,
   },

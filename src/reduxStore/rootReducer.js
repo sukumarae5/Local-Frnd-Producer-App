@@ -8,8 +8,10 @@ import avatarsReducer from"../features/Avatars/avatarsReducer"
 import loccationReducer from"../features/Countries/locationReducer"
 import callReducer from"../features/calls/callReducer"
 import friendReducer from"../features/friend/friendReducer"
-
-
+import interestReducer from "../features/interest/interestReducer"
+import lifestyleReducer from "../features/lifeStyle/lifestyleReducer"
+import lifestyleOptionsReducer  from"../features/lifeStyle/lifestyleReducer"
+import userLifestyleReducer from"../features/lifeStyle/lifestyleReducer"
 const rootReducer = combineReducers({
   auth:authReducer,
   user: userReducer,
@@ -18,9 +20,12 @@ const rootReducer = combineReducers({
   calls:callReducer,
   language:languageReducer,
   avatars:avatarsReducer,
-  friends:friendReducer,
-  
-  location:loccationReducer
+  friends:friendReducer,  
+  location:loccationReducer,
+  interest:interestReducer,
+  lifestyle:lifestyleReducer,
+  lifestyleOptions:lifestyleOptionsReducer,
+  userLifestyle:userLifestyleReducer
 });
 
 export default rootReducer;

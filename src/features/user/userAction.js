@@ -39,7 +39,7 @@ type:USER_LOGOUT_REQUEST,
 })
 
 
-// 🔹 REQUEST
+// 🔹 REQUEST patch method.......//
 export const newUserDataRequest = (data) => ({
   type: NEW_USER_DATA_REQUEST,
   payload: data,

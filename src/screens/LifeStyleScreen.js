@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,15 +8,65 @@ import {
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Picker } from "@react-native-picker/picker";
 import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { Picker } from "@react-native-picker/picker";
+import { useDispatch, useSelector } from "react-redux";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import {
+  FETCH_LIFESTYLE_REQUEST,
+  FETCH_LIFESTYLE_OPTIONS_REQUEST,
+  USER_LIFESTYLE_REQUEST,
+} from "../features/lifeStyle/lifestyleTypes";
 
 const LifeStyleScreen = ({ navigation }) => {
-  const [drinking, setDrinking] = useState("");
-  const [smoking, setSmoking] = useState("");
-  const [eating, setEating] = useState("");
   const [about, setAbout] = useState("");
+  const [selectedChoices, setSelectedChoices] = useState({});
+  const [userId, setUserId] = useState(null);
+
+  const dispatch = useDispatch();
+  const { loading, data, options } = useSelector((state) => state.lifestyle);
+
+  // Load user_id from storage
+  useEffect(() => {
+    const loadUserId = async () => {
+      const id = await AsyncStorage.getItem("user_id");
+      setUserId(Number(id));
+    };
+    loadUserId();
+  }, []);
+
+  // Fetch categories and options
+  useEffect(() => {
+    dispatch({ type: FETCH_LIFESTYLE_REQUEST });
+    dispatch({ type: FETCH_LIFESTYLE_OPTIONS_REQUEST });
+  }, []);
+
+  // Store selections
+  const handleSelect = (categoryId, optionId) => {
+    setSelectedChoices((prev) => ({ ...prev, [categoryId]: optionId }));
+  };
+
+  // Submit selected values
+  const handleSubmit = () => {
+    const lifestyleIds = Object.values(selectedChoices).map(Number);
+
+    if (!userId) {
+      console.log("User ID not found!");
+      return;
+    }
+
+    dispatch({
+      type: USER_LIFESTYLE_REQUEST,
+      payload: {
+        user_id: userId,
+        lifestyles: lifestyleIds,
+      },
+    });
+
+    navigation.navigate("InterestScreen");
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -27,49 +77,35 @@ const LifeStyleScreen = ({ navigation }) => {
           <Text style={styles.header}>Life Style</Text>
         </TouchableOpacity>
 
-        {/* Drinking */}
-        <Text style={styles.label}>Drinking</Text>
-        <View style={styles.dropdownWrapper}>
-          <Picker
-            selectedValue={drinking}
-            onValueChange={(value) => setDrinking(value)}
-          >
-            <Picker.Item label="Planning To Quit" value="quit" />
-            <Picker.Item label="No" value="no" />
-            <Picker.Item label="Occasionally" value="occasionally" />
-            <Picker.Item label="Frequently" value="frequently" />
-          </Picker>
-        </View>
+        {loading && <Text>Loading...</Text>}
 
-        {/* Smoking */}
-        <Text style={styles.label}>Smoking</Text>
-        <View style={styles.dropdownWrapperActive}>
-          <Picker
-            selectedValue={smoking}
-            onValueChange={(value) => setSmoking(value)}
-          >
-            <Picker.Item label="Never" value="never" />
-            <Picker.Item label="Trying to Quit" value="quit" />
-            <Picker.Item label="Occasionally" value="occasionally" />
-            <Picker.Item label="Frequently" value="frequently" />
-          </Picker>
-        </View>
+        {!loading && data.map((category) => {
+          const relatedOptions = options.filter(opt => opt.category_id === category.id);
 
-        {/* Eating */}
-        <Text style={styles.label}>Eating</Text>
-        <View style={styles.dropdownWrapper}>
-          <Picker
-            selectedValue={eating}
-            onValueChange={(value) => setEating(value)}
-          >
-            <Picker.Item label="Non - Vegetarian" value="nonveg" />
-            <Picker.Item label="Vegetarian" value="veg" />
-            <Picker.Item label="Eggetarian" value="egg" />
-            <Picker.Item label="Non-Vegetarian" value="nonveg" />
-          </Picker>
-        </View>
+          return (
+            <View key={category.id} style={{ marginBottom: 20 }}>
+              <Text style={styles.label}>{category.name}</Text>
 
-        {/* About */}
+              <View style={styles.dropdownWrapper}>
+                <Picker
+                  selectedValue={selectedChoices[category.id] || ""}
+                  onValueChange={(value) => handleSelect(category.id, value)}
+                >
+                  <Picker.Item label="Select..." value="" />
+                  
+                  {relatedOptions.map((opt) => (
+                    <Picker.Item
+                      key={opt.lifestyle_id}
+                      label={opt.lifestyle_name}
+                      value={opt.lifestyle_id}
+                    />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+          );
+        })}
+
         <Text style={styles.label}>About</Text>
         <TextInput
           style={styles.textArea}
@@ -79,12 +115,8 @@ const LifeStyleScreen = ({ navigation }) => {
           onChangeText={setAbout}
         />
 
-        {/* Button */}
-        <TouchableOpacity style={{ marginTop: 30 }} onPress={()=>{navigation.navigate("InterestScreen")}}>
-          <LinearGradient
-            colors={["#9D4CF1", "#D800F4"]}
-            style={styles.button}
-          >
+        <TouchableOpacity style={{ marginTop: 30 }} onPress={handleSubmit}>
+          <LinearGradient colors={["#9D4CF1", "#D800F4"]} style={styles.button}>
             <Text style={styles.buttonText}>CONTINUE</Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -105,15 +137,6 @@ const styles = StyleSheet.create({
   dropdownWrapper: {
     borderWidth: 1,
     borderColor: "#dddddd",
-    borderRadius: 10,
-    height: 48,
-    justifyContent: "center",
-    backgroundColor: "#fff",
-    overflow: "hidden",
-  },
-  dropdownWrapperActive: {
-    borderWidth: 2,
-    borderColor: "#B675F8",
     borderRadius: 10,
     height: 48,
     justifyContent: "center",

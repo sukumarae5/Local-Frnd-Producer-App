@@ -6,6 +6,7 @@ import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
 import { userlogoutrequest } from '../features/user/userAction';
+import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
 
 
 const ProfileScreen = () => {
@@ -31,7 +32,8 @@ const handlelogoubutton = async () => {
 
 
   return (
-    <BackgroundPagesOne>
+        <WelcomeScreenbackgroungpage>
+
       <View style={styles.container}>
 
         {/* Header */}
@@ -127,7 +129,7 @@ const handlelogoubutton = async () => {
         </TouchableOpacity>
 
       </View>
-    </BackgroundPagesOne>
+        </WelcomeScreenbackgroungpage>
   );
 };
 
@@ -145,7 +147,7 @@ const styles = StyleSheet.create({
   },
 
   headerText: {
-    color: '#fff',
+    color: '#111010',
     fontSize: 22,
     fontWeight: '600',
     marginLeft: 10,
@@ -166,7 +168,7 @@ const styles = StyleSheet.create({
 
   username: {
     marginTop: 10,
-    color: '#fff',
+    color: '#0f0f0f',
     fontSize: 22,
     fontWeight: '700',
     textAlign: 'center',
@@ -183,13 +185,13 @@ const styles = StyleSheet.create({
   },
 
   statNumber: {
-    color: '#fff',
+    color: '#0c0c0c',
     fontSize: 20,
     fontWeight: '700',
   },
 
   statLabel: {
-    color: '#bfbfbf',
+    color: '#0a0a0a',
     fontSize: 14,
   },
 
@@ -213,12 +215,12 @@ const styles = StyleSheet.create({
   },
 
   tabText: {
-    color: '#ccc',
+    color: '#090909',
     fontSize: 16,
   },
 
   activeTabText: {
-    color: '#fff',
+    color: '#0d0d0d',
     fontWeight: '700',
   },
 
@@ -238,7 +240,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 15,
     fontSize: 16,
-    color: '#fff',
+    color: '#111010',
   },
 
   logoutBtn: {

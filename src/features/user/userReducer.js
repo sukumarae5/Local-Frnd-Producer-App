@@ -98,7 +98,8 @@ export default function userReducer(state = initialState, action) {
         ...state,
         loading: false,
         success: true,
-        newUserData: action.payload, // ✅ UPDATED
+        newUserData: action.payload, 
+        error:action.payload
       };
 
     case NEW_USER_DATA_FAILED:

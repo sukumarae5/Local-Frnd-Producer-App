@@ -17,7 +17,11 @@ export const friendAccept = `${MAIN_BASE_URL}/api/friend/accept`;
 export const friendPending  = `${MAIN_BASE_URL}/api/friend/pending`;
 export const friendStatus =  `${MAIN_BASE_URL}/api/friend/status`;
 export const friendUnfriend = `${MAIN_BASE_URL}/api/friend/unfriend`;
-
-
+export const statesapi=`${MAIN_BASE_URL}/api/location/states`;
+export const citiesapi=`${MAIN_BASE_URL}/api/location/cities`
 export const Locationapi=`${MAIN_BASE_URL}/api/location/countries`;
-console.log(Locationapi)
+export const yourinterest =`${MAIN_BASE_URL}/api/interest/all`
+export const lifestycategory=`${MAIN_BASE_URL}/api/lifestylecategory/all`
+export const lifeStyleallapi=`${MAIN_BASE_URL}/api/lifestyle/all`
+export const userlifestyleapi=`${MAIN_BASE_URL}/api/userlifestyle`
+console.log(statesapi)
