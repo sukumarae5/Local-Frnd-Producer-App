@@ -1,33 +1,32 @@
 import {
-  RANDOM_USER_REQUEST,
-  RANDOM_USER_SUCCESS,
-  RANDOM_USER_FAILED,
-} from "./randomuserType";
+  OTHER_USER_FETCH_REQUEST,
+  OTHER_USER_FETCH_SUCCESS,
+  OTHER_USER_FETCH_FAILURE,
+} from "./otherUserType";
 
 const initialState = {
+  profile: null,
   loading: false,
-  users: null,
   error: null,
 };
 
-export default function randomUserReducer(state = initialState, action) {
-    console.log(action)
+export default function otherUserReducer(state = initialState, action) {
   switch (action.type) {
-    case RANDOM_USER_REQUEST:
+    case OTHER_USER_FETCH_REQUEST:
       return {
         ...state,
         loading: true,
         error: null,
       };
 
-    case RANDOM_USER_SUCCESS:
+    case OTHER_USER_FETCH_SUCCESS:
       return {
         ...state,
         loading: false,
-        users: action.payload,
+        profile: action.payload.profile,
       };
 
-    case RANDOM_USER_FAILED:
+    case OTHER_USER_FETCH_FAILURE:
       return {
         ...state,
         loading: false,

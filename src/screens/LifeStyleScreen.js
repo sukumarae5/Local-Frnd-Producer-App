@@ -19,6 +19,7 @@ import {
   FETCH_LIFESTYLE_OPTIONS_REQUEST,
   USER_LIFESTYLE_REQUEST,
 } from "../features/lifeStyle/lifestyleTypes";
+import { newUserDataRequest } from "../features/user/userAction";
 
 const LifeStyleScreen = ({ navigation }) => {
   const [about, setAbout] = useState("");
@@ -64,7 +65,7 @@ const LifeStyleScreen = ({ navigation }) => {
         lifestyles: lifestyleIds,
       },
     });
-
+ dispatch(newUserDataRequest({bio:about}));
     navigation.navigate("InterestScreen");
   };
 

@@ -21,7 +21,7 @@ const rotatingItems = [
   { id: 7, type: "icon", src: require("../assets/Videocharticon.png"), size: 70, angle: 40 },
 ];
 
-const RADIUS = 130;
+const RADIUS = 133;
 
 const WelcomeScreen02 = ({ navigation }) => {
   const rotateAnim = useRef(new Animated.Value(0)).current;

@@ -25,4 +25,5 @@ export const selectinterest =`${MAIN_BASE_URL}/api/userinterest/`
 export const lifestycategory=`${MAIN_BASE_URL}/api/lifestylecategory/all`
 export const lifeStyleallapi=`${MAIN_BASE_URL}/api/lifestyle/all`
 export const userlifestyleapi=`${MAIN_BASE_URL}/api/userlifestyle`
-console.log(statesapi)
+export const otheruserapi=`${MAIN_BASE_URL}/api/userprofile/profile`
+console.log(otheruserapi)

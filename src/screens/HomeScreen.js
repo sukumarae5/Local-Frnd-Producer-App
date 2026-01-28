@@ -15,6 +15,8 @@ import { useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import { userDatarequest } from "../features/user/userAction";
 import { SocketContext } from "../socket/SocketProvider";
+import {randomUserRequest} from "../features/RandomUsers/randomuserAction"
+import StoriesScreen from "./StoriesScreen";
 
 const { width, height } = Dimensions.get("window");
 const wp = (v) => (width * v) / 100;
@@ -50,6 +52,7 @@ const HomeScreen = () => {
 
   useEffect(() => {
     dispatch(userDatarequest());
+    dispatch(randomUserRequest())
   }, []);
 
   useEffect(() => {
@@ -111,27 +114,8 @@ const HomeScreen = () => {
             />
           </View>
 
-          {/* STORIES */}
-          <Text style={styles.sectionLabel}>Stories</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: wp(2) }}
-          >
-            <TouchableOpacity style={styles.storyContainer}>
-              <View style={styles.yourStoryCircle}>
-                <Icon name="plus" size={iconSize(6)} color="#8B5CF6" />
-              </View>
-              <Text style={styles.storyName}>Your Story</Text>
-            </TouchableOpacity>
+                 <StoriesScreen/>
 
-            {activePals.map((p) => (
-              <TouchableOpacity key={p.id} style={styles.storyContainer}>
-                <Image source={p.img} style={styles.storyAvatar} />
-                <Text style={styles.storyName}>{p.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
 
           {/* OFFERS */}
           <Text style={styles.sectionLabel}>Offers</Text>
@@ -282,37 +266,37 @@ const styles = StyleSheet.create({
     color: "#000",
   },
 
-  sectionLabel: {
-    fontSize: wp(5),
-    fontWeight: "700",
-    color: "#111",
-    marginTop: hp(3),
-    marginBottom: hp(1),
-  },
+  // sectionLabel: {
+  //   fontSize: wp(5),
+  //   fontWeight: "700",
+  //   color: "#111",
+  //   marginTop: hp(3),
+  //   marginBottom: hp(1),
+  // },
 
-  storyContainer: { alignItems: "center", marginRight: wp(4) },
+  // storyContainer: { alignItems: "center", marginRight: wp(4) },
 
-  yourStoryCircle: {
-    width: wp(18),
-    height: wp(18),
-    borderRadius: wp(9),
-    backgroundColor: "#EFE7FF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  // yourStoryCircle: {
+  //   width: wp(18),
+  //   height: wp(18),
+  //   borderRadius: wp(9),
+  //   backgroundColor: "#EFE7FF",
+  //   justifyContent: "center",
+  //   alignItems: "center",
+  // },
 
-  storyAvatar: {
-    width: wp(18),
-    height: wp(18),
-    borderRadius: wp(9),
-  },
+  // storyAvatar: {
+  //   width: wp(18),
+  //   height: wp(18),
+  //   borderRadius: wp(9),
+  // },
 
-  storyName: {
-    marginTop: hp(0.5),
-    fontSize: wp(3),
-    color: "#333",
-    fontWeight: "500",
-  },
+  // storyName: {
+  //   marginTop: hp(0.5),
+  //   fontSize: wp(3),
+  //   color: "#333",
+  //   fontWeight: "500",
+  // },
 
   offerCard: {
     width: width - wp(10),
