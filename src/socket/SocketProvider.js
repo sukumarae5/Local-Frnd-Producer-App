@@ -2,11 +2,14 @@ import React, { createContext, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createSocket, destroySocket } from "./globalSocket";
+import { useDispatch } from "react-redux";
+import { friendPendingRequest } from "../features/friend/friendAction";
 
 export const SocketContext = createContext(null);
 
 const SocketProvider = ({ children }) => {
-  // ✅ HOOKS — ALWAYS CALLED, NEVER CONDITIONAL
+
+  const dispatch = useDispatch();
   const socketRef = useRef(null);
   const appState = useRef(AppState.currentState);
   const [connected, setConnected] = useState(false);
@@ -34,9 +37,21 @@ const SocketProvider = ({ children }) => {
         if (mounted) setConnected(true);
       });
 
+
+      
       socket.on("disconnect", () => {
         if (mounted) setConnected(false);
       });
+      socket.on("friend_request", () => {
+  console.log("📨 Friend request received");
+  dispatch(friendPendingRequest());
+});
+
+socket.on("friend_accept", () => {
+  console.log("🤝 Friend accepted");
+  dispatch(friendPendingRequest());
+});
+
     };
 
     init();

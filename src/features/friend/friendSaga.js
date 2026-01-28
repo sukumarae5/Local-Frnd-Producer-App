@@ -30,6 +30,8 @@ import {
 
   friendUnfriendSuccess,
   friendUnfriendFailed,
+  friendPendingRequest,
+  friendListRequest,
 } from "./friendAction";
 
 import {
@@ -51,13 +53,9 @@ function* sendFriendRequestSaga(action) {
       action.payload,
       { headers: { Authorization: `Bearer ${token}` } }
     );
-
-    yield put(
-      friendSuccess({
-        to: action.payload.to,
-        created: response.data.created,
-      })
-    );
+    console.log("Friend Request Response:", response);
+    yield put(friendSuccess({ to: action.payload.to }));
+    yield put(friendPendingRequest());
   } catch (e) {
     yield put(friendFailed(e.message));
   }
@@ -99,7 +97,7 @@ console.log("Pending Friends Response:", response);
 function* acceptFriendSaga(action) {
   try {
     const token = yield call(AsyncStorage.getItem, "twittoke");
-
+ console.log("Accept Friend Saga Payload:", action.payload);
     const response= yield call(
       axios.post,
       friendAccept,
@@ -107,7 +105,10 @@ function* acceptFriendSaga(action) {
       { headers: { Authorization: `Bearer ${token}` } }
     );
 console.log("Accept Friend Response:", response);
-    yield put(friendAcceptSuccess(action.payload.request_id));
+ yield put(friendAcceptSuccess(action.payload.request_id));
+    yield put(friendPendingRequest());
+    yield put(friendListRequest())
+  
   } catch (e) {
     yield put(friendAcceptFailed(e.message));
   }
@@ -153,6 +154,6 @@ export default function* friendSaga() {
   yield takeLatest(FRIEND_LIST_REQUEST, fetchFriendListSaga);
   yield takeLatest(FRIEND_PENDING_REQUEST, fetchPendingSaga);
   yield takeLatest(FRIEND_ACCEPT_REQUEST, acceptFriendSaga);
-yield takeLatest(FRIEND_STATUS_REQUEST, fetchFriendStatusSaga);
+  yield takeLatest(FRIEND_STATUS_REQUEST, fetchFriendStatusSaga);
   yield takeLatest(FRIEND_UNFRIEND_REQUEST, unfriendSaga);
 }

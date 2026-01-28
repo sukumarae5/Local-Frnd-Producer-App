@@ -87,11 +87,12 @@ const HomeScreen = () => {
               onPress={() => navigation.navigate("FriendRequestsScreen")}
             >
               <Icon name="bell-outline" size={iconSize(6)} color="#000" />
-              {incoming.length > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{incoming.length}</Text>
-                </View>
-              )}
+             {incoming.length > 0 && (
+  <View style={styles.badge}>
+    <Text style={styles.badgeText}>{incoming.length}</Text>
+  </View>
+)}
+
             </TouchableOpacity>
 
             {/* PROFILE */}

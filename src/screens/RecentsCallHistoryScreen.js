@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -23,64 +23,40 @@ import {
   friendPendingRequest,
 } from "../features/friend/friendAction";
 
-const TABS = {
-  RECENT: "RECENT",
-  MOST: "MOST",
-};
-
 const RecentsCallHistoryScreen = () => {
   const dispatch = useDispatch();
-  const { list, loading } = useSelector((s) => s.calls);
-  const { userdata } = useSelector((s) => s.user);
-console.log("RecentsCallHistoryScreen Rendered", list);
-  const {
-    friendStatus,
-    incoming,
-    error: friendError,
-  } = useSelector((s) => s.friends);
- 
-  console.log("Friend Status from Redux:", friendStatus, incoming);
-  const [tab, setTab] = useState(TABS.RECENT);
 
+  const { list: calls, loading } = useSelector((s) => s.calls);
+  const { userdata } = useSelector((s) => s.user);
+  const { friendStatus, incoming } = useSelector((s) => s.friends);
+
+  /* ================= INIT ================= */
   useEffect(() => {
     dispatch({ type: RECENT_CALL_REQUEST });
     dispatch(friendPendingRequest());
   }, []);
 
- useEffect(() => {
-  incoming.forEach((c) => {
-    if (c.user_id) {
-      console.log("Fetching friend status for:", c.user_id);
-      dispatch(friendStatusRequest(c.user_id));
-    }
-  });
-}, [incoming]);
-
+  /* ================= LOAD STATUS (DEDUPED) ================= */
+  const uniqueUserIds = useMemo(() => {
+    return [...new Set(calls.map(c => c.other_user_id))];
+  }, [calls]);
 
   useEffect(() => {
-    if (friendError) {
-      Alert.alert("Friend Error", friendError);
-    }
-  }, [friendError]);
+    uniqueUserIds.forEach(id => {
+      dispatch(friendStatusRequest(id));
+    });
+  }, [uniqueUserIds]);
 
+  /* ================= ACTIONS ================= */
   const callAgain = (userId, type) => {
-    Alert.alert("Call Again", `Start ${type} call?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Call",
-        onPress: () => {
-          dispatch(
-            startCallRequest({
-              call_type: type,
-              gender: userdata?.user?.gender,
-              target_user_id: userId,
-            })
-          );
-        },
-      },
-    ]);
+    dispatch(
+      startCallRequest({
+        call_type: type,
+        gender: userdata?.user?.gender,
+        target_user_id: userId,
+      })
+    );
   };
-
 
   const handleAddFriend = (userId) => {
     dispatch(friendRequest(userId));
@@ -101,52 +77,41 @@ console.log("RecentsCallHistoryScreen Rendered", list);
     ]);
   };
 
-
-  const renderFriendButton = (item) => {
-    const status = friendStatus[item.other_user_id]?.state;
+  /* ================= FRIEND BUTTON ================= */
+  const renderFriendButton = (userId) => {
+    const status = friendStatus[userId]?.state;
 
     if (status === "FRIEND") {
       return (
-        <TouchableOpacity onPress={() => handleUnfriend(item.other_user_id)}>
+        <TouchableOpacity onPress={() => handleUnfriend(userId)}>
           <Ionicons name="person-remove-outline" size={22} color="#ff3b30" />
         </TouchableOpacity>
       );
     }
 
     if (status === "PENDING_SENT") {
-      return <Text style={{ color: "#aaa" }}>Pending</Text>;
+      return <Text style={styles.pending}>Pending</Text>;
     }
 
     if (status === "PENDING_RECEIVED") {
-      const req = incoming.find(
-        (r) => r.user_id === item.other_user_id
-      );
-
-      if (!req) {
-        return <Text style={{ color: "#aaa" }}>Loading…</Text>;
-      }
+      const req = incoming.find(r => r.sender_id === userId);
+      if (!req) return <Text style={styles.pending}>...</Text>;
 
       return (
-        <TouchableOpacity onPress={() => handleAccept(req.id)}>
+        <TouchableOpacity onPress={() => handleAccept(req.request_id)}>
           <Ionicons name="checkmark-circle" size={22} color="#00ffcc" />
         </TouchableOpacity>
       );
     }
 
- 
     return (
-      <TouchableOpacity onPress={() => handleAddFriend(item.other_user_id)}>
+      <TouchableOpacity onPress={() => handleAddFriend(userId)}>
         <Ionicons name="person-add-outline" size={22} color="#00ffcc" />
       </TouchableOpacity>
     );
   };
 
-  const mostTalked = [...list]
-    .sort((a, b) => b.duration_seconds - a.duration_seconds)
-    .slice(0, 10);
-
-  const data = tab === TABS.RECENT ? list : mostTalked;
-
+  /* ================= RENDER ITEM ================= */
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <View>
@@ -161,7 +126,7 @@ console.log("RecentsCallHistoryScreen Rendered", list);
           <Feather name="phone-call" size={20} color="#00ffcc" />
         </TouchableOpacity>
 
-        {renderFriendButton(item)}
+        {renderFriendButton(item.other_user_id)}
       </View>
     </View>
   );
@@ -169,24 +134,11 @@ console.log("RecentsCallHistoryScreen Rendered", list);
   return (
     <View style={styles.container}>
       <LinearGradient colors={["#3b0066", "#1b0030"]} style={styles.header}>
-        <Text style={styles.title}>Recents</Text>
+        <Text style={styles.title}>Recent Calls</Text>
       </LinearGradient>
 
-      <View style={styles.tabs}>
-        <Tab
-          label="Recent Calls"
-          active={tab === TABS.RECENT}
-          onPress={() => setTab(TABS.RECENT)}
-        />
-        <Tab
-          label="Most Talked"
-          active={tab === TABS.MOST}
-          onPress={() => setTab(TABS.MOST)}
-        />
-      </View>
-
       <FlatList
-        data={data}
+        data={calls}
         keyExtractor={(i) => String(i.other_user_id)}
         renderItem={renderItem}
         ListEmptyComponent={
@@ -201,49 +153,15 @@ console.log("RecentsCallHistoryScreen Rendered", list);
 
 export default RecentsCallHistoryScreen;
 
-const Tab = ({ label, active, onPress }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={[styles.tab, active && styles.tabActive]}
-  >
-    <Text style={[styles.tabText, active && styles.tabTextActive]}>
-      {label}
-    </Text>
-  </TouchableOpacity>
-);
-
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#120018" },
-
-  header: {
-    paddingTop: 50,
-    paddingBottom: 15,
-    alignItems: "center",
-  },
+  header: { paddingTop: 50, paddingBottom: 15, alignItems: "center" },
   title: { color: "#fff", fontSize: 22, fontWeight: "700" },
-
-  tabs: {
-    flexDirection: "row",
-    margin: 15,
-    backgroundColor: "#2a003f",
-    borderRadius: 14,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  tabActive: {
-    backgroundColor: "#7f00ff",
-    borderRadius: 14,
-  },
-  tabText: { color: "#aaa", fontWeight: "600" },
-  tabTextActive: { color: "#fff" },
 
   card: {
     backgroundColor: "#2a003f",
-    marginHorizontal: 15,
-    marginBottom: 12,
+    margin: 15,
     padding: 15,
     borderRadius: 14,
     flexDirection: "row",
@@ -253,14 +171,8 @@ const styles = StyleSheet.create({
   user: { color: "#fff", fontSize: 16, fontWeight: "600" },
   meta: { color: "#bbb", fontSize: 13, marginTop: 4 },
 
-  actions: {
-    flexDirection: "row",
-    gap: 18,
-  },
+  actions: { flexDirection: "row", gap: 18 },
+  pending: { color: "#aaa", fontSize: 13 },
 
-  empty: {
-    textAlign: "center",
-    color: "#888",
-    marginTop: 50,
-  },
+  empty: { textAlign: "center", color: "#888", marginTop: 50 },
 });

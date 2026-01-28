@@ -96,6 +96,8 @@ const { incoming } = useSelector((state) => state.friends);
   const handleLogout = async () => {
     try {
       clearTimeout(timeoutRef.current);
+
+      socketRef?.current?.disconnect();
       await AsyncStorage.clear();
 
       navigation.dispatch(
@@ -131,11 +133,12 @@ const { incoming } = useSelector((state) => state.friends);
     <Icon name="notifications-outline" size={26} color="#fff" />
   </TouchableOpacity>
 
-  {incoming.length > 0 && (
-    <View style={styles.badge}>
-      <Text style={styles.badgeText}>{incoming.length}</Text>
-    </View>
-  )}    
+ {incoming.length > 0 && (
+  <View style={styles.badge}>
+    <Text style={styles.badgeText}>{incoming.length}</Text>
+  </View>
+)}
+ 
 </View>
 
 
