@@ -1,6 +1,9 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+// TrainersCallPage.js
+
+import React, { useContext, useRef, useState, useEffect } from "react";
 import {
-  View,  Text,  StyleSheet,  TouchableOpacity,  Image,  Alert,  Animated,  Dimensions,} from "react-native";
+  View, Text, StyleSheet, TouchableOpacity, Image, Alert, Animated, Dimensions
+} from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Ionicons";
 import Feather from "react-native-vector-icons/Feather";
@@ -30,30 +33,25 @@ const TrainersCallPage = ({ navigation }) => {
   const gender = userdata?.user?.gender;
   const myId = userdata?.user?.user_id;
 
-  const hasNavigatedRef = useRef(false);
-
   const [callingRandom, setCallingRandom] = useState(false);
   const [callingRandomVideo, setCallingRandomVideo] = useState(false);
 
-  /** 🔥 Individual motion anim refs */
   const animRefs = useRef([]);
 
-  /** 🎯 Initialize wave animations */
+  /** WAVE MOTION */
   useEffect(() => {
     if (users.length === 0) return;
 
     animRefs.current = users.map(() => new Animated.Value(0));
 
     users.forEach((_, i) => {
-      const randomSpeed = Math.floor(Math.random() * 1500) + 800; // 800ms - 2300ms
-      const initialDelay = Math.floor(Math.random() * 500); // 0 - 500ms
+      const randomSpeed = Math.floor(Math.random() * 1500) + 800;
 
       Animated.loop(
         Animated.sequence([
           Animated.timing(animRefs.current[i], {
             toValue: 1,
             duration: randomSpeed,
-            delay: initialDelay,
             useNativeDriver: true,
           }),
           Animated.timing(animRefs.current[i], {
@@ -66,58 +64,31 @@ const TrainersCallPage = ({ navigation }) => {
     });
   }, [users]);
 
-  /** 🟣 SOCKET MATCH EVENTS */
-  useEffect(() => {
-    if (!connected || !socketRef.current) return;
-    const socket = socketRef.current;
-
-    const onMatched = (data) => {
-      if (!data?.session_id) return;
-      if (hasNavigatedRef.current) return;
-
-      hasNavigatedRef.current = true;
-      setCallingRandom(false);
-      setCallingRandomVideo(false);
-
-      const callType = data.call_type || "AUDIO";
-      const screen = callType === "VIDEO" ? "VideocallScreen" : "AudiocallScreen";
-
-      navigation.navigate(screen, {
-        session_id: data.session_id,
-        peer_id: data.peer_id,
-        role: "caller",
-      });
-    };
-
-    socket.on("call_matched", onMatched);
-    return () => socket.off("call_matched", onMatched);
-  }, [connected, navigation]);
-
-  /** 🎙 START AUDIO */
+  /** AUDIO CALL */
   const startRandomAudioCall = () => {
-    if (callingRandom) return;
     if (!connected) return Alert.alert("Connecting", "Please wait...");
     if (!gender) return Alert.alert("Profile incomplete", "Please select gender");
 
-    hasNavigatedRef.current = false;
     setCallingRandom(true);
     dispatch(startCallRequest({ call_type: "AUDIO", gender }));
+
+    navigation.navigate("CallStatusScreen", { call_type: "AUDIO" });
   };
 
-  /** 📹 START VIDEO */
+  /** VIDEO CALL */
   const startRandomVideoCall = () => {
-    if (callingRandomVideo) return;
     if (!connected) return Alert.alert("Connecting", "Please wait...");
     if (!gender) return Alert.alert("Profile incomplete", "Please select gender");
 
-    hasNavigatedRef.current = false;
     setCallingRandomVideo(true);
     dispatch(startCallRequest({ call_type: "VIDEO", gender }));
+
+    navigation.navigate("CallStatusScreen", { call_type: "VIDEO" });
   };
 
   return (
     <View style={styles.container}>
-      {/* TOP HEADER */}
+      {/* HEADER */}
       <View style={styles.topWhite}>
         <View style={styles.topRow}>
           <Icon name="wallet-outline" size={20} color="#FFCA28" />
@@ -136,82 +107,90 @@ const TrainersCallPage = ({ navigation }) => {
         </View>
       </View>
 
-      {/* ONLINE GRID */}
-      <LinearGradient colors={["#CE4BFB", "#9D00DB"]} style={styles.onlineContainer}>
-        <Text style={styles.onlineTitle}>ONLINE</Text>
+      {/* GRID */}
+      {/* GRID */}
+<LinearGradient colors={["#CE4BFB", "#9D00DB"]} style={styles.onlineContainer}>
+  <Text style={styles.onlineTitle}>ONLINE</Text>
 
-        <View style={styles.gridWrapper}>
-          {users.filter((u) => u?.user_id !== myId).map((item, index) => {
-            const translateY = animRefs.current[index]?.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, -WAVE_DISTANCE],
-            }) || 0;
+  <View style={styles.gridWrapper}>
+    {users
+      .filter((u) => u?.user_id !== myId)
+      .map((item, index) => {
 
-            return (
-              <Animated.View
-                key={item?.user_id}
-                style={[styles.itemCell, { transform: [{ translateY }] }]}
-              >
-                <TouchableOpacity
-                  onPress={() => {
-                    dispatch(otherUserFetchRequest(item.user_id));
-                    navigation.navigate("AboutScreen", { userId: item.user_id });
-                  }}
-                  style={styles.userItem}
-                >
-                  <View style={styles.avatarWrapper}>
-                    <View style={styles.onlineDot} />
-                    <Image
-                      source={
-                        item?.primary_image
-                          ? { uri: item.primary_image }
-                          : require("../assets/boy1.jpg")
-                      }
-                      style={styles.avatarImage}
-                    />
-                  </View>
-                  <Text style={styles.nameText}>{item?.name || "Guest"}</Text>
-                </TouchableOpacity>
-              </Animated.View>
-            );
-          })}
-        </View>
-      </LinearGradient>
+        const translateY =
+          animRefs.current[index]?.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, -WAVE_DISTANCE],
+          }) || 0;
 
-      {/* BOTTOM ACTION PANEL */}
+        // Zig-zag offset
+        const row = Math.floor(index / COLS);
+        const offsetX = row % 2 === 0 ? 0 : CELL_WIDTH / 2;
+
+        return (
+          <Animated.View
+            key={item.user_id}
+            style={[
+              styles.itemCell,
+              {
+                transform: [{ translateY }],
+                marginLeft: offsetX,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.userItem}
+              onPress={() => {
+                dispatch(otherUserFetchRequest(item.user_id));
+                navigation.navigate("PerfectMatchScreen", {
+                  userId: item.user_id,
+                });
+              }}
+            >
+              {/* Avatar */}
+              <View style={styles.avatarWrapper}>
+                <View style={styles.onlineDot} />
+
+                <Image
+                  source={
+                    item?.primary_image
+                      ? { uri: item.primary_image }
+                      : require("../assets/boy1.jpg")
+                  }
+                  style={styles.avatarImage}
+                />
+              </View>
+
+              {/* Language badge */}
+              <View style={styles.langBadge}>
+                <Text style={styles.langText}>  {item?.native_name || "none"}</Text>
+              </View>
+
+              {/* Name */}
+              <Text style={styles.nameText}>
+                {item?.name || "Guest"}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+        );
+      })}
+  </View>
+</LinearGradient>
+
+      {/* ACTIONS */}
       <View style={styles.bottomPanel}>
         <TouchableOpacity style={styles.actionCard} onPress={startRandomAudioCall}>
           <LinearGradient colors={["#F239EC", "#9136FF"]} style={styles.actionIconWrap}>
             <Feather name="phone-call" size={18} color="#fff" />
           </LinearGradient>
-          <View style={{ marginLeft: 6 }}>
-            <Text style={styles.actionTextTop}>Random</Text>
-            <Text style={styles.actionTextBottom}>
-              {callingRandom ? "Connecting…" : "audio call"}
-            </Text>
-          </View>
+          <Text style={styles.actionTextTop}>Random</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionCard} onPress={startRandomVideoCall}>
           <LinearGradient colors={["#F239EC", "#9136FF"]} style={styles.actionIconWrap}>
             <Feather name="video" size={18} color="#fff" />
           </LinearGradient>
-          <View style={{ marginLeft: 6 }}>
-            <Text style={styles.actionTextTop}>Random</Text>
-            <Text style={styles.actionTextBottom}>
-              {callingRandomVideo ? "Connecting…" : "video call"}
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionCard}>
-          <LinearGradient colors={["#F239EC", "#9136FF"]} style={styles.actionIconWrap}>
-            <Feather name="map-pin" size={18} color="#fff" />
-          </LinearGradient>
-          <View style={{ marginLeft: 6 }}>
-            <Text style={styles.actionTextTop}>Random</Text>
-            <Text style={styles.actionTextBottom}>lokal calls</Text>
-          </View>
+          <Text style={styles.actionTextTop}>Video</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -220,98 +199,83 @@ const TrainersCallPage = ({ navigation }) => {
 
 export default TrainersCallPage;
 
-/* ================== STYLES ================== */
+/*** STYLES ***/
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#EFEAFD" },
-  topWhite: {
-    backgroundColor: "#FFF",
-    paddingTop: 50,
-    paddingHorizontal: 18,
-    paddingBottom: 10,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
+  topWhite: { backgroundColor: "#FFF", paddingTop: 50, paddingHorizontal: 18, paddingBottom: 10, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
   topRow: { flexDirection: "row", alignItems: "center" },
   coinText: { marginLeft: 6, fontSize: 14, fontWeight: "600", color: "#444" },
-  heading1: { fontSize: 16, fontWeight: "600", color: "#6A00A8", textAlign: "center", marginTop: 8 },
-  heading2: { fontSize: 24, fontWeight: "700", color: "#6A00A8", textAlign: "center" },
-
+  heading1: { textAlign: "center", fontSize: 16, fontWeight: "600", color: "#6A00A8" },
+  heading2: { textAlign: "center", fontSize: 24, fontWeight: "700", color: "#6A00A8" },
   filterRow: { flexDirection: "row", justifyContent: "center", marginTop: 12, gap: 10 },
   filterChip: { backgroundColor: "#F6F0FF", paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20 },
   filterText: { color: "#6A00A8", fontSize: 13, fontWeight: "600" },
-
   onlineContainer: { flex: 1, padding: 12, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
-  onlineTitle: { color: "#fff", fontWeight: "700", fontSize: 14, marginBottom: 10, marginLeft: 5 },
-
+  onlineTitle: { color: "#fff", fontWeight: "700", fontSize: 14, marginBottom: 10 },
   gridWrapper: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  itemCell: {
-    width: CELL_WIDTH,
-    height: 120,
-    alignItems: "center",
-    marginBottom: 14,
-  },
+  flexDirection: "row",
+  flexWrap: "wrap",
+},
 
-  userItem: { alignItems: "center" },
-  avatarWrapper: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
-    backgroundColor: "#D38AFB",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  avatarImage: { width: 70, height: 70, borderRadius: 35, backgroundColor: "#fff" },
-  onlineDot: {
-    width: 12,
-    height: 12,
-    backgroundColor: "#00FF00",
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: "#fff",
-    position: "absolute",
-    top: 3,
-    right: 3,
-  },
-  nameText: {
-    marginTop: 6,
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#fff",
-    textAlign: "center",
-  },
+itemCell: {
+  width: CELL_WIDTH,
+  alignItems: "center",
+  marginBottom: 20,
+},
 
-  bottomPanel: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    backgroundColor: "#fff",
-  },
-  actionCard: {
-    flex: 1,
-    marginHorizontal: 4,
-    borderWidth: 1,
-    borderColor: "#D5B7FF",
-    borderRadius: 14,
-    backgroundColor: "#fff",
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionIconWrap: {
-    height: 32,
-    width: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionTextTop: { fontSize: 14, fontWeight: "700", color: "#6A00A8" },
-  actionTextBottom: { fontSize: 12, fontWeight: "500", color: "#6A00A8" },
+avatarWrapper: {
+  width: 86,
+  height: 86,
+  borderRadius: 43,
+  backgroundColor: "rgba(255,255,255,0.2)",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+avatarImage: {
+  width: 64,
+  height: 64,
+  borderRadius: 32,
+  borderWidth: 2,
+  borderColor: "#fff",
+},
+
+onlineDot: {
+  width: 14,
+  height: 14,
+  borderRadius: 7,
+  backgroundColor: "#00FF6A",
+  borderWidth: 2,
+  borderColor: "#fff",
+  position: "absolute",
+  top: 4,
+  right: 4,
+  zIndex: 10,
+},
+
+langBadge: {
+  backgroundColor: "#FFD8A8",
+  paddingHorizontal: 8,
+  paddingVertical: 2,
+  borderRadius: 10,
+  marginTop: 6,
+},
+
+langText: {
+  fontSize: 11,
+  color: "#7A3E00",
+  fontWeight: "600",
+},
+
+nameText: {
+  marginTop: 4,
+  fontSize: 15,
+  color: "#fff",
+  fontWeight: "700",
+},
+
+  bottomPanel: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 16, paddingHorizontal: 12, backgroundColor: "#fff" },
+  actionCard: { flex: 1, marginHorizontal: 4, borderWidth: 1, borderColor: "#D5B7FF", borderRadius: 14, backgroundColor: "#fff", padding: 12, alignItems: "center" },
+  actionIconWrap: { height: 32, width: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  actionTextTop: { marginTop: 4, fontSize: 14, fontWeight: "700", color: "#6A00A8" },
 });

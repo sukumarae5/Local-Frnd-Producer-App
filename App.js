@@ -43,6 +43,8 @@ import ReceiverBottomTabs from './src/navigation/ReceiverBottomTabs';
 import FriendRequestsScreen from './src/screens/FriendRequestsScreen';   
 import AboutScreen from './src/screens/AboutScreen'
 import StoriesScreen from'./src/screens/StoriesScreen'
+import CallStatusScreen from "./src/screens/CallStatusScreen"
+import PerfectMatchScreen from"./src/screens/PerfectMatchScreen"
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -93,6 +95,8 @@ export default function App() {
 <Stack.Screen name="ReceiverBottomTabs" component={ReceiverBottomTabs} options={{ headerShown: false }}/>
 <Stack.Screen name="AboutScreen" component={AboutScreen}/>
 <Stack.Screen name="StoriesScreen" component={StoriesScreen}/>
+<Stack.Screen name="CallStatusScreen" component={CallStatusScreen}/>
+<Stack.Screen name="PerfectMatchScreen" component={PerfectMatchScreen}/>
 <Stack.Screen
   name="FriendRequestsScreen"
   component={FriendRequestsScreen}
