@@ -1,4 +1,6 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+// TrainersCallPage.js
+
+import React, { useContext, useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -108,6 +110,8 @@ const TrainersCallPage = ({ navigation }) => {
     hasNavigatedRef.current = false;
     setCallingRandom(true);
     dispatch(callRequest({ call_type: "AUDIO" }));
+        navigation.navigate("CallStatusScreen", { call_type: "AUDIO" });
+
   };
 
   const startRandomVideoCall = () => {
@@ -120,6 +124,8 @@ const TrainersCallPage = ({ navigation }) => {
     hasNavigatedRef.current = false;
     setCallingRandomVideo(true);
     dispatch(callRequest({ call_type: "VIDEO" }));
+            navigation.navigate("CallStatusScreen", { call_type: "VIDEO" });
+
   };
 
   /* ---------------- RENDER ---------------- */

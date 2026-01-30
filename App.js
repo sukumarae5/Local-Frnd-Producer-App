@@ -44,6 +44,8 @@ import FriendRequestsScreen from './src/screens/FriendRequestsScreen';
 import AboutScreen from './src/screens/AboutScreen'
 import ChatScreen from './src/screens/ChatScreen'
 import StoriesScreen from'./src/screens/StoriesScreen'
+import CallStatusScreen from "./src/screens/CallStatusScreen"
+import PerfectMatchScreen from"./src/screens/PerfectMatchScreen"
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -96,6 +98,8 @@ export default function App() {
 <Stack.Screen name="ChatScreen" component={ChatScreen}/>
 
 <Stack.Screen name="StoriesScreen" component={StoriesScreen}/>
+<Stack.Screen name="CallStatusScreen" component={CallStatusScreen}/>
+<Stack.Screen name="PerfectMatchScreen" component={PerfectMatchScreen}/>
 <Stack.Screen
   name="FriendRequestsScreen"
   component={FriendRequestsScreen}

@@ -15,14 +15,14 @@ import { CommonActions } from "@react-navigation/native";
 import InCallManager from "react-native-incall-manager";
 import { useDispatch } from "react-redux";
 import { clearCall } from "../features/calls/callAction";
-
 import { SocketContext } from "../socket/SocketProvider";
 import { createPC } from "../utils/webrtc";
+import { Image } from "react-native";
 
 const AudiocallScreen = ({ route, navigation }) => {
   const { session_id, role } = route.params;
   const { socketRef, connected } = useContext(SocketContext);
-const dispatch = useDispatch();
+  const dispatch = useDispatch();
 
   /* ================= REFS ================= */
   const pcRef = useRef(null);
@@ -31,6 +31,7 @@ const dispatch = useDispatch();
   const startedRef = useRef(false);
   const endedRef = useRef(false);
   const timerRef = useRef(null);
+  const micAnim = useRef(new Animated.Value(1)).current;
 
   /* ================= STATE ================= */
   const [connectedUI, setConnectedUI] = useState(false);
@@ -38,8 +39,6 @@ const dispatch = useDispatch();
   const [speakerOn, setSpeakerOn] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [iceState, setIceState] = useState("new");
-
-  const micAnim = useRef(new Animated.Value(1)).current;
 
   /* ================= PERMISSION ================= */
   const requestPermission = async () => {
@@ -80,7 +79,9 @@ const dispatch = useDispatch();
       });
 
       localStreamRef.current = stream;
-      stream.getTracks().forEach((t) => pcRef.current.addTrack(t, stream));
+      stream.getTracks().forEach((t) =>
+        pcRef.current.addTrack(t, stream)
+      );
 
       socket.emit("audio_join", { session_id });
 
@@ -92,8 +93,6 @@ const dispatch = useDispatch();
       socket.on("audio_connected", async () => {
         if (role !== "caller") return;
         if (!pcRef.current || !localStreamRef.current) return;
-
-        console.log("📞 audio_connected → creating offer");
 
         const offer = await pcRef.current.createOffer();
         await pcRef.current.setLocalDescription(offer);
@@ -113,15 +112,6 @@ const dispatch = useDispatch();
     };
   }, [connected]);
 
-  /* ================= HEARTBEAT ================= */
-  useEffect(() => {
-    const ping = setInterval(() => {
-      socketRef.current?.emit("audio_ping", { session_id });
-    }, 15000);
-
-    return () => clearInterval(ping);
-  }, []);
-
   /* ================= SIGNALING ================= */
   const flushIce = async () => {
     if (!pcRef.current || endedRef.current) return;
@@ -129,9 +119,7 @@ const dispatch = useDispatch();
     for (const c of pendingIceRef.current) {
       try {
         await pcRef.current.addIceCandidate(c);
-      } catch (e) {
-        console.log("ICE add error", e);
-      }
+      } catch {}
     }
     pendingIceRef.current = [];
   };
@@ -189,8 +177,16 @@ const dispatch = useDispatch();
     setMicOn(track.enabled);
 
     Animated.sequence([
-      Animated.timing(micAnim, { toValue: 0.6, duration: 120, useNativeDriver: true }),
-      Animated.spring(micAnim, { toValue: 1, friction: 3, useNativeDriver: true }),
+      Animated.timing(micAnim, {
+        toValue: 0.6,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.spring(micAnim, {
+        toValue: 1,
+        friction: 3,
+        useNativeDriver: true,
+      }),
     ]).start();
   };
 
@@ -205,7 +201,8 @@ const dispatch = useDispatch();
   const cleanup = (emit = true) => {
     if (endedRef.current) return;
     endedRef.current = true;
-dispatch(clearCall());
+
+    dispatch(clearCall());
     clearInterval(timerRef.current);
 
     if (emit) {
@@ -213,43 +210,96 @@ dispatch(clearCall());
     }
 
     InCallManager.stop();
-
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     pcRef.current?.close();
 
     const nextScreen =
-    role === "caller" ? "TrainersCallpage" : "ReciverHomeScreen";
+      role === "caller" ? "TrainersCallpage" : "ReciverHomeScreen";
 
-  navigation.dispatch(
-    CommonActions.reset({
-      index: 0,
-      routes: [{ name: nextScreen }],
-    })
-  );
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: nextScreen }],
+      })
+    );
   };
 
   /* ================= UI ================= */
   return (
-    <LinearGradient colors={["#1b0030", "#0d0017"]} style={styles.container}>
-      <Text style={styles.timer}>
-        {connectedUI
-          ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`
-          : "Connecting…"}
-      </Text>
+    <LinearGradient
+      colors={["#E9C9FF", "#F4C9F2", "#FFD1E8"]}
+      style={styles.container}
+    >
+      {/* TIME */}
+      <View style={styles.timePill}>
+        <Text style={styles.timeText}>
+          {connectedUI
+            ? `${Math.floor(seconds / 60)}:${String(
+                seconds % 60
+              ).padStart(2, "0")}`
+            : "Connecting…"}
+        </Text>
+      </View>
 
+      {/* USERS */}
+      <View style={styles.usersRow}>
+        <View style={styles.userCard}>
+          <View style={styles.avatarRing}>
+            <View style={styles.avatar} />
+          </View>
+          <Text style={styles.userName}>User 1</Text>
+          <Text style={styles.subText}>About me</Text>
+          <Text style={styles.desc}>
+            looking for good communication and travel partner
+          </Text>
+        </View>
+
+        <View style={styles.userCard}>
+          <View style={styles.avatarRing}>
+            <View style={styles.avatar} />
+          </View>
+          <Text style={styles.userName}>User 2</Text>
+          <Text style={styles.subText}>About me</Text>
+          <Text style={styles.desc}>
+            meaningful conversations and positive connection
+          </Text>
+        </View>
+      </View>
+<View style={styles.topheats} >
+          <Image source={require("../assets/leftheart.png")}  style={styles.leftheart1}></Image>
+
+        <Image source={require("../assets/leftheart.png")}  style={styles.leftheart}></Image>
+              <Image source={require("../assets/rightheart.png")}  style={styles.rightheart}></Image>
+
+      </View>
+      {/* CONTROLS */}
       <View style={styles.controls}>
-        <TouchableOpacity onPress={toggleSpeaker}>
-          <Ionicons name={speakerOn ? "volume-high" : "volume-medium"} size={30} color="#fff" />
+        <TouchableOpacity
+          style={styles.circleBtn}
+          onPress={toggleSpeaker}
+        >
+          <Ionicons
+            name={speakerOn ? "volume-high" : "volume-medium"}
+            size={22}
+            color="#9b4dff"
+          />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={toggleMic}>
+        <TouchableOpacity style={styles.circleBtn} onPress={toggleMic}>
           <Animated.View style={{ transform: [{ scale: micAnim }] }}>
-            <Ionicons name={micOn ? "mic" : "mic-off"} size={30} color="#fff" />
+            <Ionicons
+              name={micOn ? "mic" : "mic-off"}
+              size={22}
+              color="#9b4dff"
+            />
           </Animated.View>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => cleanup(true)}>
-          <Ionicons name="call" size={36} color="red" />
+        <TouchableOpacity
+          style={styles.endBtn}
+          onPress={() => cleanup(true)}
+        >
+          <Ionicons name="call" size={22} color="#f43939" />
         </TouchableOpacity>
       </View>
 
@@ -260,9 +310,117 @@ dispatch(clearCall());
 
 export default AudiocallScreen;
 
+/* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center" },
-  timer: { color: "#00ffcc", fontSize: 22, marginBottom: 30 },
-  controls: { flexDirection: "row", gap: 40 },
-  debug: { marginTop: 20, color: "#00ffcc", fontSize: 12 },
+  container: {
+    flex: 1,
+    paddingTop: 60,
+    alignItems: "center",
+  },
+topheats:{
+    position:"absolute",
+    top:30,
+    left:0,
+    right:0,
+    flexDirection:"row",
+    justifyContent:"space-between",
+    paddingHorizontal:30,
+    zIndex:10,
+  },
+  leftheart:{marginTop:400,  left:-110  },
+    leftheart1:{marginTop:100,  left:-40  },
+
+  rightheart:{marginTop:390, left:40},
+  timePill: {
+    backgroundColor: "#fb6b7c",
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+
+  timeText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
+
+  usersRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "92%",
+    marginTop: 50,
+  },
+
+  userCard: {
+    width: "45%",
+    alignItems: "center",
+  },
+
+  avatarRing: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 4,
+    borderColor: "#c77dff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+
+  avatar: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "#ddd",
+  },
+
+  userName: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+
+  subText: {
+    fontSize: 12,
+    color: "#888",
+    marginBottom: 6,
+  },
+
+  desc: {
+    fontSize: 12,
+    textAlign: "center",
+    color: "#444",
+  },
+
+  controls: {
+    position: "absolute",
+    bottom: 50,
+    flexDirection: "row",
+    gap: 25,
+  },
+
+  circleBtn: {
+    backgroundColor: "#fff",
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 4,
+  },
+
+  endBtn: {
+    backgroundColor: "#9b4dff",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 6,
+  },
+
+  debug: {
+    position: "absolute",
+    bottom: 10,
+    fontSize: 11,
+    color: "#555",
+  },
 });
