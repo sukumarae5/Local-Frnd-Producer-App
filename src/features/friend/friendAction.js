@@ -23,7 +23,7 @@ import {
 
 export const friendRequest = (to) => ({
   type: FRIEND_REQUEST,
-  payload: { to }, // backend expects { to }
+  payload: { to }, 
 });
 
 export const friendSuccess = (data) => ({

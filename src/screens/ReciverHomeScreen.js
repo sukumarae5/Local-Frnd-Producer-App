@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useContext } from 'react';
+import React, { useEffect, useRef, useState, useContext } from "react";
 import {
   View,
   Text,
@@ -6,140 +6,123 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Modal,
-} from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { useDispatch } from 'react-redux';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CommonActions } from '@react-navigation/native';
-import { useSelector } from "react-redux";
+} from "react-native";
+import LinearGradient from "react-native-linear-gradient";
+import Icon from "react-native-vector-icons/Ionicons";
+import { useDispatch, useSelector } from "react-redux";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { CommonActions } from "@react-navigation/native";
+import {
+  femaleSearchRequest,
+  femaleCancelRequest,
+} from "../features/calls/callAction";
 
-import { startCallRequest } from '../features/calls/callAction';
-import { SocketContext } from '../socket/SocketProvider';
-
-const WAIT_TIMEOUT = 60000;
+import { SocketContext } from "../socket/SocketProvider";
 
 const ReciverHomeScreen = ({ navigation }) => {
+  /* ================= HOOK ORDER (DO NOT CHANGE) ================= */
   const dispatch = useDispatch();
   const { socketRef, connected } = useContext(SocketContext);
-console.log("ReciverHomeScreen Rendered");
-console.log("Socket Connected:", connected);
-console.log("Socket ID:", socketRef?.current?.id);
-  const timeoutRef = useRef(null);
+
   const navigatingRef = useRef(false);
 
   const [waiting, setWaiting] = useState(false);
   const [callType, setCallType] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-const { incoming } = useSelector((state) => state.friends);
 
-  /* ================= SOCKET MATCH ================= */
+  const { incoming } = useSelector((state) => state.friends);
+
+  /* ================= SOCKET: INCOMING CALL ================= */
   useEffect(() => {
     if (!connected || !socketRef.current) return;
 
     const socket = socketRef.current;
 
-    const onMatched = data => {
+    const onIncomingCall = (data) => {
       if (navigatingRef.current) return;
 
       navigatingRef.current = true;
-      clearTimeout(timeoutRef.current);
       setWaiting(false);
 
-      if (data.call_type === 'VIDEO') {
-        navigation.replace('VideocallScreen', {
-          session_id: data.session_id,
-          role: data.role,
-          peer_id: data.peer_id,
-        });
-      } else {
-        navigation.replace('AudiocallScreen', {
-          session_id: data.session_id,
-          role: data.role,
-          peer_id: data.peer_id,
-        });
-      }
+      const screen =
+        data.call_type === "VIDEO"
+          ? "VideocallScreen"
+          : "AudiocallScreen";
+
+      navigation.replace(screen, {
+        session_id: data.session_id,
+        role: "receiver",
+      });
     };
 
-    socket.on('call_matched', onMatched);
+    socket.on("incoming_call", onIncomingCall);
 
     return () => {
-      socket.off('call_matched', onMatched);
-      clearTimeout(timeoutRef.current);
+      socket.off("incoming_call", onIncomingCall);
     };
-  }, [connected, navigation]);
+  }, [connected, navigation, socketRef]);
 
-  /* ================= GO ONLINE ================= */
-  const handleGoOnline = type => {
-    if (!connected || !socketRef.current || waiting) return;
+  /* ================= START SEARCH ================= */
+  const handleGoOnline = (type) => {
+    if (!connected || waiting) return;
 
     navigatingRef.current = false;
     setWaiting(true);
     setCallType(type);
     setShowModal(false);
 
-    dispatch(
-      startCallRequest({
-        call_type: type,
-        gender: 'Female',
-      }),
-    );
+    dispatch(femaleSearchRequest({ call_type: type }));
 
-    timeoutRef.current = setTimeout(() => {
-      setWaiting(false);
-      setCallType(null);
-    }, WAIT_TIMEOUT);
+
+  };
+
+  /* ================= CANCEL SEARCH ================= */
+  const handleCancel = () => {
+dispatch(femaleCancelRequest());
+    navigatingRef.current = false;
+    setWaiting(false);
+    setCallType(null);
   };
 
   /* ================= LOGOUT ================= */
   const handleLogout = async () => {
-    try {
-      clearTimeout(timeoutRef.current);
-      await AsyncStorage.clear();
+    socketRef?.current?.disconnect();
+    await AsyncStorage.clear();
 
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [{ name: 'Login' }],
-        }),
-      );
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      })
+    );
   };
 
   /* ================= UI ================= */
   return (
     <SafeAreaView style={styles.safe}>
       {/* HEADER */}
-      <LinearGradient colors={['#6a007a', '#3b003f']} style={styles.header}>
+      <LinearGradient colors={["#6a007a", "#3b003f"]} style={styles.header}>
         <View style={styles.headerRow}>
-          {/* LEFT PLACEHOLDER */}
           <View style={{ width: 40 }} />
-
-          {/* TITLE */}
           <Text style={styles.appName}>Local Friend</Text>
 
-          {/* RIGHT ICONS */}
           <View style={styles.headerIcons}>
             <View>
-  <TouchableOpacity
-    style={styles.iconBtn}
-    onPress={() => navigation.navigate("FriendRequestsScreen")}
-  >
-    <Icon name="notifications-outline" size={26} color="#fff" />
-  </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.iconBtn}
+                onPress={() => navigation.navigate("FriendRequestsScreen")}
+              >
+                <Icon name="notifications-outline" size={26} color="#fff" />
+              </TouchableOpacity>
 
-  {incoming.length > 0 && (
-    <View style={styles.badge}>
-      <Text style={styles.badgeText}>{incoming.length}</Text>
-    </View>
-  )}    
-</View>
+              {incoming.length > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{incoming.length}</Text>
+                </View>
+              )}
+            </View>
 
-
-            {/* 🚪 LOGOUT */}
             <TouchableOpacity
               style={styles.iconBtn}
               onPress={() => setShowLogoutModal(true)}
@@ -155,7 +138,7 @@ const { incoming } = useSelector((state) => state.friends);
         {!waiting ? (
           <TouchableOpacity onPress={() => setShowModal(true)}>
             <LinearGradient
-              colors={['#ff2fd2', '#b000ff']}
+              colors={["#ff2fd2", "#b000ff"]}
               style={styles.onlineBtn}
             >
               <Icon name="radio" size={34} color="#fff" />
@@ -163,9 +146,15 @@ const { incoming } = useSelector((state) => state.friends);
             </LinearGradient>
           </TouchableOpacity>
         ) : (
-          <Text style={styles.waitingText}>
-            Waiting for {callType === 'VIDEO' ? 'VIDEO' : 'AUDIO'} call… 📞
-          </Text>
+          <>
+            <Text style={styles.waitingText}>
+              Waiting for {callType} call… 📞
+            </Text>
+
+            <TouchableOpacity onPress={handleCancel} style={styles.cancelBtn}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </>
         )}
       </View>
 
@@ -177,7 +166,7 @@ const { incoming } = useSelector((state) => state.friends);
 
             <TouchableOpacity
               style={styles.callBtn}
-              onPress={() => handleGoOnline('AUDIO')}
+              onPress={() => handleGoOnline("AUDIO")}
             >
               <Icon name="call-outline" size={26} color="#fff" />
               <Text style={styles.callText}>Audio Call</Text>
@@ -185,7 +174,7 @@ const { incoming } = useSelector((state) => state.friends);
 
             <TouchableOpacity
               style={[styles.callBtn, styles.videoBtn]}
-              onPress={() => handleGoOnline('VIDEO')}
+              onPress={() => handleGoOnline("VIDEO")}
             >
               <Icon name="videocam-outline" size={26} color="#fff" />
               <Text style={styles.callText}>Video Call</Text>
@@ -223,6 +212,7 @@ const { incoming } = useSelector((state) => state.friends);
 };
 
 export default ReciverHomeScreen;
+
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({

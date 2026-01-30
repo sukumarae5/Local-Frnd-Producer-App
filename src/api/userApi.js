@@ -6,7 +6,6 @@ export const user_Edit = `${MAIN_BASE_URL}/api/user/profile`;
 export const USER_PHOTO_POST_URL = `${MAIN_BASE_URL}/api/photo`;
 export const USER_DATA=`${MAIN_BASE_URL}/api/userprofile/profile`;
 export const random_users_data=`${MAIN_BASE_URL}/api/user/random-users`;
-export const random_calls=`${MAIN_BASE_URL}/api/call/random-connect`;
 export const languages=`${MAIN_BASE_URL}/api/language/getlanguages`;
 export const newuserapi=`${MAIN_BASE_URL}/api/user/profile`
 export const avatarsapi=`${MAIN_BASE_URL}/api/avatars`
@@ -26,4 +25,13 @@ export const lifestycategory=`${MAIN_BASE_URL}/api/lifestylecategory/all`
 export const lifeStyleallapi=`${MAIN_BASE_URL}/api/lifestyle/all`
 export const userlifestyleapi=`${MAIN_BASE_URL}/api/userlifestyle`
 export const otheruserapi=`${MAIN_BASE_URL}/api/userprofile/profile`
-console.log(otheruserapi)
+
+
+//calls
+export const random_calls = `${MAIN_BASE_URL}/api/call/random-connect`;       // MALE
+export const female_search = `${MAIN_BASE_URL}/api/call/start-search`;       // FEMALE
+export const female_cancel = `${MAIN_BASE_URL}/api/call/cancel-search`;      // FEMALE
+export const searching_females = `${MAIN_BASE_URL}/api/call/searching-females`;
+
+
+

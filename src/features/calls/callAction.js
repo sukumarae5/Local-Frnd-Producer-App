@@ -1,49 +1,67 @@
+import * as T from "./callType";
 
-
-import {
-  CALL_REQUEST,
-  CALL_SUCCESS,
-  CALL_FAILED,
-  CALL_RESET,
-  RECENT_CALL_REQUEST,
-  RECENT_CALL_SUCCESS,
-  RECENT_CALL_FAILED,
-  RECENT_CALL_RESET,
-} from "./callType";
-
-export const startCallRequest = (payload) => ({
-  type: CALL_REQUEST,
-  payload, // { call_type: "AUDIO" | "VIDEO", gender }
+/* 👨 MALE RANDOM CALL */
+export const callRequest = (payload) => ({
+  type: T.CALL_REQUEST,
+  payload, // { call_type }
 });
 
 export const callSuccess = (data) => ({
-  type: CALL_SUCCESS,
+  type: T.CALL_SUCCESS,
   payload: data,
 });
 
 export const callFailed = (error) => ({
-  type: CALL_FAILED,
+  type: T.CALL_FAILED,
   payload: error,
 });
 
-export const callReset = () => ({
-  type: CALL_RESET,
+/* 👩 FEMALE SEARCH */
+export const femaleSearchRequest = (payload) => ({
+  type: T.FEMALE_SEARCH_REQUEST,
+  payload, // { call_type }
 });
 
-export const recentCallRequest = () => ({
-  type: RECENT_CALL_REQUEST,
-});
-
-export const recentCallSuccess = (data) => ({
-  type: RECENT_CALL_SUCCESS,
+export const femaleSearchSuccess = (data) => ({
+  type: T.FEMALE_SEARCH_SUCCESS,
   payload: data,
 });
 
-export const recentCallFailed = (error) => ({
-  type: RECENT_CALL_FAILED,
+export const femaleSearchFailed = (error) => ({
+  type: T.FEMALE_SEARCH_FAILED,
   payload: error,
 });
 
-export const recentCallReset = () => ({
-  type: RECENT_CALL_RESET,
+/* 👩 FEMALE CANCEL SEARCH */
+export const femaleCancelRequest = () => ({
+  type: T.FEMALE_CANCEL_REQUEST,
+});
+
+export const femaleCancelSuccess = () => ({
+  type: T.FEMALE_CANCEL_SUCCESS,
+});
+
+export const femaleCancelFailed = (error) => ({
+  type: T.FEMALE_CANCEL_FAILED,
+  payload: error,
+});
+
+/* 👨 FETCH SEARCHING FEMALES */
+export const searchingFemalesRequest = () => ({
+  type: T.SEARCHING_FEMALES_REQUEST,
+});
+
+export const searchingFemalesSuccess = (data) => ({
+  type: T.SEARCHING_FEMALES_SUCCESS,
+  payload: data,
+});
+
+export const searchingFemalesFailed = (error) => ({
+  type: T.SEARCHING_FEMALES_FAILED,
+  payload: error,
+});
+
+
+export const clearCall = () => ({
+  type: T.CLEAR_CALL,
 });

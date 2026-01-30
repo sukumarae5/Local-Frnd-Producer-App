@@ -12,13 +12,15 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { RTCView, mediaDevices } from "react-native-webrtc";
 import { CommonActions } from "@react-navigation/native";
 import InCallManager from "react-native-incall-manager";
-
+import { useDispatch } from "react-redux";
+import { clearCall } from "../features/calls/callAction";
 import { SocketContext } from "../socket/SocketProvider";
 import { createPC } from "../utils/webrtc";
 
 const VideocallScreen = ({ route, navigation }) => {
   const { session_id, role } = route.params;
   const { socketRef, connected } = useContext(SocketContext);
+const dispatch = useDispatch();
 
   /* ================= REFS ================= */
   const pcRef = useRef(null);
@@ -220,7 +222,7 @@ const VideocallScreen = ({ route, navigation }) => {
   const cleanup = (emit = true) => {
     if (endedRef.current) return;
     endedRef.current = true;
-
+ dispatch(clearCall());
     clearInterval(timerRef.current);
 
     if (emit) {

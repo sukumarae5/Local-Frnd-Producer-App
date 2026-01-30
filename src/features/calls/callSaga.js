@@ -1,91 +1,107 @@
-
-
 import { call, put, takeLatest } from "redux-saga/effects";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import * as T from "./callType";
 import {
-  CALL_REQUEST,
-  CALL_SUCCESS,
-  CALL_FAILED,
-   RECENT_CALL_REQUEST,
-  RECENT_CALL_SUCCESS,
-  RECENT_CALL_FAILED,
-} from "./callType";
+  callSuccess,
+  callFailed,
+  femaleSearchSuccess,
+  femaleSearchFailed,
+  femaleCancelSuccess,
+  femaleCancelFailed,
+  searchingFemalesSuccess,
+  searchingFemalesFailed,
+} from "./callAction";
 
-import { random_calls, recent_calls } from "../../api/userApi";
+import {
+  random_calls,
+  female_search,
+  female_cancel,
+  searching_females,
+} from "../../api/userApi";
 
-function* createCallSession(action) {
+/* ================= 👨 MALE RANDOM CALL ================= */
+function* maleCallSaga(action) {
   try {
-    const payload = action.payload;
-
-    console.log("📞 CALL REQUEST PAYLOAD =>", payload);
-    // payload = { call_type: "VIDEO", gender: "Male" }
-
+    console.log("Male Call Saga Payload:", action.payload); 
     const token = yield call(AsyncStorage.getItem, "twittoke");
+      const gender = yield call(AsyncStorage.getItem, "gender");
+      console.log("gender", gender);
 
-    const response = yield call(
+    const res = yield call(
       axios.post,
       random_calls,
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
+      action.payload,
+      { headers: { Authorization: `Bearer ${token}` } }
     );
-
-    console.log("📞 CALL RESPONSE =>", response.data);
-
-    yield put({
-      type: CALL_SUCCESS,
-      payload: response.data,
-    });
-
-  } catch (error) {
-    console.error("❌ CALL ERROR =>", error);
-
-    yield put({
-      type: CALL_FAILED,
-      payload: error.message,
-    });
+console.log("Male Call Response:", res);
+    yield put(callSuccess(res.data));
+  } catch (e) {
+    yield put(callFailed(e.message));
   }
 }
 
+/* ================= 👩 FEMALE START SEARCH ================= */
+function* femaleSearchSaga(action) {
+  try {
+    const token = yield call(AsyncStorage.getItem, "twittoke");
+console.log("Female Search Saga Payload:", action.payload);
+    
+const gender = yield call(AsyncStorage.getItem, "gender");
+      console.log("gender", gender);
+const res = yield call(
+      axios.post,
+      female_search,
+      action.payload,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+console.log("Female Search Response:", res);
+    yield put(femaleSearchSuccess(res.data));
+  } catch (e) {
+    yield put(femaleSearchFailed(e.message));
+  }
+}
 
-function* fetchRecentCalls() {
+/* ================= 👩 FEMALE CANCEL SEARCH ================= */
+function* femaleCancelSaga() {
   try {
     const token = yield call(AsyncStorage.getItem, "twittoke");
 
-    const response = yield call(
-      axios.get,
-      recent_calls,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
+    yield call(
+      axios.post,
+      female_cancel,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    console.log("📞 RECENT CALL USERS =>", response.data);
-
-    yield put({
-      type: RECENT_CALL_SUCCESS,
-      payload: response.data.data, // <-- important
-    });
-
-  } catch (error) {
-    console.error("❌ RECENT CALL ERROR =>", error);
-
-    yield put({
-      type: RECENT_CALL_FAILED,
-      payload: error.message,
-    });
+    yield put(femaleCancelSuccess());
+  } catch (e) {
+    yield put(femaleCancelFailed(e.message));
   }
 }
 
+/* ================= 👨 SEARCHING FEMALES LIST ================= */
+function* searchingFemalesSaga() {
+  try {
+    const token = yield call(AsyncStorage.getItem, "twittoke");
 
+    const res = yield call(
+      axios.get,
+      searching_females,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    yield put(searchingFemalesSuccess(res.data.data));
+  } catch (e) {
+    yield put(searchingFemalesFailed(e.message));
+  }
+}
+
+/* ================= WATCHERS ================= */
 export default function* callSaga() {
-  yield takeLatest(CALL_REQUEST, createCallSession);
- yield takeLatest(RECENT_CALL_REQUEST, fetchRecentCalls);
+  yield takeLatest(T.CALL_REQUEST, maleCallSaga);
+  yield takeLatest(T.FEMALE_SEARCH_REQUEST, femaleSearchSaga);
+  yield takeLatest(T.FEMALE_CANCEL_REQUEST, femaleCancelSaga);
+  yield takeLatest(T.SEARCHING_FEMALES_REQUEST, searchingFemalesSaga);
 }
