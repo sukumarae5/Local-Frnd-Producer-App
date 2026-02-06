@@ -18,6 +18,7 @@ import {
 } from "../features/calls/callAction";
 
 import { SocketContext } from "../socket/SocketProvider";
+import { userDatarequest } from "../features/user/userAction";
 
 const ReciverHomeScreen = ({ navigation }) => {
   /* ================= HOOK ORDER (DO NOT CHANGE) ================= */
@@ -32,7 +33,12 @@ const ReciverHomeScreen = ({ navigation }) => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const { incoming } = useSelector((state) => state.friends);
+const { userdata } = useSelector((state) => state.user);
+console.log("userdata", userdata);
 
+  useEffect(() => {
+      dispatch(userDatarequest());
+    }, []);
   /* ================= SOCKET: INCOMING CALL ================= */
   useEffect(() => {
     if (!connected || !socketRef.current) return;
@@ -108,28 +114,41 @@ dispatch(femaleCancelRequest());
           <Text style={styles.appName}>Local Friend</Text>
 
           <View style={styles.headerIcons}>
-            <View>
-              <TouchableOpacity
-                style={styles.iconBtn}
-                onPress={() => navigation.navigate("FriendRequestsScreen")}
-              >
-                <Icon name="notifications-outline" size={26} color="#fff" />
-              </TouchableOpacity>
 
-              {incoming.length > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{incoming.length}</Text>
-                </View>
-              )}
-            </View>
+  {/* MESSAGE ICON (same as male HomeScreen) */}
+  <TouchableOpacity
+    style={styles.iconBtn}
+    onPress={() => navigation.navigate("MessagesScreen")}
+  >
+<Icon name="chatbubble-ellipses-outline" size={26} color="#fff" />
+  </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.iconBtn}
-              onPress={() => setShowLogoutModal(true)}
-            >
-              <Icon name="log-out-outline" size={26} color="#fff" />
-            </TouchableOpacity>
-          </View>
+  {/* NOTIFICATION ICON */}
+  <View>
+    <TouchableOpacity
+      style={styles.iconBtn}
+      onPress={() => navigation.navigate("FriendRequestsScreen")}
+    >
+      <Icon name="notifications-outline" size={26} color="#fff" />
+    </TouchableOpacity>
+
+    {incoming.length > 0 && (
+      <View style={styles.badge}>
+        <Text style={styles.badgeText}>{incoming.length}</Text>
+      </View>
+    )}
+  </View>
+
+  {/* LOGOUT ICON */}
+  <TouchableOpacity
+    style={styles.iconBtn}
+    onPress={() => setShowLogoutModal(true)}
+  >
+    <Icon name="log-out-outline" size={26} color="#fff" />
+  </TouchableOpacity>
+
+</View>
+
         </View>
       </LinearGradient>
 

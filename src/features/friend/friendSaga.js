@@ -41,6 +41,7 @@ import {
   friendAccept,
   friendStatus, friendUnfriend
 } from "../../api/userApi";
+import { chatListRequest } from "../chat/chatAction";
 
 /* ================= SEND FRIEND REQUEST ================= */
 function* sendFriendRequestSaga(action) {
@@ -108,6 +109,7 @@ console.log("Accept Friend Response:", response);
  yield put(friendAcceptSuccess(action.payload.request_id));
     yield put(friendPendingRequest());
     yield put(friendListRequest())
+    yield put(chatListRequest());
   
   } catch (e) {
     yield put(friendAcceptFailed(e.message));

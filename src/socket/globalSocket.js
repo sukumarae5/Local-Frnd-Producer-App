@@ -14,7 +14,7 @@ export const createSocket = (token) => {
   console.log("🆕 Creating socket...");
 
   socket = io(MAIN_BASE_URL, {
-    transports: ["websocket"], // 🔥 REQUIRED
+    transports: ["websocket"],
     auth: { token },
     forceNew: true,
     reconnection: true,
@@ -47,3 +47,4 @@ export const destroySocket = () => {
     console.log("👋 Socket destroyed");
   }
 };
+

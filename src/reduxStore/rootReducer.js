@@ -13,6 +13,8 @@ import lifestyleReducer from "../features/lifeStyle/lifestyleReducer"
 import lifestyleOptionsReducer  from"../features/lifeStyle/lifestyleReducer"
 import userLifestyleReducer from"../features/lifeStyle/lifestyleReducer"
 import otherusersSaga from "../features/Otherusers/otherUserReducer"
+import chatReducer from "../features/chat/chatReducer"
+
 const rootReducer = combineReducers({
   auth:authReducer,
   user: userReducer,
@@ -27,7 +29,8 @@ const rootReducer = combineReducers({
   lifestyle:lifestyleReducer,
   lifestyleOptions:lifestyleOptionsReducer,
   userLifestyle:userLifestyleReducer,
-  otherUsers:otherusersSaga
+  otherUsers:otherusersSaga,
+  chat:chatReducer
 });
 
 export default rootReducer;

@@ -7,6 +7,7 @@ import {
   Platform,
   PermissionsAndroid,
 } from "react-native";
+
 import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { RTCView, mediaDevices } from "react-native-webrtc";
@@ -16,11 +17,15 @@ import { useDispatch } from "react-redux";
 import { clearCall } from "../features/calls/callAction";
 import { SocketContext } from "../socket/SocketProvider";
 import { createPC } from "../utils/webrtc";
+import EndCallConfirmModal from "../screens/EndCallConfirmationScreen";
 
 const VideocallScreen = ({ route, navigation }) => {
   const { session_id, role } = route.params;
   const { socketRef, connected } = useContext(SocketContext);
-const dispatch = useDispatch();
+
+  const dispatch = useDispatch();
+
+  const [showEndModal, setShowEndModal] = useState(false);
 
   /* ================= REFS ================= */
   const pcRef = useRef(null);
@@ -37,6 +42,7 @@ const dispatch = useDispatch();
   const [cameraOn, setCameraOn] = useState(true);
   const [speakerOn, setSpeakerOn] = useState(false);
   const [seconds, setSeconds] = useState(0);
+const [activeBtn, setActiveBtn] = useState(null);
 
   /* ================= PERMISSION ================= */
   const requestPermission = async () => {
@@ -69,17 +75,15 @@ const dispatch = useDispatch();
         return;
       }
 
-      /* 🔊 ANDROID AUDIO ROUTING (CORRECT WAY) */
       InCallManager.start({ media: "audio" });
       InCallManager.setMicrophoneMute(false);
-      InCallManager.setSpeakerphoneOn(false); // start with earpiece / BT
+      InCallManager.setSpeakerphoneOn(false);
 
       pcRef.current = createPC({
         onIceCandidate: (candidate) => {
           socket.emit("video_ice_candidate", { session_id, candidate });
         },
         onTrack: (stream) => {
-          // 🔊 FORCE REMOTE AUDIO ENABLED
           stream.getAudioTracks().forEach((t) => (t.enabled = true));
           setRemoteStream(stream);
         },
@@ -138,6 +142,7 @@ const dispatch = useDispatch();
         await pcRef.current.addIceCandidate(c);
       } catch {}
     }
+
     pendingIceRef.current = [];
   };
 
@@ -180,6 +185,7 @@ const dispatch = useDispatch();
     if (timerRef.current) return;
 
     setConnectedUI(true);
+
     timerRef.current = setInterval(() => {
       setSeconds((s) => s + 1);
     }, 1000);
@@ -202,7 +208,6 @@ const dispatch = useDispatch();
     setCameraOn(track.enabled);
   };
 
-  /* 🔊 Speaker ONLY (Bluetooth auto handled by system) */
   const toggleSpeaker = () => {
     setSpeakerOn((prev) => {
       InCallManager.setSpeakerphoneOn(!prev);
@@ -210,7 +215,6 @@ const dispatch = useDispatch();
     });
   };
 
-  /* 🎥 SAFE CAMERA SWITCH (NO FREEZE) */
   const switchCamera = () => {
     const track = localStreamRef.current?.getVideoTracks()[0];
     if (track && track._switchCamera) {
@@ -221,8 +225,10 @@ const dispatch = useDispatch();
   /* ================= CLEANUP ================= */
   const cleanup = (emit = true) => {
     if (endedRef.current) return;
+
     endedRef.current = true;
- dispatch(clearCall());
+
+    dispatch(clearCall());
     clearInterval(timerRef.current);
 
     if (emit) {
@@ -230,6 +236,7 @@ const dispatch = useDispatch();
     }
 
     InCallManager.stop();
+
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     pcRef.current?.close();
 
@@ -247,6 +254,7 @@ const dispatch = useDispatch();
   /* ================= UI ================= */
   return (
     <View style={styles.container}>
+      {/* Remote */}
       {remoteStream && (
         <RTCView
           streamURL={remoteStream.toURL()}
@@ -255,6 +263,7 @@ const dispatch = useDispatch();
         />
       )}
 
+      {/* Local preview */}
       {localStreamRef.current && (
         <RTCView
           streamURL={localStreamRef.current.toURL()}
@@ -263,82 +272,184 @@ const dispatch = useDispatch();
         />
       )}
 
-      <LinearGradient colors={["#00000000", "#000000cc"]} style={styles.bottom}>
-        <Text style={styles.timer}>
+      {/* Top timer */}
+      <View style={styles.timerPill}>
+        <Text style={styles.timerText}>
           {connectedUI
-            ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`
+            ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(
+                2,
+                "0"
+              )}`
             : "Connecting…"}
         </Text>
+      </View>
 
-        <View style={styles.controls}>
-          <Control
-            icon={speakerOn ? "volume-high" : "volume-mute"}
-            onPress={toggleSpeaker}
-          />
-          <Control
-            icon={micOn ? "mic" : "mic-off"}
-            onPress={toggleMic}
-            danger={!micOn}
-          />
-          <Control
-            icon={cameraOn ? "videocam" : "videocam-off"}
-            onPress={toggleCamera}
-          />
-          <Control icon="camera-reverse" onPress={switchCamera} />
-          <Control icon="call" onPress={() => cleanup(true)} danger />
-        </View>
+      {/* Bottom floating bar */}
+      <LinearGradient
+        colors={["#1b1b1b", "#101010"]}
+        style={styles.bottomBar}
+      >
+        <RoundBtn
+  id="speaker"
+  activeBtn={activeBtn}
+  setActiveBtn={setActiveBtn}
+  icon={speakerOn ? "volume-high" : "volume-mute"}
+  onPress={toggleSpeaker}
+/>
+
+<RoundBtn
+  id="mic"
+  activeBtn={activeBtn}
+  setActiveBtn={setActiveBtn}
+  icon={micOn ? "mic" : "mic-off"}
+  onPress={toggleMic}
+/>
+
+<RoundBtn
+  id="camera"
+  activeBtn={activeBtn}
+  setActiveBtn={setActiveBtn}
+  icon={cameraOn ? "videocam" : "videocam-off"}
+  onPress={toggleCamera}
+/>
+
+<RoundBtn
+  id="switch"
+  activeBtn={activeBtn}
+  setActiveBtn={setActiveBtn}
+  icon="camera-reverse"
+  onPress={switchCamera}
+/>
+
+<RoundBtn
+  id="end"
+  activeBtn={activeBtn}
+  setActiveBtn={setActiveBtn}
+  icon="call"
+  onPress={() => setShowEndModal(true)}
+  large
+/>
+
       </LinearGradient>
+
+      {/* End call modal */}
+      <EndCallConfirmModal
+        visible={showEndModal}
+        onCancel={() => setShowEndModal(false)}
+        onConfirm={() => {
+          setShowEndModal(false);
+          cleanup(true);
+        }}
+      />
     </View>
   );
 };
 
-const Control = ({ icon, onPress, danger }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={[styles.controlBtn, danger && styles.dangerBtn]}
-  >
-    <Ionicons name={icon} size={26} color="#fff" />
-  </TouchableOpacity>
-);
+const RoundBtn = ({
+  id,
+  icon,
+  onPress,
+  large,
+  activeBtn,
+  setActiveBtn,
+}) => {
+
+  const isActive = activeBtn === id;
+
+  const handlePress = () => {
+    setActiveBtn(id);
+    onPress && onPress();
+  };
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      activeOpacity={0.9}
+      style={[
+        styles.roundBtn,
+        large && styles.endBtn,
+        {
+          backgroundColor: isActive ? "#9b2a91" : "#ffffff",
+        },
+      ]}
+    >
+      <Ionicons
+        name={icon}
+        size={large ? 30 : 22}
+        color={isActive ? "#ffffff" : "#9b2a91"}
+      />
+    </TouchableOpacity>
+  );
+};
 
 export default VideocallScreen;
 
 /* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000" },
-  remote: { flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+
+  remote: {
+    flex: 1,
+  },
+
   local: {
     position: "absolute",
-    width: 120,
+    top: 70,
+    right: 16,
+    width: 110,
     height: 160,
-    top: 40,
-    right: 20,
-    borderRadius: 12,
+    borderRadius: 18,
+    overflow: "hidden",
+    borderWidth: 2,
+    borderColor: "#fff",
     zIndex: 10,
   },
-  bottom: {
+
+  timerPill: {
     position: "absolute",
-    bottom: 0,
-    width: "100%",
-    paddingBottom: 30,
-    paddingTop: 20,
-    alignItems: "center",
-  },
-  timer: { color: "#00ffcc", fontSize: 18, marginBottom: 12 },
-  controls: {
-    flexDirection: "row",
-    gap: 14,
-    justifyContent: "center",
-  },
-  controlBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    top: 40,
+    alignSelf: "center",
     backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    zIndex: 20,
   },
-  dangerBtn: {
-    backgroundColor: "#ff3b30",
+
+  timerText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  bottomBar: {
+    position: "absolute",
+    bottom: 24,
+    left: 16,
+    right: 16,
+    height: 84,
+    borderRadius: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-evenly",
+    paddingHorizontal: 12,
+  },
+
+  roundBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  endBtn: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
   },
 });

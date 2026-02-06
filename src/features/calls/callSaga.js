@@ -12,6 +12,10 @@ import {
   femaleCancelFailed,
   searchingFemalesSuccess,
   searchingFemalesFailed,
+  callDetailsSuccess,
+  callDetailsFailed,
+  directCallSuccess,
+  directCallFailed,
 } from "./callAction";
 
 import {
@@ -19,6 +23,8 @@ import {
   female_search,
   female_cancel,
   searching_females,
+  call_connected_details,
+  direct_call 
 } from "../../api/userApi";
 
 /* ================= 👨 MALE RANDOM CALL ================= */
@@ -98,10 +104,54 @@ function* searchingFemalesSaga() {
   }
 }
 
+function* callDetailsSaga() {
+  try {
+    const token = yield call(AsyncStorage.getItem, "twittoke");
+
+    const res = yield call(
+      axios.get,
+      call_connected_details,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+console.log("Call Details Response:", res);
+    yield put(callDetailsSuccess(res.data));
+
+  } catch (e) {
+    yield put(callDetailsFailed(e.message));
+  }
+}
+
+function* directCallSaga(action) {
+  try {
+    const token = yield call(AsyncStorage.getItem, "twittoke");
+
+    const res = yield call(
+      axios.post,
+      direct_call,
+      action.payload, // { female_id, call_type }
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    console.log("Direct Call Response:", res);
+
+    yield put(directCallSuccess(res.data));
+
+  } catch (e) {
+    yield put(
+      directCallFailed(
+        e.response?.data?.error || e.message
+      )
+    );
+  }
+}
+
 /* ================= WATCHERS ================= */
 export default function* callSaga() {
   yield takeLatest(T.CALL_REQUEST, maleCallSaga);
   yield takeLatest(T.FEMALE_SEARCH_REQUEST, femaleSearchSaga);
   yield takeLatest(T.FEMALE_CANCEL_REQUEST, femaleCancelSaga);
   yield takeLatest(T.SEARCHING_FEMALES_REQUEST, searchingFemalesSaga);
+  yield takeLatest(T.CALL_DETAILS_REQUEST, callDetailsSaga);
+  yield takeLatest(T.DIRECT_CALL_REQUEST, directCallSaga);
+
 }

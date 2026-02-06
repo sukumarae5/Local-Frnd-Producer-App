@@ -23,7 +23,7 @@ export const yourinterest =`${MAIN_BASE_URL}/api/interest/all`
 export const selectinterest =`${MAIN_BASE_URL}/api/userinterest/`
 export const lifestycategory=`${MAIN_BASE_URL}/api/lifestylecategory/all`
 export const lifeStyleallapi=`${MAIN_BASE_URL}/api/lifestyle/all`
-export const userlifestyleapi=`${MAIN_BASE_URL}/api/userlifestyle`
+export const userlifestyleapi=`${MAIN_BASE_URL}/api/userlifestyle/`
 export const otheruserapi=`${MAIN_BASE_URL}/api/userprofile/profile`
 
 
@@ -32,6 +32,14 @@ export const random_calls = `${MAIN_BASE_URL}/api/call/random-connect`;       //
 export const female_search = `${MAIN_BASE_URL}/api/call/start-search`;       // FEMALE
 export const female_cancel = `${MAIN_BASE_URL}/api/call/cancel-search`;      // FEMALE
 export const searching_females = `${MAIN_BASE_URL}/api/call/searching-females`;
+export const call_connected_details =`${MAIN_BASE_URL}/api/call/connected-details`;
+export const direct_call = `${MAIN_BASE_URL}/api/call/direct-connect`; // MALE
+
+
+export const chatHistoryApi = `${MAIN_BASE_URL}/api/chat/messages`;
+export const chatDeleteApi  = `${MAIN_BASE_URL}/api/chat/messages`;
+export const chatListApi = `${MAIN_BASE_URL}/api/chat/list`;
+export const chatReadConversationApi =`${MAIN_BASE_URL}/api/chat/read/conversation`;
 
 
 

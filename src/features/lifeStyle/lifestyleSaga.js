@@ -11,6 +11,7 @@ import {
   USER_LIFESTYLE_SUCCESS,
   USER_LIFESTYLE_FAILURE,
 } from "./lifestyleTypes";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
   lifestycategory,
@@ -52,10 +53,21 @@ function* fetchLifestyleOptionsWorker() {
   }
 }
 
-/* ================== POST USER LIFESTYLE ================== */
-function postUserLifestyleApi(data) {
-  return axios.post(userlifestyleapi, data);
+function* postUserLifestyleApi(data) {
+  const token = yield call(AsyncStorage.getItem, "twittoke");
+
+  return yield call(
+    axios.post,
+    userlifestyleapi,
+    data,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
 }
+
 
 function* userLifestyleWorker(action) {
   try {

@@ -13,6 +13,9 @@ import lifestyleSaga from "../features/lifeStyle/lifestyleSaga"
 import lifestyleOptionsSaga from "../features/lifeStyle/lifestyleSaga"
 import userLifestyleSaga from"../features/lifeStyle/lifestyleSaga"
 import otherusersSaga from "../features/Otherusers/otherUserSaga"
+import chatSaga from "../features/chat/chatSaga"
+
+
 export default function* rootSaga() {
   yield all([
     authSaga(),
@@ -28,6 +31,7 @@ export default function* rootSaga() {
     lifestyleSaga(),
     lifestyleOptionsSaga(),
     userLifestyleSaga(),
-    otherusersSaga()
+    otherusersSaga(),
+    chatSaga()
   ]);
 }

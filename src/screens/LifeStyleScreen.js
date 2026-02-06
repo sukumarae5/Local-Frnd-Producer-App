@@ -24,20 +24,11 @@ import { newUserDataRequest } from "../features/user/userAction";
 const LifeStyleScreen = ({ navigation }) => {
   const [about, setAbout] = useState("");
   const [selectedChoices, setSelectedChoices] = useState({});
-  const [userId, setUserId] = useState(null);
 
   const dispatch = useDispatch();
   const { loading, data, options } = useSelector((state) => state.lifestyle);
 
-  // Load user_id from storage
-  useEffect(() => {
-    const loadUserId = async () => {
-      const id = await AsyncStorage.getItem("user_id");
-      setUserId(Number(id));
-    };
-    loadUserId();
-  }, []);
-
+ 
   // Fetch categories and options
   useEffect(() => {
     dispatch({ type: FETCH_LIFESTYLE_REQUEST });
@@ -53,18 +44,13 @@ const LifeStyleScreen = ({ navigation }) => {
   const handleSubmit = () => {
     const lifestyleIds = Object.values(selectedChoices).map(Number);
 
-    if (!userId) {
-      console.log("User ID not found!");
-      return;
-    }
+   dispatch({
+  type: USER_LIFESTYLE_REQUEST,
+  payload: {
+    lifestyles: lifestyleIds,
+  },
+});
 
-    dispatch({
-      type: USER_LIFESTYLE_REQUEST,
-      payload: {
-        user_id: userId,
-        lifestyles: lifestyleIds,
-      },
-    });
  dispatch(newUserDataRequest({bio:about}));
     navigation.navigate("InterestScreen");
   };

@@ -3,7 +3,8 @@
 import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Image, Animated } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { callDetailsRequest } from "../features/calls/callAction";
 
 /* ---------------- STATIC DATA ---------------- */
 const smallAvatars = [
@@ -19,10 +20,14 @@ const SMALL_SIZE = 40;
 const DOT_RADIUS = (CENTER_SIZE * 1.7) / 2;
 
 const CallStatusScreen = ({ navigation, route }) => {
-  /* ---------------- EXISTING LOGIC (UNCHANGED) ---------------- */
+
+  const dispatch = useDispatch();
+
   const rotateAnim = useRef(new Animated.Value(0)).current;
+  const navigatedRef = useRef(false);
 
   const call = useSelector((state) => state.calls?.call);
+
   const call_type = route.params?.call_type || "AUDIO";
 
   /** ROTATION */
@@ -38,30 +43,29 @@ const CallStatusScreen = ({ navigation, route }) => {
 
   /** STATUS HANDLING */
   useEffect(() => {
-    if (!call) return;
 
-    if (call.status === "MATCHED") {
-      navigation.replace(
-        call.call_type === "VIDEO"
-          ? "VideocallScreen"
-          : "AudiocallScreen",
-        {
-          session_id: call.session_id,
-          peer_id: call.peer_id,
-          role: "caller",
-        }
-      );
+    if (!call?.status) return;
+
+    const status = call.status.toUpperCase();
+
+    if (status === "RINGING") {
+
+      if (navigatedRef.current) return;
+      navigatedRef.current = true;
+
+      dispatch(callDetailsRequest());
+
+      navigation.replace("PerfectMatchScreen", {
+        call_type: call.call_type,
+        session_id: call.session_id,
+      });
     }
 
-    if (call.status === "FAILED" || call.status === "CANCELED") {
+    if (status === "FAILED" || status === "CANCELED") {
       navigation.goBack();
     }
-  }, [call]);
 
-  const rotation = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "360deg"],
-  });
+  }, [call, navigation, dispatch]);
 
   /* ---------------- UI ANIMATIONS ---------------- */
   const ripple1 = useRef(new Animated.Value(0)).current;
@@ -127,37 +131,38 @@ const CallStatusScreen = ({ navigation, route }) => {
     }),
   };
 
-  /* ---------------- UI ---------------- */
   return (
     <LinearGradient
       colors={["#E9C9FF", "#F4C9F2", "#FFD1E8"]}
       style={styles.container}
     >
-      <View style={styles.topheats} >
-        <Image source={require("../assets/leftheart.png")}  style={styles.leftheart}></Image>
-              <Image source={require("../assets/rightheart.png")}  style={styles.rightheart}></Image>
 
+      <View style={styles.topheats}>
+        <Image
+          source={require("../assets/leftheart.png")}
+          style={styles.leftheart}
+        />
+        <Image
+          source={require("../assets/rightheart.png")}
+          style={styles.rightheart}
+        />
       </View>
+
       <View style={{ height: 60 }} />
 
       <View style={styles.centerArea}>
-        {/* RIPPLE GLOW */}
+
         <Animated.View style={rippleStyle1} />
         <Animated.View style={rippleStyle2} />
 
-        {/* DOTTED OUTER CIRCLE */}
         <View style={styles.dottedCircle} />
 
-        {/* ROTATING AVATARS */}
-        <Animated.View
-          style={[
-            styles.rotatingRing,
-            // { transform: [{ rotate: rotation }] },
-          ]}
-        >
+        <Animated.View style={styles.rotatingRing}>
           {smallAvatars.map((img, i) => {
+
             const angle =
               (i * (360 / smallAvatars.length)) * (Math.PI / 180);
+
             const r = DOT_RADIUS;
 
             return (
@@ -178,30 +183,24 @@ const CallStatusScreen = ({ navigation, route }) => {
           })}
         </Animated.View>
 
-        {/* CENTER IMAGE */}
         <View style={styles.centerCircle}>
           <Image
             source={require("../assets/girl2.jpg")}
             style={styles.centerImage}
           />
         </View>
+
       </View>
 
-      {/* CALL TYPE */}
       <View style={styles.tag}>
         <Text style={styles.tagText}>
           {call_type === "VIDEO" ? "Video Call" : "Audio Call"}
         </Text>
       </View>
 
-      {/* STATUS */}
       <Text style={styles.searchingText}>
-  {call
-    ? call.status === "SEARCHING"
-      ? "Searching..."
-      : call.status
-    : "Initializing..."}
-</Text>
+        {call?.status || "Initializing..."}
+      </Text>
 
       <View style={{ flex: 1 }} />
 
@@ -209,6 +208,7 @@ const CallStatusScreen = ({ navigation, route }) => {
         source={require("../assets/smallheart1.png")}
         style={styles.bottomHeart}
       />
+
     </LinearGradient>
   );
 };
@@ -216,32 +216,24 @@ const CallStatusScreen = ({ navigation, route }) => {
 export default CallStatusScreen;
 
 /* ---------------- STYLES ---------------- */
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-  },
-  topheats:{
-    position:"absolute",
-    top:30,
-    left:0,
-    right:0,
-    flexDirection:"row",
-    justifyContent:"space-between",
-    paddingHorizontal:30,
-    zIndex:10,
+  container: { flex: 1, alignItems: "center" },
+
+  topheats: {
+    position: "absolute",
+    top: 30,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 30,
+    zIndex: 10,
   },
 
-leftheart:{
-  marginTop:150,
-left:-40
-},
+  leftheart: { marginTop: 150, left: -40 },
+  rightheart: { marginTop: 80, left: 40 },
 
-rightheart:{
-    marginTop:80,
-
-left:40
-},
   centerArea: {
     alignItems: "center",
     justifyContent: "center",
@@ -261,8 +253,8 @@ left:40
 
   rotatingRing: {
     position: "absolute",
-    width: CENTER_SIZE * 1,
-    height: CENTER_SIZE * 1,
+    width: CENTER_SIZE,
+    height: CENTER_SIZE,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -318,7 +310,6 @@ left:40
   bottomHeart: {
     width: 35,
     height: 35,
-    color: "#eca6cf",
     marginBottom: 200,
   },
 });

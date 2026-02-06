@@ -42,7 +42,7 @@ const getDayLabel = (dateString) => {
   return "Earlier";
 };
 
-const FriendRequestsScreen = () => {
+const FriendRequestsScreen = ({ navigation }) => {   // ✅ CHANGED
   const dispatch = useDispatch();
   const { incoming, friends, loading } = useSelector((s) => s.friends);
 
@@ -50,7 +50,7 @@ const FriendRequestsScreen = () => {
   useEffect(() => {
     dispatch(friendPendingRequest());
     dispatch(friendListRequest());
-  }, []);
+  }, [dispatch]);
 
   /* ================= ACTIONS ================= */
   const accept = (requestId) => {
@@ -58,7 +58,6 @@ const FriendRequestsScreen = () => {
   };
 
   const reject = (senderId) => {
-    // using unfriend API to reject/delete pending request
     dispatch(friendUnfriendRequest(senderId));
   };
 
@@ -83,13 +82,10 @@ const FriendRequestsScreen = () => {
     <View style={styles.card}>
       <View>
         <Text style={styles.name}>{item.sender_name}</Text>
-        <Text style={styles.sub}>
-          User ID: {item.sender_id}
-        </Text>
+        <Text style={styles.sub}>User ID: {item.sender_id}</Text>
       </View>
 
       <View style={styles.actions}>
-        {/* ACCEPT */}
         <TouchableOpacity
           style={[styles.btn, styles.accept]}
           onPress={() => accept(item.request_id)}
@@ -97,7 +93,6 @@ const FriendRequestsScreen = () => {
           <Text style={styles.btnText}>Accept</Text>
         </TouchableOpacity>
 
-        {/* DELETE / REJECT */}
         <TouchableOpacity
           style={[styles.btn, styles.remove]}
           onPress={() => reject(item.sender_id)}
@@ -110,26 +105,30 @@ const FriendRequestsScreen = () => {
 
   /* ================= FRIEND ITEM ================= */
   const renderFriendItem = ({ item }) => (
-    <View style={[styles.card, styles.friend]}>
-      <View>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.sub}>
-          User ID: {item.user_id}
-        </Text>
-      </View>
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={() =>
+        navigation.navigate("ChatScreen", { user: item })
+      }
+    >
+      <View style={[styles.card, styles.friend]}>
+        <View>
+          <Text style={styles.name}>{item.name}</Text>
+          <Text style={styles.sub}>User ID: {item.user_id}</Text>
+        </View>
 
-      <TouchableOpacity
-        style={[styles.btn, styles.remove]}
-        onPress={() => unfriend(item.user_id)}
-      >
-        <Text style={styles.btnText}>Unfriend</Text>
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity
+          style={[styles.btn, styles.remove]}
+          onPress={() => unfriend(item.user_id)}
+        >
+          <Text style={styles.btnText}>Unfriend</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-      {/* ================= FRIEND REQUESTS ================= */}
       <Text style={styles.title}>Friend Requests</Text>
 
       {["Today", "Yesterday", "Earlier"].map((section) =>
@@ -152,7 +151,6 @@ const FriendRequestsScreen = () => {
         </Text>
       )}
 
-      {/* ================= FRIENDS ================= */}
       <Text style={[styles.title, { marginTop: 30 }]}>
         Friends
       </Text>
@@ -172,6 +170,7 @@ const FriendRequestsScreen = () => {
 };
 
 export default FriendRequestsScreen;
+
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({

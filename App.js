@@ -3,9 +3,7 @@ import React, { useEffect } from "react";
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Provider } from 'react-redux';
-
 import store from './src/reduxStore/store';
-
 import LandingScreen from './src/screens/LandingScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import PhoneScreen from './src/screens/PhoneScreen';
@@ -46,6 +44,7 @@ import ChatScreen from './src/screens/ChatScreen'
 import StoriesScreen from'./src/screens/StoriesScreen'
 import CallStatusScreen from "./src/screens/CallStatusScreen"
 import PerfectMatchScreen from"./src/screens/PerfectMatchScreen"
+import EndCallConfirmModal from "./src/screens/EndCallConfirmationScreen"
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -96,18 +95,14 @@ export default function App() {
 <Stack.Screen name="ReceiverBottomTabs" component={ReceiverBottomTabs} options={{ headerShown: false }}/>
 <Stack.Screen name="AboutScreen" component={AboutScreen}/>
 <Stack.Screen name="ChatScreen" component={ChatScreen}/>
-
 <Stack.Screen name="StoriesScreen" component={StoriesScreen}/>
 <Stack.Screen name="CallStatusScreen" component={CallStatusScreen}/>
+<Stack.Screen name="EndCallConfirmModal" component={EndCallConfirmModal}/>
 <Stack.Screen name="PerfectMatchScreen" component={PerfectMatchScreen}/>
 <Stack.Screen
   name="FriendRequestsScreen"
   component={FriendRequestsScreen}
-/>
-
-   
-   
-   
+/>   
    </Stack.Navigator>
       </NavigationContainer>
       </SocketProvider>

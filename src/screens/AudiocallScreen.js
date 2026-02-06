@@ -7,22 +7,69 @@ import {
   Platform,
   PermissionsAndroid,
   Animated,
+  Image
 } from "react-native";
+import { otherUserFetchRequest } from "../features/Otherusers/otherUserActions";
+
 import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { mediaDevices } from "react-native-webrtc";
 import { CommonActions } from "@react-navigation/native";
 import InCallManager from "react-native-incall-manager";
-import { useDispatch } from "react-redux";
-import { clearCall } from "../features/calls/callAction";
+import EndCallConfirmModal from "../screens/EndCallConfirmationScreen";
+
+import { useDispatch, useSelector } from "react-redux";
+import {
+  clearCall,
+  callDetailsRequest
+} from "../features/calls/callAction";
+
 import { SocketContext } from "../socket/SocketProvider";
 import { createPC } from "../utils/webrtc";
-import { Image } from "react-native";
 
 const AudiocallScreen = ({ route, navigation }) => {
+
   const { session_id, role } = route.params;
   const { socketRef, connected } = useContext(SocketContext);
+
+  const [showEndModal, setShowEndModal] = useState(false);
+
   const dispatch = useDispatch();
+
+  const connectedCallDetails = useSelector(
+    (state) => state?.calls?.connectedCallDetails
+  );
+console.log("connectedCallDetails", connectedCallDetails);  
+  const { userdata } = useSelector((state) => state.user);
+console.log("userdata", userdata);
+const myId = userdata?.user.user_id;
+
+
+  
+
+  const myIdStr = String(myId);
+
+const caller = connectedCallDetails?.caller;
+const connectedUser = connectedCallDetails?.connected_user;
+const myId1 = useSelector(
+  state => state.auth
+);
+console.log("myId1:", myId1);
+const me =
+  String(caller?.user_id) === myIdStr
+    ? caller
+    : connectedUser;
+
+const other =
+  String(caller?.user_id) === myIdStr
+    ? connectedUser
+    : caller;
+console.log(
+  "myId:",
+  myId,
+  "caller:",
+  connectedCallDetails?.caller?.user_id
+);
 
   /* ================= REFS ================= */
   const pcRef = useRef(null);
@@ -43,20 +90,24 @@ const AudiocallScreen = ({ route, navigation }) => {
   /* ================= PERMISSION ================= */
   const requestPermission = async () => {
     if (Platform.OS !== "android") return true;
+
     const res = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
     );
+
     return res === PermissionsAndroid.RESULTS.GRANTED;
   };
 
   /* ================= INIT ================= */
   useEffect(() => {
     if (!connected || !socketRef.current || startedRef.current) return;
+
     startedRef.current = true;
 
     const socket = socketRef.current;
 
     const start = async () => {
+
       const ok = await requestPermission();
       if (!ok) {
         navigation.goBack();
@@ -121,6 +172,7 @@ const AudiocallScreen = ({ route, navigation }) => {
         await pcRef.current.addIceCandidate(c);
       } catch {}
     }
+
     pendingIceRef.current = [];
   };
 
@@ -134,6 +186,7 @@ const AudiocallScreen = ({ route, navigation }) => {
     await pcRef.current.setLocalDescription(answer);
 
     socketRef.current.emit("audio_answer", { session_id, answer });
+
     onConnected();
   };
 
@@ -142,6 +195,7 @@ const AudiocallScreen = ({ route, navigation }) => {
 
     await pcRef.current.setRemoteDescription(answer);
     await flushIce();
+
     onConnected();
   };
 
@@ -158,11 +212,14 @@ const AudiocallScreen = ({ route, navigation }) => {
     } catch {}
   };
 
-  /* ================= TIMER ================= */
+  /* ================= CONNECTED ================= */
   const onConnected = () => {
     if (timerRef.current) return;
 
     setConnectedUI(true);
+
+    dispatch(callDetailsRequest());
+
     timerRef.current = setInterval(() => {
       setSeconds((s) => s + 1);
     }, 1000);
@@ -200,6 +257,7 @@ const AudiocallScreen = ({ route, navigation }) => {
   /* ================= CLEANUP ================= */
   const cleanup = (emit = true) => {
     if (endedRef.current) return;
+
     endedRef.current = true;
 
     dispatch(clearCall());
@@ -210,6 +268,7 @@ const AudiocallScreen = ({ route, navigation }) => {
     }
 
     InCallManager.stop();
+
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     pcRef.current?.close();
 
@@ -230,48 +289,84 @@ const AudiocallScreen = ({ route, navigation }) => {
       colors={["#E9C9FF", "#F4C9F2", "#FFD1E8"]}
       style={styles.container}
     >
+
       {/* TIME */}
       <View style={styles.timePill}>
         <Text style={styles.timeText}>
           {connectedUI
-            ? `${Math.floor(seconds / 60)}:${String(
-                seconds % 60
-              ).padStart(2, "0")}`
+            ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`
             : "Connecting…"}
         </Text>
       </View>
 
       {/* USERS */}
-      <View style={styles.usersRow}>
-        <View style={styles.userCard}>
-          <View style={styles.avatarRing}>
-            <View style={styles.avatar} />
-          </View>
-          <Text style={styles.userName}>User 1</Text>
-          <Text style={styles.subText}>About me</Text>
-          <Text style={styles.desc}>
-            looking for good communication and travel partner
-          </Text>
-        </View>
+     {/* USERS */}
+{connectedCallDetails?.connected && me && other && (
+  <View style={styles.usersRow}>
 
-        <View style={styles.userCard}>
-          <View style={styles.avatarRing}>
-            <View style={styles.avatar} />
-          </View>
-          <Text style={styles.userName}>User 2</Text>
-          <Text style={styles.subText}>About me</Text>
-          <Text style={styles.desc}>
-            meaningful conversations and positive connection
-          </Text>
-        </View>
+    {/* ME */}
+    <View style={styles.userCard}>
+      <View style={styles.avatarRing}>
+        <Image
+          source={{ uri: me.avatar }}
+          style={styles.avatar}
+        />
       </View>
-<View style={styles.topheats} >
-          <Image source={require("../assets/leftheart.png")}  style={styles.leftheart1}></Image>
 
-        <Image source={require("../assets/leftheart.png")}  style={styles.leftheart}></Image>
-              <Image source={require("../assets/rightheart.png")}  style={styles.rightheart}></Image>
+      <Text style={styles.userName}>{me.name}</Text>
+      <Text style={styles.subText}>About me</Text>
+      <Text style={styles.desc}>
+        {me.bio || ""}
+      </Text>
+    </View>
 
+    {/* OTHER – clickable */}
+    <TouchableOpacity
+      activeOpacity={0.8}
+      style={styles.userCard}
+      onPress={() => {
+        if (!other?.user_id) return;
+  console.log("Pressed other user:", other?.user_id);
+
+        dispatch(otherUserFetchRequest(other.user_id));
+        navigation.navigate("AboutScreen");
+      }}
+    >
+      <View style={styles.avatarRing}>
+        <Image
+          source={{ uri: other.avatar }}
+          style={styles.avatar}
+        />
       </View>
+
+      <Text style={styles.userName}>{other.name}</Text>
+      <Text style={styles.subText}>About me</Text>
+      <Text style={styles.desc}>
+        {other.bio || ""}
+      </Text>
+    </TouchableOpacity>
+
+  </View>
+)}
+
+
+      {/* HEARTS */}
+     <View style={styles.topheats} pointerEvents="none">
+
+        <Image
+          source={require("../assets/leftheart.png")}
+          style={styles.leftheart1}
+        />
+        <Image
+          source={require("../assets/leftheart.png")}
+          style={styles.leftheart}
+        />
+        <Image
+          source={require("../assets/rightheart.png")}
+          style={styles.rightheart}
+        />
+      </View>
+
       {/* CONTROLS */}
       <View style={styles.controls}>
         <TouchableOpacity
@@ -285,7 +380,10 @@ const AudiocallScreen = ({ route, navigation }) => {
           />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.circleBtn} onPress={toggleMic}>
+        <TouchableOpacity
+          style={styles.circleBtn}
+          onPress={toggleMic}
+        >
           <Animated.View style={{ transform: [{ scale: micAnim }] }}>
             <Ionicons
               name={micOn ? "mic" : "mic-off"}
@@ -297,13 +395,32 @@ const AudiocallScreen = ({ route, navigation }) => {
 
         <TouchableOpacity
           style={styles.endBtn}
-          onPress={() => cleanup(true)}
+          onPress={() => setShowEndModal(true)}
         >
           <Ionicons name="call" size={22} color="#f43939" />
         </TouchableOpacity>
       </View>
 
       <Text style={styles.debug}>ICE: {iceState}</Text>
+
+      {/* ✅ END CALL CONFIRM MODAL */}
+      <EndCallConfirmModal
+        visible={showEndModal}
+        otherUser={other}
+        onCancel={() => setShowEndModal(false)}
+        onConfirm={(rating) => {
+
+          // later if you want
+          // socketRef.current?.emit("audio_call_rating", {
+          //   session_id,
+          //   rating
+          // });
+
+          setShowEndModal(false);
+          cleanup(true);
+        }}
+      />
+
     </LinearGradient>
   );
 };
@@ -311,26 +428,29 @@ const AudiocallScreen = ({ route, navigation }) => {
 export default AudiocallScreen;
 
 /* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 60,
     alignItems: "center",
   },
-topheats:{
-    position:"absolute",
-    top:30,
-    left:0,
-    right:0,
-    flexDirection:"row",
-    justifyContent:"space-between",
-    paddingHorizontal:30,
-    zIndex:10,
-  },
-  leftheart:{marginTop:400,  left:-110  },
-    leftheart1:{marginTop:100,  left:-40  },
 
-  rightheart:{marginTop:390, left:40},
+  topheats: {
+    position: "absolute",
+    top: 30,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 30,
+    zIndex: 10,
+  },
+
+  leftheart: { marginTop: 500, left: -110 },
+  leftheart1: { marginTop: 150, left: -40 },
+  rightheart: { marginTop: 460, left: 40 },
+
   timePill: {
     backgroundColor: "#fb6b7c",
     paddingHorizontal: 20,
@@ -344,10 +464,12 @@ topheats:{
   },
 
   usersRow: {
+    flex: 1,
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     width: "92%",
-    marginTop: 50,
+    transform: [{ translateY: -200 }],
   },
 
   userCard: {

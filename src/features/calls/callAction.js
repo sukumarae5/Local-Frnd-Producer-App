@@ -61,6 +61,36 @@ export const searchingFemalesFailed = (error) => ({
   payload: error,
 });
 
+export const callDetailsRequest = () => ({
+  type: T.CALL_DETAILS_REQUEST
+});
+
+export const callDetailsSuccess = (data) => ({
+  type: T.CALL_DETAILS_SUCCESS,
+  payload: data
+});
+
+export const callDetailsFailed = (error) => ({
+  type: T.CALL_DETAILS_FAILED,
+  payload: error
+});
+
+/* 👨 MALE DIRECT CALL */
+
+export const directCallRequest = (payload) => ({
+  type: T.DIRECT_CALL_REQUEST,
+  payload, // { female_id, call_type }
+});
+
+export const directCallSuccess = (data) => ({
+  type: T.DIRECT_CALL_SUCCESS,
+  payload: data,
+});
+
+export const directCallFailed = (error) => ({
+  type: T.DIRECT_CALL_FAILED,
+  payload: error,
+});
 
 export const clearCall = () => ({
   type: T.CLEAR_CALL,
