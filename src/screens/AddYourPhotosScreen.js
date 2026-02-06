@@ -15,12 +15,20 @@ import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { launchCamera, launchImageLibrary } from "react-native-image-picker";
 
-import { useDispatch } from "react-redux"; // ✅ ADDED
-import { userpostphotorequest } from "../features/photo/photoAction"; // ✅ ADDED
+import { useDispatch } from "react-redux";
+import { userpostphotorequest } from "../features/photo/photoAction";
 
-const AddYourPhotosScreen = ({ navigation }) => {
-  const dispatch = useDispatch(); // ✅ ADDED
-  const [photos, setPhotos] = useState([]);
+const AddYourPhotosScreen = ({ navigation, route }) => {
+  const dispatch = useDispatch();
+
+  /* ================= EXISTING PHOTOS (FROM API) ================= */
+  const existingPhotos = route?.params?.existingPhotos || []; // [{photo_id, photo_url}]
+  const from = route?.params?.from;
+
+  /* ================= NEW PHOTOS (LOCAL) ================= */
+  const [newPhotos, setNewPhotos] = useState([]);
+
+  const totalPhotos = [...existingPhotos, ...newPhotos];
 
   /* ================= CAMERA PERMISSION ================= */
 
@@ -30,7 +38,7 @@ const AddYourPhotosScreen = ({ navigation }) => {
         PermissionsAndroid.PERMISSIONS.CAMERA
       );
       return granted === PermissionsAndroid.RESULTS.GRANTED;
-    } catch (err) {
+    } catch {
       return false;
     }
   };
@@ -40,16 +48,14 @@ const AddYourPhotosScreen = ({ navigation }) => {
   const openCamera = async () => {
     const permitted = await requestCameraPermission();
     if (!permitted) {
-      InteractionManager.runAfterInteractions(() => {
-        Alert.alert("Camera permission denied");
-      });
+      Alert.alert("Camera permission denied");
       return;
     }
 
     launchCamera({ mediaType: "photo", quality: 1 }, (response) => {
       if (response.didCancel || response.errorCode) return;
       if (response.assets?.length > 0) {
-        setPhotos((prev) => [...prev, response.assets[0]]);
+        setNewPhotos((prev) => [...prev, response.assets[0]]);
       }
     });
   };
@@ -60,7 +66,7 @@ const AddYourPhotosScreen = ({ navigation }) => {
     launchImageLibrary({ mediaType: "photo", quality: 0.8 }, (response) => {
       if (response.didCancel || response.errorMessage) return;
       if (response.assets?.length > 0) {
-        setPhotos((prev) => [...prev, response.assets[0]]);
+        setNewPhotos((prev) => [...prev, response.assets[0]]);
       }
     });
   };
@@ -68,10 +74,8 @@ const AddYourPhotosScreen = ({ navigation }) => {
   /* ================= SELECT OPTION ================= */
 
   const openSelectOption = () => {
-    if (photos.length >= 4) {
-      InteractionManager.runAfterInteractions(() => {
-        Alert.alert("Limit Reached", "You can upload only 4 photos.");
-      });
+    if (totalPhotos.length >= 4) {
+      Alert.alert("Limit Reached", "You can upload only 4 photos.");
       return;
     }
 
@@ -89,30 +93,34 @@ const AddYourPhotosScreen = ({ navigation }) => {
     });
   };
 
-  /* ================= UPLOAD PHOTOS (API DISPATCH) ================= */
+  /* ================= UPLOAD NEW PHOTOS ONLY ================= */
 
-const handleUploadPhotos = () => {
-  if (photos.length === 0) {
-    Alert.alert("Please add at least one photo");
-    return;
-  }
-  const formData = new FormData();
+  const handleUploadPhotos = () => {
+    if (newPhotos.length === 0) {
+      Alert.alert("No new photos to upload");
+      return;
+    }
 
-  photos.forEach((photo, index) => {
-    formData.append("photos", {
-      uri: photo.uri,
-      type: photo.type || "image/jpeg",
-      name: photo.fileName || `photo_${index}_${Date.now()}.jpg`,
+    const formData = new FormData();
+
+    newPhotos.forEach((photo, index) => {
+      formData.append("photos", {
+        uri: photo.uri,
+        type: photo.type || "image/jpeg",
+        name: photo.fileName || `photo_${index}_${Date.now()}.jpg`,
+      });
     });
-  });
 
-  dispatch(
-    userpostphotorequest(formData, () => {
-      navigation.navigate("SelectYourIdealMatchScreen");
-    })
-  );
-};
-
+    dispatch(
+      userpostphotorequest(formData, () => {
+        if (from === "EditProfile") {
+          navigation.goBack();
+        } else {
+          navigation.navigate("SelectYourIdealMatchScreen");
+        }
+      })
+    );
+  };
 
   /* ================= UI ================= */
 
@@ -120,7 +128,7 @@ const handleUploadPhotos = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
 
-        {/* Header */}
+        {/* HEADER */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="chevron-back" size={22} />
@@ -130,30 +138,56 @@ const handleUploadPhotos = () => {
 
         {/* PHOTO GRID */}
         <View style={styles.grid}>
-          {Array.from({ length: 4 }).map((_, index) => (
-            <View key={index} style={styles.gridItem}>
-              {photos[index] ? (
-                <Image
-                  source={{ uri: photos[index].uri }}
-                  style={styles.image}
-                />
-              ) : index === photos.length ? (
+          {Array.from({ length: 4 }).map((_, index) => {
+            const photo = totalPhotos[index];
+
+            // EXISTING PHOTO
+            if (photo?.photo_url) {
+              return (
+                <View key={`existing-${photo.photo_id}`} style={styles.gridItem}>
+                  <Image
+                    source={{ uri: photo.photo_url }}
+                    style={styles.image}
+                  />
+                </View>
+              );
+            }
+
+            // NEW PHOTO
+            if (photo?.uri) {
+              return (
+                <View key={`new-${index}`} style={styles.gridItem}>
+                  <Image
+                    source={{ uri: photo.uri }}
+                    style={styles.image}
+                  />
+                </View>
+              );
+            }
+
+            // ADD BUTTON
+            if (index === totalPhotos.length) {
+              return (
                 <TouchableOpacity
+                  key={`add-${index}`}
                   style={styles.addBox}
                   onPress={openSelectOption}
                 >
                   <Ionicons name="add" size={36} color="#C56CF0" />
                 </TouchableOpacity>
-              ) : (
-                <View style={styles.placeholderBox}>
-                  <Text style={styles.placeholderText}>160 x 210</Text>
-                </View>
-              )}
-            </View>
-          ))}
+              );
+            }
+
+            // PLACEHOLDER
+            return (
+              <View key={`empty-${index}`} style={styles.placeholderBox}>
+                <Text style={styles.placeholderText}>160 x 210</Text>
+              </View>
+            );
+          })}
         </View>
 
-        {/* Continue Button */}
+        {/* CONTINUE BUTTON */}
         <View style={styles.btnWrap}>
           <TouchableOpacity onPress={handleUploadPhotos}>
             <LinearGradient
@@ -165,9 +199,9 @@ const handleUploadPhotos = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Not Now */}
+        {/* SKIP */}
         <TouchableOpacity
-          onPress={() => navigation.navigate("Home")}
+          onPress={() => navigation.goBack()}
           style={{ marginTop: 10, alignSelf: "center" }}
         >
           <Text style={styles.skipText}>NOT NOW</Text>
@@ -183,10 +217,7 @@ export default AddYourPhotosScreen;
 /* ==================== STYLES ==================== */
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8F2FF",
-  },
+  container: { flex: 1, backgroundColor: "#F8F2FF" },
 
   headerRow: {
     flexDirection: "row",
@@ -195,10 +226,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  header: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
+  header: { fontSize: 18, fontWeight: "600" },
 
   grid: {
     flexDirection: "row",
@@ -215,19 +243,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: "hidden",
     backgroundColor: "#D9D9D9",
-    justifyContent: "center",
-    alignItems: "center",
   },
 
-  image: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
+  image: { width: "100%", height: "100%", resizeMode: "cover" },
 
   addBox: {
-    width: "100%",
-    height: "100%",
+    width: "48%",
+    height: 210,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: "#C56CF0",
@@ -238,21 +260,15 @@ const styles = StyleSheet.create({
   },
 
   placeholderBox: {
-    width: "100%",
-    height: "100%",
+    width: "48%",
+    height: 210,
     justifyContent: "center",
     alignItems: "center",
   },
 
-  placeholderText: {
-    fontSize: 14,
-    color: "#777",
-  },
+  placeholderText: { fontSize: 14, color: "#777" },
 
-  btnWrap: {
-    paddingHorizontal: 20,
-    marginTop: 20,
-  },
+  btnWrap: { paddingHorizontal: 20, marginTop: 20 },
 
   button: {
     paddingVertical: 14,
@@ -260,15 +276,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 
-  skipText: {
-    color: "#666",
-    fontSize: 15,
-    fontWeight: "600",
-  },
+  skipText: { color: "#666", fontSize: 15, fontWeight: "600" },
 });

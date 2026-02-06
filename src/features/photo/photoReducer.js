@@ -1,4 +1,5 @@
-import { USER_POST_PHOTO_REQUEST,USER_POST_PHOTO_SUCCESS,USER_POST_PHOTO_FAILED } from "./photoAction";
+import { USER_POST_PHOTO_REQUEST,USER_POST_PHOTO_SUCCESS,USER_POST_PHOTO_FAILED , USER_DELETE_PHOTO_FAILED, USER_DELETE_PHOTO_REQUEST, USER_DELETE_PHOTO_SUCCESS 
+} from "./photoAction";
 const initialState={
     userphoto:null,
     loading:null,
@@ -17,6 +18,16 @@ export default function photoReducer(state=initialState,action){
         case USER_POST_PHOTO_FAILED:
             return{...state,loading:false,error:action.payload}
     
+case USER_DELETE_PHOTO_REQUEST:
+      return { ...state, loading: true, error: null };
+
+    case USER_DELETE_PHOTO_SUCCESS:
+      return { ...state, loading: false };
+
+    case USER_DELETE_PHOTO_FAILED:
+      return { ...state, loading: false, error: action.payload };
+
+            
         default:
             return state;
     }
