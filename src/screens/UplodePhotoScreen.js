@@ -10,6 +10,8 @@ import {
   Alert,
   PermissionsAndroid,
 } from "react-native";
+// import { PermissionsAndroid } from "react-native";
+
 import LinearGradient from "react-native-linear-gradient";
 import { launchCamera, launchImageLibrary } from "react-native-image-picker";
 import { useNavigation } from "@react-navigation/native";
@@ -23,6 +25,7 @@ const UplodePhotoScreen = () => {
   const navigation = useNavigation();
 
   const [photo, setPhoto] = useState(null);
+  
 
   const requestCameraPermission = async () => {
     try {

@@ -67,6 +67,7 @@ const FillYourProfileScreen = ({ navigation,route }) => {
       city_id: cityValue.id,
       country_id:route.params.country_id
     };
+    
 
     dispatch(newUserDataRequest(payload));
     navigation.navigate("LifeStyleScreen");

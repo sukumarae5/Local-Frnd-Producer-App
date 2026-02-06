@@ -25,7 +25,6 @@ const initialState = {
   result:null,
     newUserData: null, // ✅ RENAMED
 
-
 };
 
 export default function userReducer(state = initialState, action) {
@@ -61,7 +60,7 @@ export default function userReducer(state = initialState, action) {
       return {
         ...state,
         loading: false,
-        userdata: action.payload, // 🔥 store only user object
+    userdata: action.payload.data ?? action.payload,
       };
 
     case USER_DATA_FAILED:
@@ -87,28 +86,28 @@ export default function userReducer(state = initialState, action) {
 
 
    case NEW_USER_DATA_REQUEST:
-      return {
-        ...state,
-        loading: true,
-        error: null,
-      };
+  return {
+    ...state,
+    loading: true,
+    error: null,
+  };
 
-    case NEW_USER_DATA_SUCCESS:
-      return {
-        ...state,
-        loading: false,
-        success: true,
-        newUserData: action.payload, 
-        error:action.payload
-      };
+case NEW_USER_DATA_SUCCESS:
+  return {
+    ...state,
+    loading: false,
+    success: true,
+    error: null,
+  };
 
-    case NEW_USER_DATA_FAILED:
-      return {
-        ...state,
-        loading: false,
-        success: false,
-        error: action.payload,
-      };
+case NEW_USER_DATA_FAILED:
+  return {
+    ...state,
+    loading: false,
+    success: false,
+    error: action.payload,
+  };
+
 
     default:
       return state;

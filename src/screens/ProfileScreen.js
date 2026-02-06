@@ -1,285 +1,270 @@
-import React, { useState, useContext } from "react";
+import React, { useContext } from "react";
 import {
   View,
   Text,
   Image,
   TouchableOpacity,
   StyleSheet,
+  Dimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Ionicons";
+import Svg, { Path } from "react-native-svg";
 import { useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useDispatch } from "react-redux";
-import { userlogoutrequest } from "../features/user/userAction";
-import WelcomeScreenbackgroungpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
+import { useDispatch, useSelector } from "react-redux";
 import { SocketContext } from "../socket/SocketProvider";
 
+const { width } = Dimensions.get("window");
+
 const ProfileScreen = () => {
-  const [tab, setTab] = useState("Safety");
-  const dispatch = useDispatch();
   const navigation = useNavigation();
+  const dispatch = useDispatch();
   const { socketRef } = useContext(SocketContext);
 
-  /* ================= LOGOUT ================= */
-  const handlelogoubutton = async () => {
-    try {
-      socketRef?.current?.emit("user_offline");
-      socketRef?.current?.disconnect();
-
-      await AsyncStorage.multiRemove(["twittoke", "user_id"]);
-
-      dispatch(userlogoutrequest());
-
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Phone" }],
-      });
-    } catch (error) {
-      console.log("Logout error:", error);
-    }
-  };
+  // 🔥 REDUX USER DATA
+  const { userdata } = useSelector((state) => state.user);
 
   return (
-    <WelcomeScreenbackgroungpage>
-      <View style={styles.container}>
+    <SafeAreaView style={styles.safe}>
+      {/* ================= TOP PURPLE SECTION ================= */}
+      <View style={styles.topBg}>
+        {/* HEART BACKGROUND (NO TOUCH) */}
+        <Image
+          pointerEvents="none"
+          source={require("../assets/leftheart.png")}
+          style={styles.leftHeart}
+        />
+        <Image
+          pointerEvents="none"
+          source={require("../assets/rightheart.png")}
+          style={styles.rightHeart}
+        />
 
         {/* HEADER */}
-        <View style={styles.headerRow}>
+        <View style={styles.header}>
           <Icon
             name="arrow-back"
-            size={26}
-            color="#000"
+            size={22}
             onPress={() => navigation.goBack()}
           />
-          <Text style={styles.headerText}>Profile</Text>
+          <Text style={styles.headerTitle}>Profile</Text>
         </View>
 
-        {/* PROFILE IMAGE */}
-        <View style={styles.avatarContainer}>
-          <Image
-            source={require("../assets/boy1.jpg")}
-            style={styles.avatar}
+        {/* AVATAR */}
+        <View style={styles.avatarWrap}>
+          <View style={styles.avatarRing}>
+            <Image
+              source={require("../assets/boy1.jpg")}
+              style={styles.avatar}
+            />
+          </View>
+        </View>
+
+        {/* NAME + EDIT */}
+        <View style={styles.nameRow}>
+          <TouchableOpacity
+            style={styles.editCircle}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate("EditProfileScreen")}
+          >
+            <Icon name="pencil" size={14} color="#fff" />
+          </TouchableOpacity>
+
+          <Text style={styles.username}>
+            {userdata?.name || userdata?.user?.name || "User"}
+          </Text>
+        </View>
+
+        {/* WHITE CURVE (NO TOUCH) */}
+        <Svg
+          pointerEvents="none"
+          width={width}
+          height={140}
+          style={{ position: "absolute", bottom: -1 }}
+        >
+          <Path
+            d={`
+              M0 80
+              C ${width * 0.25} 10, ${width * 0.75} 150, ${width} 80
+              L ${width} 140
+              L 0 140
+              Z
+            `}
+            fill="#FFFFFF"
+          />
+        </Svg>
+      </View>
+
+      {/* ================= WHITE CONTENT ================= */}
+      <View style={styles.content}>
+        <View style={styles.listBox}>
+          <Item
+            icon="star-outline"
+            color="#F6A623"
+            title="Favorites"
+            sub="you sent them a flashnote!"
+          />
+
+          <Item
+            icon="person-outline"
+            color="#FF5A5A"
+            title="Invite Friends"
+            sub="Invite your friends and earn Flashnotes!"
+          />
+
+          <Item
+            icon="settings-outline"
+            color="#999"
+            title="App Settings"
+            sub="Manage your notifications, connected accounts.."
+            onPress={() => navigation.navigate("SettingScreen")}
+          />
+
+          <Item
+            icon="help-circle-outline"
+            color="#2ECC71"
+            title="Need Help?"
+            sub="FAQ, tutorial and contact"
+            onPress={() => navigation.navigate("EditProfileScreen")}
           />
         </View>
-
-        {/* NAME */}
-        <Text style={styles.username}>Shoshanna</Text>
-
-        {/* STATS */}
-        <View style={styles.statsRow}>
-          <View style={styles.statBlock}>
-            <Text style={styles.statNumber}>80%</Text>
-            <Text style={styles.statLabel}>Reach</Text>
-          </View>
-
-          <View style={styles.statBlock}>
-            <Text style={styles.statNumber}>70</Text>
-            <Text style={styles.statLabel}>Friends</Text>
-          </View>
-
-          <View style={styles.statBlock}>
-            <Text style={styles.statNumber}>1k</Text>
-            <Text style={styles.statLabel}>Following</Text>
-          </View>
-        </View>
-
-        {/* TABS */}
-        <View style={styles.tabsContainer}>
-          <TouchableOpacity
-            style={[styles.tabBtn, tab === "Safety" && styles.activeTab]}
-            onPress={() => setTab("Safety")}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                tab === "Safety" && styles.activeTabText,
-              ]}
-            >
-              Safety
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tabBtn, tab === "Plans" && styles.activeTab]}
-            onPress={() => {
-              setTab("Plans");
-              navigation.navigate("PlanScreen");
-            }}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                tab === "Plans" && styles.activeTabText,
-              ]}
-            >
-              Plans
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* OPTIONS */}
-        <View style={styles.listBox}>
-
-          <TouchableOpacity style={styles.listItem}>
-            <Icon name="settings-outline" size={24} color="#666" />
-            <Text style={styles.listText}>Settings</Text>
-            <Icon name="chevron-forward" size={20} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.listItem}>
-            <Icon name="help-circle-outline" size={24} color="#666" />
-            <Text style={styles.listText}>Support</Text>
-            <Icon name="chevron-forward" size={20} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.listItem}>
-            <Icon name="document-text-outline" size={24} color="#666" />
-            <Text style={styles.listText}>Privacy Policy</Text>
-            <Icon name="chevron-forward" size={20} color="#666" />
-          </TouchableOpacity>
-
-          {/* ✅ FIXED ABOUT ROW */}
-          <TouchableOpacity
-            style={styles.listItem}
-            onPress={() => navigation.navigate("AboutScreen")}
-          >
-            <Icon name="information-circle-outline" size={24} color="#666" />
-            <Text style={styles.listText}>About</Text>
-            <Icon name="chevron-forward" size={20} color="#666" />
-          </TouchableOpacity>
-
-        </View>
-
-        {/* LOGOUT */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handlelogoubutton}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-
       </View>
-    </WelcomeScreenbackgroungpage>
+    </SafeAreaView>
   );
 };
+
+/* ================= LIST ITEM ================= */
+const Item = ({ icon, color, title, sub, onPress }) => (
+  <TouchableOpacity
+    style={styles.item}
+    onPress={onPress}
+    activeOpacity={0.7}
+  >
+    <Icon name={icon} size={22} color={color} />
+    <View style={{ flex: 1, marginLeft: 12 }}>
+      <Text style={styles.itemTitle}>{title}</Text>
+      <Text style={styles.itemSub}>{sub}</Text>
+    </View>
+    <Icon name="chevron-forward" size={18} color="#aaa" />
+  </TouchableOpacity>
+);
 
 export default ProfileScreen;
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 20,
-    paddingTop: 40,
+  safe: {
     flex: 1,
+    backgroundColor: "#FFFFFF",
   },
 
-  headerRow: {
+  /* TOP PURPLE */
+  topBg: {
+    height: 300,
+    backgroundColor: "#F5E1FF",
+  },
+
+  leftHeart: {
+    position: "absolute",
+    left: -30,
+    top: 40,
+    width: 150,
+    height: 150,
+    resizeMode: "contain",
+  },
+
+  rightHeart: {
+    position: "absolute",
+    right: -40,
+    top: 30,
+    width: 170,
+    height: 170,
+    resizeMode: "contain",
+  },
+
+  header: {
     flexDirection: "row",
     alignItems: "center",
+    padding: 16,
   },
 
-  headerText: {
-    color: "#111",
-    fontSize: 22,
+  headerTitle: {
+    fontSize: 20,
     fontWeight: "600",
     marginLeft: 10,
   },
 
-  avatarContainer: {
+  avatarWrap: {
     alignItems: "center",
-    marginTop: 25,
+    marginTop: 5,
+  },
+
+  avatarRing: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 6,
+    borderColor: "#C44DFF",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   avatar: {
-    width: 110,
-    height: 110,
-    borderRadius: 60,
-    borderWidth: 3,
-    borderColor: "#ff4dff",
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+  },
+
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+  },
+
+  editCircle: {
+    backgroundColor: "#C44DFF",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
   },
 
   username: {
-    marginTop: 10,
-    color: "#111",
-    fontSize: 22,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginVertical: 25,
-  },
-
-  statBlock: {
-    alignItems: "center",
-  },
-
-  statNumber: {
     fontSize: 20,
     fontWeight: "700",
   },
 
-  statLabel: {
-    fontSize: 14,
-  },
-
-  tabsContainer: {
-    backgroundColor: "#3b2047",
-    borderRadius: 35,
-    padding: 6,
-    flexDirection: "row",
-    marginBottom: 25,
-  },
-
-  tabBtn: {
+  /* WHITE CONTENT */
+  content: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 30,
-    alignItems: "center",
-  },
-
-  activeTab: {
-    backgroundColor: "#ff4dff",
-  },
-
-  tabText: {
-    color: "#000",
-    fontSize: 16,
-  },
-
-  activeTabText: {
-    fontWeight: "700",
+    backgroundColor: "#FFFFFF",
+    paddingTop: 20,
   },
 
   listBox: {
-    marginTop: 10,
+    backgroundColor: "#FFFFFF",
   },
 
-  listItem: {
+  item: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 18,
-    borderBottomWidth: 0.3,
-    borderBottomColor: "#ccc",
+    paddingHorizontal: 20,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#eee",
   },
 
-  listText: {
-    flex: 1,
-    marginLeft: 15,
-    fontSize: 16,
+  itemTitle: {
+    fontSize: 14,
+    fontWeight: "500",
   },
 
-  logoutBtn: {
-    marginTop: 40,
-    borderWidth: 1,
-    borderColor: "#ff4dff",
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-
-  logoutText: {
-    color: "#ff4dff",
-    textAlign: "center",
-    fontSize: 16,
-    fontWeight: "600",
+  itemSub: {
+    fontSize: 11,
+    color: "#777",
+    marginTop: 2,
   },
 });

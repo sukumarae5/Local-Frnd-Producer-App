@@ -46,9 +46,18 @@ import ChatScreen from './src/screens/ChatScreen'
 import StoriesScreen from'./src/screens/StoriesScreen'
 import CallStatusScreen from "./src/screens/CallStatusScreen"
 import PerfectMatchScreen from"./src/screens/PerfectMatchScreen"
+import SettingScreen from"./src/screens/SettingScreen"
+import EditProfileScreen  from"./src/screens/EditProfileScreen"
+import EditUserInterestScreen from "./src/screens/EditUserInterestScreen"
+import EditUserLifestyleScreen from"./src/screens/EditUserLifestyleScreen"
+import EditUserGeneralInfoScreen from "./src/screens/EditUserGeneralInfoScreen"
+import { LogBox } from "react-native";
+
+
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+LogBox.ignoreAllLogs();
 
   //  useEffect(() => {
   //   setupCallKeep();   // ✅ MUST RUN ON APP START
@@ -100,12 +109,13 @@ export default function App() {
 <Stack.Screen name="StoriesScreen" component={StoriesScreen}/>
 <Stack.Screen name="CallStatusScreen" component={CallStatusScreen}/>
 <Stack.Screen name="PerfectMatchScreen" component={PerfectMatchScreen}/>
-<Stack.Screen
-  name="FriendRequestsScreen"
-  component={FriendRequestsScreen}
-/>
+<Stack.Screen name="SettingScreen" component={SettingScreen}/>
+<Stack.Screen name="EditProfileScreen" component={EditProfileScreen}/>
+<Stack.Screen name="EditUserInterestScreen" component={EditUserInterestScreen}/>
+<Stack.Screen name="EditUserLifestyleScreen" component={EditUserLifestyleScreen}/>
+<Stack.Screen  name="FriendRequestsScreen"  component={FriendRequestsScreen}/>
+<Stack.Screen name="EditUserGeneralInfoScreen" component={EditUserGeneralInfoScreen}/>
 
-   
    
    
    </Stack.Navigator>

@@ -44,7 +44,7 @@ const HomeScreen = () => {
   const socket = socketRef?.current;
   const { userdata } = useSelector((state) => state.user);
   const { incoming } = useSelector((state) => state.friends);
-
+console.log(userdata)
   const profilePhotoURL = userdata?.primary_image?.photo_url;
   const imageUrl = profilePhotoURL
     ? { uri: profilePhotoURL }

@@ -60,26 +60,43 @@ function* handleUserData() {
 
 function* handleNewUserData(action) {
   try {
-    const token = yield call(AsyncStorage.getItem, "twittoke");
+    if (!action.payload || typeof action.payload !== "object") return;
 
+    const token = yield call([AsyncStorage, "getItem"], "twittoke");
+
+    // 🧼 Clean payload
+    const cleanPayload = Object.fromEntries(
+      Object.entries(action.payload).filter(
+        ([_, value]) => value !== undefined && value !== null
+      )
+    );
+
+    if (Object.keys(cleanPayload).length === 0) return;
+
+    // 🔥 PATCH API
     const response = yield call(() =>
-      axios.patch(newuserapi, action.payload, {
+      axios.patch(newuserapi, cleanPayload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
     );
-console.log(response)
+
+    // ✅ PATCH SUCCESS (store only response.data)
     yield put(newUserDataSuccess(response.data));
+
+    // 🔥 THIS IS THE KEY LINE (force refresh user)
+    yield put({ type: USER_DATA_REQUEST });
+
   } catch (error) {
-    console.log(error)
     yield put(
       newUserDataFailed(
-        error.response?.data?.message || error.message
+        error?.response?.data?.message || error.message
       )
     );
   }
 }
+
 
 export default function* userSaga() {
   yield takeLatest(USER_EDIT_REQUEST, handleUserEdit);
