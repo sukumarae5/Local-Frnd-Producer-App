@@ -115,7 +115,6 @@ LogBox.ignoreAllLogs();
 <Stack.Screen name="EditUserInterestScreen" component={EditUserInterestScreen}/>
 <Stack.Screen name="EditUserLifestyleScreen" component={EditUserLifestyleScreen}/>
 <Stack.Screen name="EditUserGeneralInfoScreen" component={EditUserGeneralInfoScreen}/>  
-
 <Stack.Screen name="NotificationScreen" component={NotificationScreen}/>
 <Stack.Screen
   name="FriendRequestsScreen"

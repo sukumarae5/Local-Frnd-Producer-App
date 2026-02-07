@@ -1,8 +1,8 @@
-// src/navigation/MaleHomeTabs.js
 import React from "react";
-import { TouchableOpacity } from "react-native";
+import { View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import LinearGradient from "react-native-linear-gradient";
 
 import HomeScreen from "../screens/HomeScreen";
 import MessagesScreen from "../screens/MessagesScreen";
@@ -12,24 +12,60 @@ import ProfileScreen from "../screens/ProfileScreen";
 
 const Tab = createBottomTabNavigator();
 
-/* 🔥 CENTER CALL BUTTON */
-const CallTabButton = ({ children, onPress }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={{
-      top: -20,
-      width: 70,
-      height: 70,
-      borderRadius: 35,
-      backgroundColor: "#ff00ff",
-      justifyContent: "center",
-      alignItems: "center",
-      elevation: 8,
-    }}
-  >
-    {children}
-  </TouchableOpacity>
-);
+const TabIcon = ({ focused, name }) => {
+  // -------- initial (like your screenshot) --------
+  if (!focused) {
+    return (
+      <Ionicons
+        name={name}     // outline icon
+        size={30}
+        color="#D51BF9"
+      />
+    );
+  }
+
+  // -------- active (gradient ring + gradient bg) --------
+  return (
+    <LinearGradient
+      colors={["#D51BF9", "#8C37F8"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <View
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: "#ffffff",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <LinearGradient
+          colors={["#D51BF9", "#8C37F8"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 15,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Ionicons name={name} size={20} color="#fff" />
+        </LinearGradient>
+      </View>
+    </LinearGradient>
+  );
+};
 
 const MaleHomeTabs = () => {
   return (
@@ -37,82 +73,79 @@ const MaleHomeTabs = () => {
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
-        tabBarStyle: {
-          height: 64,
-          backgroundColor: "#120020",
-          borderTopColor: "#2e0040",
-        },
+
+       tabBarStyle: {
+  position: "absolute",
+  left: 40,
+  right: 40,
+  bottom: 20,
+  height: 60,
+  borderRadius: 30,
+  backgroundColor: "#ffffff",
+  borderTopWidth: 0,
+  elevation: 8,
+},
+
+tabBarItemStyle: {
+  justifyContent: "center",
+  alignItems: "center",
+  paddingTop: 10,
+},
+
+
       }}
     >
-      {/* 🏠 HOME */}
+      {/* HOME */}
       <Tab.Screen
         name="Home"
         component={HomeScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name="home-outline"
-              size={26}
-              color={focused ? "#ff2fd2" : "#aaa"}
-            />
+            <TabIcon focused={focused} name="home-outline" />
           ),
         }}
       />
 
-      {/* 💬 MESSAGES */}
+      {/* MESSAGES */}
       <Tab.Screen
         name="Messages"
         component={MessagesScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name="chatbubble-outline"
-              size={26}
-              color={focused ? "#ff2fd2" : "#aaa"}
-            />
+            <TabIcon focused={focused} name="chatbubble-ellipses-outline" />
           ),
         }}
       />
 
-      {/* 📞 CENTER CALL */}
+      {/* CALL */}
       <Tab.Screen
         name="Call"
         component={TrainersCallpage}
         options={{
-          tabBarButton: (props) => (
-            <CallTabButton {...props}>
-              <Ionicons name="call" size={30} color="#fff" />
-            </CallTabButton>
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused} name="call-outline" />
           ),
         }}
       />
 
-      {/* 🕒 RECENTS (ONLY ONCE ✅) */}
+      {/* RECENTS */}
       <Tab.Screen
         name="Recents"
         component={RecentsCallHistoryScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name="time-outline"
-              size={26}
-              color={focused ? "#ff2fd2" : "#aaa"}
-            />
+            <TabIcon focused={focused} name="time-outline" />
           ),
         }}
       />
 
-      {/* 👤 PROFILE */}
+      {/* PROFILE */}
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <Ionicons
-              name="person-outline"
-              size={26}
-              color={focused ? "#ff2fd2" : "#aaa"}
-            />
+            <TabIcon focused={focused} name="person-outline" />
           ),
         }}
       />

@@ -34,6 +34,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Platform } from "react-native";
 import { Alert,  } from "react-native";
 import { launchImageLibrary } from "react-native-image-picker";
+import { userdeletephotorequest } from "../features/photo/photoAction";
 
 /* ================================================= */
 
@@ -237,27 +238,30 @@ useEffect(() => {
 }, [newUserData]);
 
   const interestText = selectedInterests.map((i) => i.name).join(", ");
-const handleDeleteImage = (index) => {
-  const imageUrl = userdata?.images?.gallery?.[index];
+const handleDeleteImage = (photo_id) => {
+  Alert.alert("Delete Photo", "Are you sure?", [
+    { text: "Cancel" },
+    {
+      text: "Delete",
+      style: "destructive",
+      onPress: () => {
+        dispatch(
+          userdeletephotorequest(
+            { photo_id },
+            () => {
+              console.log("✅ Deleted");
 
-  Alert.alert(
-    "Delete Photo",
-    "Are you sure you want to delete this photo?",
-    [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => {
-          dispatch({
-            type: "DELETE_GALLERY_IMAGE_REQUEST",
-            payload: { image_url: imageUrl },
-          });
-        },
+              // 👇 force refresh screen
+            ({ refresh: Date.now() });
+            }
+          )
+        );
       },
-    ]
-  );
+    },
+  ]);
 };
+
+
 
 
   return (
@@ -434,56 +438,54 @@ const handleDeleteImage = (index) => {
     {Array.from({ length: 4 }).map((_, index) => {
   const image = userdata?.images?.gallery?.[index];
 
-console.log(image)
-        // IMAGE SLOT
-        if (image) {
-          return (
-            <View key={index} style={styles.galleryItem}>
-  <TouchableOpacity
-    style={styles.galleryTouch}   // ⭐ IMPORTANT
-    onPress={() =>
-      navigation.navigate("EditUserGalleryScreen", {
-        images: userdata.images.gallery,
-        startIndex: index,
-      })
-    }
-  >
-    
-    <Image
-      source={{ uri: image }}
-      style={styles.galleryImage}
-    />
-    
-  </TouchableOpacity>
+  if (image) {
+    return (
+      <View key={image.photo_id} style={styles.galleryItem}>
+        <TouchableOpacity
+          style={styles.galleryTouch}
+          onPress={() =>
+            navigation.navigate("EditUserGalleryScreen", {
+              images: userdata.images.gallery,
+              startIndex: index,
+            })
+          }
+        ><Image
+  source={{ uri: image.photo_url }}
+  style={styles.galleryImage}
+  onError={(e) =>
+    console.log("❌ Image load failed:", e.nativeEvent)
+  }
+/>
 
-  {/* DELETE */}
-  <TouchableOpacity
-    style={styles.deleteBtn}
-    onPress={() => handleDeleteImage(index)}
-  >
-    <Icon name="close" size={14} color="#fff" />
-  </TouchableOpacity>
-</View>
+        </TouchableOpacity>
 
-          );
-        }
+        <TouchableOpacity
+          style={styles.deleteBtn}
+  onPress={() => handleDeleteImage(image.photo_id)}
+        >
+          <Icon name="close" size={14} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
-        // EMPTY SLOT
-        return (
-          <TouchableOpacity
-            key={index}
-            style={[styles.galleryItem, styles.emptyGallery]}
-            onPress={() =>
-              navigation.navigate("UplodePhotoScreen", {
-                open: "gallery",
-                from: "EditProfile",
-              })
-            }
-          >
-            <Icon name="add" size={28} color="#999" />
-          </TouchableOpacity>
-        );
-      })}
+  return (
+    <TouchableOpacity
+      key={index}
+      style={[styles.galleryItem, styles.emptyGallery]}
+      onPress={() =>
+        navigation.navigate("AddYourPhotosScreen", {
+  from: "EditProfile",
+  existingPhotos: userdata?.images?.gallery || [],
+})
+
+      }
+    >
+      <Icon name="add" size={28} color="#999" />
+    </TouchableOpacity>
+  );
+})}
+
     </View>
   </View>
 )}

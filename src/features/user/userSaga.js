@@ -88,6 +88,7 @@ function* handleNewUserData(action) {
     // 🔥 THIS IS THE KEY LINE (force refresh user)
     yield put({ type: USER_DATA_REQUEST });
 
+    
   } catch (error) {
     yield put(
       newUserDataFailed(

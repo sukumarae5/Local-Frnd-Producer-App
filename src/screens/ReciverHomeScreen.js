@@ -1,183 +1,150 @@
-import React, { useEffect, useRef, useState, useContext } from "react";
+import React, { useEffect, useContext, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
+  TextInput,
+  ScrollView,
   Modal,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { CommonActions } from "@react-navigation/native";
-import {
-  femaleSearchRequest,
-  femaleCancelRequest,
-} from "../features/calls/callAction";
-
 import { SocketContext } from "../socket/SocketProvider";
 import { userDatarequest } from "../features/user/userAction";
+import { femaleSearchRequest } from "../features/calls/callAction";
+
+import StoriesScreen from "./StoriesScreen";
+import OffersSectionScreen from "./OffersSectionScreen";
+import ActiveDostSectionScreen from "./ActiveDostSectionScreen";
+import LikeMindedSectionScreen from "../screens/LikeMindedSectionScreen";
+import GoOnlineCard from "../components/GoOnlineCard";
 
 const ReciverHomeScreen = ({ navigation }) => {
-  /* ================= HOOK ORDER (DO NOT CHANGE) ================= */
+
   const dispatch = useDispatch();
-  const { socketRef, connected } = useContext(SocketContext);
+  const { connected } = useContext(SocketContext);
 
-  const navigatingRef = useRef(false);
+  const incoming = useSelector(
+    (state) => state?.friends?.incoming || []
+  );
 
-  
   const [showModal, setShowModal] = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-
-  const { incoming } = useSelector((state) => state.friends);
-const { userdata } = useSelector((state) => state.user);
-console.log("userdata", userdata);
 
   useEffect(() => {
-      dispatch(userDatarequest());
-    }, []);
-  /* ================= SOCKET: INCOMING CALL ================= */
- 
-  /* ================= START SEARCH ================= */
- const handleGoOnline = (type) => {
+    dispatch(userDatarequest());
+  }, []);
 
-  if (!connected) return;
+  const handleGoOnline = (type) => {
+    if (!connected) return;
 
-  setShowModal(false);
+    setShowModal(false);
 
-  dispatch(femaleSearchRequest({ call_type: type }));
+    dispatch(femaleSearchRequest({ call_type: type }));
 
-  navigation.navigate("CallStatusScreen", {
-    call_type: type,
-    role: "female",
-  });
-};
-
-  /* ================= CANCEL SEARCH ================= */
-  const handleCancel = () => {
-dispatch(femaleCancelRequest());
-    navigatingRef.current = false;
-    setWaiting(false);
-    setCallType(null);
+    navigation.navigate("CallStatusScreen", {
+      call_type: type,
+      role: "female",
+    });
   };
 
-  /* ================= LOGOUT ================= */
-  const handleLogout = async () => {
-    socketRef?.current?.disconnect();
-    await AsyncStorage.clear();
-
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: "Login" }],
-      })
-    );
-  };
-
-  /* ================= UI ================= */
   return (
     <SafeAreaView style={styles.safe}>
-      {/* HEADER */}
-      <LinearGradient colors={["#6a007a", "#3b003f"]} style={styles.header}>
-        <View style={styles.headerRow}>
-          <View style={{ width: 40 }} />
-          <Text style={styles.appName}>Local Friend</Text>
+      <ScrollView showsVerticalScrollIndicator={false}>
 
-          <View style={styles.headerIcons}>
+        {/* ===== HEADER ===== */}
+        <LinearGradient
+          colors={["#F6D8FF", "#FDE2F3"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
 
-  {/* MESSAGE ICON (same as male HomeScreen) */}
-  <TouchableOpacity
-    style={styles.iconBtn}
-    onPress={() => navigation.navigate("MessagesScreen")}
-  >
-<Icon name="chatbubble-ellipses-outline" size={26} color="#fff" />
-  </TouchableOpacity>
+          <View style={styles.topRow}>
 
-  {/* NOTIFICATION ICON */}
-  <View>
-    <TouchableOpacity
-      style={styles.iconBtn}
-      onPress={() => navigation.navigate("FriendRequestsScreen")}
-    >
-      <Icon name="notifications-outline" size={26} color="#fff" />
-    </TouchableOpacity>
+            <View style={styles.coinBox}>
+              <Icon name="logo-bitcoin" size={14} color="#FFB800" />
+              <Text style={styles.coinText}>2999</Text>
+            </View>
 
-    {incoming.length > 0 && (
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>{incoming.length}</Text>
-      </View>
-    )}
-  </View>
+            <View style={styles.headerRightIcons}>
 
-  {/* LOGOUT ICON */}
-  <TouchableOpacity
-    style={styles.iconBtn}
-    onPress={() => setShowLogoutModal(true)}
-  >
-    <Icon name="log-out-outline" size={26} color="#fff" />
-  </TouchableOpacity>
+              <TouchableOpacity style={styles.roundIcon}>
+                <Icon name="gift-outline" size={18} color="#A855F7" />
+              </TouchableOpacity>
 
+              <TouchableOpacity
+                style={styles.roundIcon}
+                onPress={() => navigation.navigate("FriendRequestsScreen")}
+              >
+                <Icon name="notifications-outline" size={18} color="#A855F7" />
+
+                {incoming.length > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{incoming.length}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.roundIcon}
+                onPress={() => navigation.navigate("MessagesScreen")}
+              >
+                <Icon name="chatbubble-ellipses-outline" size={18} color="#A855F7" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.avatarBox}>
+                <Icon name="person" size={16} color="#A855F7" />
+              </TouchableOpacity>
+
+            </View>
+          </View>
+
+          <View style={styles.searchBox}>
+            <Icon name="search" size={16} color="#C084FC" />
+            <TextInput
+              placeholder="Search"
+              placeholderTextColor="#C084FC"
+              style={styles.searchInput}
+            />
+          </View>
+
+        </LinearGradient>
+
+        {/* ===== STORIES ===== */}
+        <StoriesScreen />
+
+        {/* ===== OFFERS ===== */}
+        <OffersSectionScreen />
+
+        {/* ===== LIKE MINDED ===== */}
+        <LikeMindedSectionScreen />
+
+        {/* ===== ACTIVE DOST ===== */}
+        <ActiveDostSectionScreen />
+
+        {/* ===== GO ONLINE CARD ===== */}
+        {/* ===== GO ONLINE CARD ===== */}
+<View style={styles.goOnlineWrap}>
+  <GoOnlineCard navigation={navigation} />
 </View>
 
-        </View>
-      </LinearGradient>
+      </ScrollView>
 
-      {/* BODY */}
-      <View style={styles.middle}>
-  {/* <TouchableOpacity onPress={() => setShowModal(true)}>
-    <LinearGradient
-      colors={["#ff2fd2", "#b000ff"]}
-      style={styles.onlineBtn}
-    >
-      <Icon name="radio" size={34} color="#fff" />
-      <Text style={styles.onlineText}>GO ONLINE</Text>
-    </LinearGradient>
-  </TouchableOpacity> */}
-
-
-<TouchableOpacity activeOpacity={0.9} onPress={() => setShowModal(true)}>
-  <LinearGradient
-    colors={["#b14cff", "#ff4fd8"]}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 1 }}
-    style={styles.outerPill}
-  >
-  {/* background hearts (5 total) */}
-<Icon name="heart" size={50} color="rgba(255,255,255,0.35)" style={styles.heart1} />
-<Icon name="heart" size={50} color="rgba(255,255,255,0.30)" style={styles.heart2} />
-<Icon name="heart" size={50} color="rgba(255,255,255,0.28)" style={styles.heart3} />
-<Icon name="heart" size={50} color="rgba(255,255,255,0.25)" style={styles.heart4} />
-<Icon name="heart" size={50} color="rgba(255,255,255,0.22)" style={styles.heart5} />
-
-    {/* INNER PILL */}
-    <View style={styles.innerPill}>
-      <View style={styles.innerPill}>
-  <Icon name="wifi-outline" size={24} color="#fff" />
-  <Text style={styles.innerText}>GO ONLINE</Text>
-</View>
-
-    </View>
-  </LinearGradient>
-</TouchableOpacity>
-
-
-
-</View>
-
-
-      {/* CALL TYPE MODAL */}
+      {/* ===== CALL TYPE MODAL ===== */}
       <Modal transparent visible={showModal} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
+
             <Text style={styles.modalTitle}>Go Online</Text>
 
             <TouchableOpacity
               style={styles.callBtn}
               onPress={() => handleGoOnline("AUDIO")}
             >
-              <Icon name="call-outline" size={26} color="#fff" />
+              <Icon name="call-outline" size={22} color="#fff" />
               <Text style={styles.callText}>Audio Call</Text>
             </TouchableOpacity>
 
@@ -185,232 +152,206 @@ dispatch(femaleCancelRequest());
               style={[styles.callBtn, styles.videoBtn]}
               onPress={() => handleGoOnline("VIDEO")}
             >
-              <Icon name="videocam-outline" size={26} color="#fff" />
+              <Icon name="videocam-outline" size={22} color="#fff" />
               <Text style={styles.callText}>Video Call</Text>
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => setShowModal(false)}>
               <Text style={styles.closeText}>Cancel</Text>
             </TouchableOpacity>
+
           </View>
         </View>
       </Modal>
 
-      {/* LOGOUT MODAL */}
-      <Modal transparent visible={showLogoutModal} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Logout?</Text>
-
-            <TouchableOpacity
-              style={styles.logoutConfirm}
-              onPress={handleLogout}
-            >
-              <Icon name="log-out-outline" size={24} color="#fff" />
-              <Text style={styles.callText}>Yes, Logout</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setShowLogoutModal(false)}>
-              <Text style={styles.closeText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };
 
 export default ReciverHomeScreen;
 
-
 /* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#e9e0f8' },
+  safe: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
 
   header: {
-    paddingVertical: 20,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 14,
+    borderBottomLeftRadius: 26,
+    borderBottomRightRadius: 26,
   },
 
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  topRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
 
-  appName: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '800',
+  coinBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
   },
 
-  headerIcons: {
-    flexDirection: 'row',
-    gap: 14,
+  coinText: {
+    color: "#FFB800",
+    fontWeight: "700",
+    marginLeft: 6,
+    fontSize: 13,
   },
 
-  iconBtn: {
-    padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 20,
+  headerRightIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
 
-badge: {
-  position: "absolute",
-  top: -6,
-  right: -6,
-  backgroundColor: "#ff0044",
-  borderRadius: 10,
-  minWidth: 20,
-  height: 20,
-  justifyContent: "center",
-  alignItems: "center",
-  paddingHorizontal: 6,
-},
+  roundIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-badgeText: {
-  color: "#fff",
-  fontSize: 12,
-  fontWeight: "bold",
-},
+  avatarBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-  middle: {
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: "#FF3B3B",
+    borderRadius: 9,
+    minWidth: 16,
+    height: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 3,
+  },
+
+  badgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+
+  searchBox: {
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 40,
+  },
+
+  searchInput: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginLeft: 6,
+    fontSize: 14,
+    color: "#A855F7",
   },
 
-  onlineBtn: {
-    paddingHorizontal: 40,
-    paddingVertical: 20,
-    borderRadius: 40,
-    alignItems: 'center',
-  },
-
-  onlineText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
+  goOnlineWrap: {
+    paddingHorizontal: 16,
+    paddingBottom: 30,
     marginTop: 10,
   },
 
-  waitingText: {
-    color: '#fff',
-    fontSize: 18,
+  outerPill: {
+    width: "100%",
+    height: 110,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    elevation: 5,
   },
+
+  innerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 26,
+    paddingVertical: 10,
+    borderRadius: 30,
+    backgroundColor: "rgba(255,255,255,0.18)",
+  },
+
+  innerText: {
+    marginLeft: 10,
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+
+  heart1: { position: "absolute", left: 18, top: 12 },
+  heart2: { position: "absolute", left: 120, top: 8 },
+  heart3: { position: "absolute", right: 70, top: 10 },
+  heart4: { position: "absolute", right: 30, bottom: 10 },
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   modalBox: {
-    backgroundColor: '#1a0033',
+    backgroundColor: "#1a0033",
     padding: 25,
     borderRadius: 20,
-    width: '80%',
-    alignItems: 'center',
+    width: "80%",
+    alignItems: "center",
   },
 
   modalTitle: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 20,
   },
 
   callBtn: {
-    flexDirection: 'row',
-    backgroundColor: '#ff00ff',
-    padding: 15,
+    flexDirection: "row",
+    backgroundColor: "#ff00ff",
+    padding: 14,
     borderRadius: 30,
-    alignItems: 'center',
-    marginBottom: 15,
-    width: '100%',
-    justifyContent: 'center',
+    alignItems: "center",
+    marginBottom: 14,
+    width: "100%",
+    justifyContent: "center",
   },
 
   videoBtn: {
-    backgroundColor: '#ff005c',
-  },
-
-  logoutConfirm: {
-    flexDirection: 'row',
-    backgroundColor: '#ff0044',
-    padding: 15,
-    borderRadius: 30,
-    alignItems: 'center',
-    marginBottom: 15,
-    width: '100%',
-    justifyContent: 'center',
+    backgroundColor: "#ff005c",
   },
 
   callText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
     marginLeft: 10,
   },
-  
-outerPill: {
-  width: 400,
-  height: 120,
-  borderRadius: 18,
-  justifyContent: "center",
-  alignItems: "center",
-  overflow: "hidden",
-  elevation: 6,
-},
-
-innerPill: {
-  alignItems: "center",     
-  justifyContent: "center",
-  paddingHorizontal: 26,
-  paddingVertical: 8,
-  borderRadius: 30,
-  backgroundColor: "rgba(255,255,255,0.18)",
-},
-innerText: {
-  marginLeft: 10,
-  color: "#fff",
-  fontSize: 15,
-  fontWeight: "700",
-  letterSpacing: 1,
-},
-heart1: {
-  position: "absolute",
-  left: 18,
-  top: 10,
-},
-
-heart2: {
-  position: "absolute",
-  left: 150,
-  top: 10,
-},
-
-heart3: {
-  position: "absolute",
-  right: 60,
-  top: 10,
-},
-
-heart4: {
-  position: "absolute",
-  right: 30,
-  bottom: 6,
-},
-
-heart5: {
-  position: "absolute",
-  left: 100,
-  bottom: 6,
-},
-
 
   closeText: {
-    color: '#aaa',
+    color: "#aaa",
     marginTop: 10,
   },
 });
