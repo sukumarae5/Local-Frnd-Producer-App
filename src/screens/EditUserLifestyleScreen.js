@@ -12,6 +12,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import {
   FETCH_LIFESTYLE_REQUEST,
   FETCH_LIFESTYLE_OPTIONS_REQUEST,
+  EDIT_USER_LIFESTYLE_REQUEST,
 } from "../features/lifeStyle/lifestyleTypes";
 
 const PURPLE = "#B832F9";
@@ -21,54 +22,67 @@ const EditUserLifestyleScreen = () => {
   const route = useRoute();
   const dispatch = useDispatch();
 
-  /* ===== GET PARAMS ===== */
+  /* ===== PARAMS ===== */
   const { selected = [] } = route.params || {};
 
-  /* ===== REDUX DATA ===== */
-  const { options = [] } = useSelector((state) => state.lifestyle);
+  /* ===== REDUX ===== */
+  const { data = [], options = [] } = useSelector(
+    (state) => state.lifestyle
+  );
 
   /* ===== LOCAL STATE ===== */
+  const [openCategory, setOpenCategory] = useState(null);
   const [localSelection, setLocalSelection] = useState(selected);
 
-  /* ===== FETCH DATA ===== */
+  /* ===== FETCH ===== */
   useEffect(() => {
     dispatch({ type: FETCH_LIFESTYLE_REQUEST });
     dispatch({ type: FETCH_LIFESTYLE_OPTIONS_REQUEST });
   }, []);
 
-  /* ===== GROUP OPTIONS BY CATEGORY ===== */
-  const groupedOptions = options.reduce((acc, item) => {
-    if (!acc[item.category_id]) {
-      acc[item.category_id] = {
-        categoryId: item.category_id,
-        categoryName: item.category_name,
-        items: [],
-      };
-    }
-    acc[item.category_id].items.push(item);
-    return acc;
-  }, {});
+  /* ===== GET SELECTED TEXT ===== */
+  const getSelectedLabel = (categoryId) => {
+    const found = localSelection.find(
+      (i) => i.categoryId === categoryId
+    );
+    return found ? found.name : "Select...";
+  };
 
-  /* ===== TOGGLE (ONE PER CATEGORY) ===== */
-  const toggleLifestyle = (item) => {
+  /* ===== SELECT OPTION ===== */
+  const handleSelect = (category, option) => {
     setLocalSelection((prev) => {
       const filtered = prev.filter(
-        (i) => i.categoryId !== item.categoryId
+        (i) => i.categoryId !== category.id
       );
-      return [...filtered, item];
+      return [
+        ...filtered,
+        {
+          categoryId: category.id,
+          categoryName: category.name,
+          id: option.lifestyle_id,
+          name: option.lifestyle_name,
+        },
+      ];
     });
+    setOpenCategory(null);
   };
 
   /* ===== DONE ===== */
-  const handleDone = () => {
-    navigation.navigate({
-      name: "EditProfileScreen",
-      params: {
-        updatedLifestyles: localSelection,
-      },
-      merge: true,
-    });
-  };
+ const handleDone = () => {
+  // 🔹 extract only lifestyle IDs
+  const lifestyleIds = localSelection.map((item) =>
+    Number(item.id)
+  );
+
+  dispatch({
+    type: EDIT_USER_LIFESTYLE_REQUEST,
+    payload: {
+      lifestyles: lifestyleIds, // ✅ ONLY THIS
+    },
+  });
+
+  navigation.goBack();
+};
 
   return (
     <View style={styles.container}>
@@ -85,61 +99,78 @@ const EditUserLifestyleScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* ===== LIST ===== */}
-      <ScrollView>
-        {options.length === 0 && (
-          <Text style={styles.emptyText}>
-            Loading lifestyle options...
-          </Text>
-        )}
+      {/* ===== CONTENT ===== */}
+      <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+        {data.map((category) => {
+          const relatedOptions = options.filter(
+            (o) => o.category_id === category.id
+          );
 
-        {Object.values(groupedOptions).map((group) => (
-          <View key={group.categoryId}>
-            {/* CATEGORY TITLE */}
-            <Text style={styles.categoryTitle}>
-              {group.categoryName}
-            </Text>
+          return (
+            <View key={category.id} style={styles.section}>
+              {/* CATEGORY NAME */}
+              <Text style={styles.label}>{category.name}</Text>
 
-            {/* SUBCATEGORY OPTIONS */}
-            {group.items.map((item) => {
-              const selectedItem = localSelection.some(
-                (i) =>
-                  i.id === item.lifestyle_id &&
-                  i.categoryId === item.category_id
-              );
+              {/* DROPDOWN */}
+              <TouchableOpacity
+                style={styles.dropdown}
+                onPress={() =>
+                  relatedOptions.length > 0 &&
+                  setOpenCategory(
+                    openCategory === category.id
+                      ? null
+                      : category.id
+                  )
+                }
+              >
+                <Text style={styles.dropdownText}>
+                  {relatedOptions.length > 0
+                    ? getSelectedLabel(category.id)
+                    : "Not available"}
+                </Text>
 
-              return (
-                <TouchableOpacity
-                  key={item.lifestyle_id}
-                  style={[
-                    styles.row,
-                    selectedItem && styles.selectedRow,
-                  ]}
-                  onPress={() =>
-                    toggleLifestyle({
-                      categoryId: item.category_id,
-                      categoryName: item.category_name,
-                      id: item.lifestyle_id,
-                      name: item.lifestyle_name,
-                    })
-                  }
-                >
-                  <Text style={styles.text}>
-                    {item.lifestyle_name}
-                  </Text>
+                {relatedOptions.length > 0 && (
+                  <Icon name="chevron-down" size={18} />
+                )}
+              </TouchableOpacity>
 
-                  {selectedItem && (
-                    <Icon
-                      name="checkmark-circle"
-                      size={20}
-                      color={PURPLE}
-                    />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ))}
+              {/* OPTIONS */}
+              {openCategory === category.id &&
+                relatedOptions.map((opt) => {
+                  const selectedItem = localSelection.some(
+                    (i) =>
+                      i.id === opt.lifestyle_id &&
+                      i.categoryId === category.id
+                  );
+
+                  return (
+                    <TouchableOpacity
+                      key={opt.lifestyle_id}
+                      style={[
+                        styles.optionRow,
+                        selectedItem && styles.selectedRow,
+                      ]}
+                      onPress={() =>
+                        handleSelect(category, opt)
+                      }
+                    >
+                      <Text style={styles.optionText}>
+                        {opt.lifestyle_name}
+                      </Text>
+
+                      {selectedItem && (
+                        <Icon
+                          name="checkmark-circle"
+                          size={18}
+                          color={PURPLE}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+            </View>
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -155,57 +186,71 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
-  /* HEADER */
   header: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
-    marginTop:20
+    marginTop: 40,
   },
+
   headerTitle: {
     fontSize: 18,
     fontWeight: "600",
   },
+
   doneText: {
     color: PURPLE,
     fontWeight: "700",
+  },
+
+  section: {
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+
+  label: {
+    fontSize: 15,
+    fontWeight: "500",
+    marginBottom: 6,
+    color: "#333",
+  },
+
+  dropdown: {
+    height: 48,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+  },
+
+  dropdownText: {
     fontSize: 14,
+    color: "#333",
   },
 
-  /* CATEGORY */
-  categoryTitle: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#666",
-    backgroundColor: "#FAFAFA",
-  },
-
-  /* LIST */
-  emptyText: {
-    textAlign: "center",
-    marginTop: 40,
-    color: "#999",
-  },
-
-  row: {
-    paddingHorizontal: 18,
-    paddingVertical: 16,
+  optionRow: {
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F2F2F2",
   },
+
   selectedRow: {
     backgroundColor: "#F6ECFF",
   },
-  text: {
-    fontSize: 15,
+
+  optionText: {
+    fontSize: 14,
     color: "#333",
   },
 });

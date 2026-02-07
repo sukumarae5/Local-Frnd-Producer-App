@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -123,26 +123,29 @@ const formatDateForApi = (date) => {
 
   return `${year}-${month}-${day}`; // YYYY-MM-DD
 };
+
+
   /* ================= REFRESH FIX ================= */
- useFocusEffect(
+const isFormInitialized = useRef(false);
+
+useFocusEffect(
   useCallback(() => {
-    if (!userdata) return;
+    if (!userdata || isFormInitialized.current) return;
 
-    console.log("🔄 EditProfileScreen refreshed");
+    console.log("🟢 Initializing EditProfile form");
 
-    // BASIC INFO
+    // BASIC INFO (ONLY ONCE)
     setProfileImg(userdata?.images?.avatar ?? null);
     setFullName(userdata?.user?.name ?? "");
     setUsername(userdata?.user?.username ?? "");
     setEmail(userdata?.user?.email ?? "");
-setDob(formatDateForApi(userdata?.user?.date_of_birth));
-setGender(userdata?.user?.gender ?? "Female");
-
+    setDob(formatDateForApi(userdata?.user?.date_of_birth));
+    setGender(userdata?.user?.gender ?? "Female");
 
     // LANGUAGE
     setLanguage(userdata?.language?.native_name ?? "");
 
-    // LOCATION (ONLY ONCE)
+    // LOCATION
     const city = userdata?.location?.city;
     const state = userdata?.location?.state;
     const country = userdata?.location?.country;
@@ -167,18 +170,17 @@ setGender(userdata?.user?.gender ?? "Female");
           name: item.subcategory.name,
         }))
       );
-    } else {
-      setSelectedLifestyles([]);
     }
 
     // INTERESTS
     if (userdata?.interests?.length) {
       setSelectedInterests(userdata.interests);
-    } else {
-      setSelectedInterests([]);
     }
-  }, [route.params?.refresh, userdata])
+
+    isFormInitialized.current = true; // 🔒 LOCK IT
+  }, [userdata])
 );
+
 
 
 const onDateChange = (event, selectedDate) => {
@@ -384,22 +386,37 @@ const handleDeleteImage = (photo_id) => {
               setOpenSection={setOpenSection}
             />
 
-            {openSection === "lifestyle" && (
-              <View style={styles.generalContainer}>
-                {userdata?.lifestyles?.map((item, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.selectInput}
-                    onPress={openLifestyle}
-                  >
-                    <Text>
-                      {item.category.name} : {item.subcategory.name}
-                    </Text>
-                    <Icon name="chevron-down" />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+           {openSection === "lifestyle" && (
+  <View style={styles.generalContainer}>
+    {userdata?.lifestyles && userdata.lifestyles.length > 0 ? (
+      userdata.lifestyles.map((item, index) => (
+        <TouchableOpacity
+          key={index}
+          style={styles.selectInput}
+          onPress={openLifestyle}
+        >
+          <Text>
+            {item.category.name} : {item.subcategory.name}
+          </Text>
+          <Icon name="chevron-down" />
+        </TouchableOpacity>
+      ))
+    ) : (
+      <View style={styles.emptyLifestyleBox}>
+        <Text style={styles.emptyText}>
+          No lifestyle available
+        </Text>
+
+        <TouchableOpacity
+          style={styles.addNowBtn}
+          onPress={openLifestyle}
+        >
+          <Text style={styles.addNowText}>Add Now</Text>
+        </TouchableOpacity>
+      </View>
+    )}
+  </View>
+)}
 
             {/* INTEREST */}
             <AccordionHeader
@@ -698,5 +715,28 @@ deleteBtn: {
   alignItems: "center",
   justifyContent: "center",
 },
+emptyLifestyleBox: {
+  alignItems: "center",
+  paddingVertical: 20,
+},
+
+emptyText: {
+  color: "#999",
+  marginBottom: 10,
+  fontSize: 14,
+},
+
+addNowBtn: {
+  paddingHorizontal: 20,
+  paddingVertical: 8,
+  borderRadius: 20,
+  backgroundColor: "#B832F9",
+},
+
+addNowText: {
+  color: "#fff",
+  fontWeight: "600",
+},
+
 
 });

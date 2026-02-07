@@ -49,6 +49,7 @@ import EditProfileScreen  from"./src/screens/EditProfileScreen"
 import EditUserInterestScreen from "./src/screens/EditUserInterestScreen"
 import EditUserLifestyleScreen from"./src/screens/EditUserLifestyleScreen"
 import EditUserGeneralInfoScreen from "./src/screens/EditUserGeneralInfoScreen"
+import HelpCenterScreen from "./src/screens/HelpCenterScreen"
 import { LogBox } from "react-native";
 
 
@@ -114,8 +115,8 @@ LogBox.ignoreAllLogs();
 <Stack.Screen name="EditUserLifestyleScreen" component={EditUserLifestyleScreen}/>
 <Stack.Screen  name="FriendRequestsScreen"  component={FriendRequestsScreen}/>
 <Stack.Screen name="EditUserGeneralInfoScreen" component={EditUserGeneralInfoScreen}/>
+<Stack.Screen name="HelpCenterScreen" component={HelpCenterScreen}/>
 
-   
    
 
    </Stack.Navigator>

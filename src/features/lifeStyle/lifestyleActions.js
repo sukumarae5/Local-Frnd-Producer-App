@@ -8,6 +8,9 @@ import {
   USER_LIFESTYLE_REQUEST,
   USER_LIFESTYLE_SUCCESS,
   USER_LIFESTYLE_FAILURE,
+  EDIT_USER_LIFESTYLE_REQUEST,
+  EDIT_USER_LIFESTYLE_SUCCESS,
+  EDIT_USER_LIFESTYLE_FAILURE,
 } from "./lifestyleTypes";
 
 export const fetchLifestyleRequest = () => ({
@@ -50,5 +53,21 @@ export const userLifestyleSuccess = (data) => ({
 
 export const userLifestyleFailure = (error) => ({
   type: USER_LIFESTYLE_FAILURE,
+  payload: error,
+});
+
+export const editUserLifestyleRequest = (payload, callback) => ({
+  type: EDIT_USER_LIFESTYLE_REQUEST,
+  payload,
+  callback, // ✅ success callback
+});
+
+export const editUserLifestyleSuccess = (data) => ({
+  type: EDIT_USER_LIFESTYLE_SUCCESS,
+  payload: data,
+});
+
+export const editUserLifestyleFailure = (error) => ({
+  type: EDIT_USER_LIFESTYLE_FAILURE,
   payload: error,
 });

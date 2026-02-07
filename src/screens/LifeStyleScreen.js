@@ -1,148 +1,186 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   ScrollView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import LinearGradient from "react-native-linear-gradient";
-import Ionicons from "react-native-vector-icons/Ionicons";
+import Icon from "react-native-vector-icons/Ionicons";
 import { Picker } from "@react-native-picker/picker";
 import { useDispatch, useSelector } from "react-redux";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { useNavigation, useRoute } from "@react-navigation/native";
 import {
   FETCH_LIFESTYLE_REQUEST,
   FETCH_LIFESTYLE_OPTIONS_REQUEST,
-  USER_LIFESTYLE_REQUEST,
 } from "../features/lifeStyle/lifestyleTypes";
-import { newUserDataRequest } from "../features/user/userAction";
 
-const LifeStyleScreen = ({ navigation }) => {
-  const [about, setAbout] = useState("");
-  const [selectedChoices, setSelectedChoices] = useState({});
+const PURPLE = "#B832F9";
 
+const EditUserLifestyleScreen = () => {
+  const navigation = useNavigation();
+  const route = useRoute();
   const dispatch = useDispatch();
-  const { loading, data, options } = useSelector((state) => state.lifestyle);
 
- 
-  // Fetch categories and options
+  /* ===== PARAMS ===== */
+  const { selected = [] } = route.params || {};
+
+  /* ===== REDUX ===== */
+  const { data = [], options = [] } = useSelector(
+    (state) => state.lifestyle
+  );
+
+  /* ===== LOCAL STATE ===== */
+  const [selectedChoices, setSelectedChoices] = useState(() => {
+    const map = {};
+    selected.forEach((item) => {
+      map[item.categoryId] = item.id;
+    });
+    return map;
+  });
+
+  /* ===== FETCH DATA ===== */
   useEffect(() => {
     dispatch({ type: FETCH_LIFESTYLE_REQUEST });
     dispatch({ type: FETCH_LIFESTYLE_OPTIONS_REQUEST });
   }, []);
 
-  // Store selections
-  const handleSelect = (categoryId, optionId) => {
-    setSelectedChoices((prev) => ({ ...prev, [categoryId]: optionId }));
+  /* ===== HANDLE CHANGE ===== */
+  const handleSelect = (category, value) => {
+    setSelectedChoices((prev) => ({
+      ...prev,
+      [category.id]: value,
+    }));
   };
 
-  // Submit selected values
-  const handleSubmit = () => {
-    const lifestyleIds = Object.values(selectedChoices).map(Number);
+  /* ===== DONE ===== */
+  const handleDone = () => {
+    const finalSelection = Object.entries(selectedChoices).map(
+      ([categoryId, lifestyleId]) => {
+        const opt = options.find(
+          (o) =>
+            o.lifestyle_id === lifestyleId &&
+            o.category_id === Number(categoryId)
+        );
 
-   dispatch({
-  type: USER_LIFESTYLE_REQUEST,
-  payload: {
-    lifestyles: lifestyleIds,
-  },
-});
+        return {
+          categoryId: Number(categoryId),
+          categoryName: opt?.category_name,
+          id: opt?.lifestyle_id,
+          name: opt?.lifestyle_name,
+        };
+      }
+    );
 
- dispatch(newUserDataRequest({bio:about}));
-    navigation.navigate("InterestScreen");
+    navigation.navigate({
+      name: "EditProfileScreen",
+      params: {
+        updatedLifestyles: finalSelection,
+      },
+      merge: true,
+    });
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.inner}>
-        
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerRow}>
-          <Ionicons name="chevron-back" size={22} />
-          <Text style={styles.header}>Life Style</Text>
+    <View style={styles.container}>
+      {/* ===== HEADER ===== */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Icon name="chevron-back" size={26} />
         </TouchableOpacity>
 
-        {loading && <Text>Loading...</Text>}
+        <Text style={styles.headerTitle}>Edit Lifestyle</Text>
 
-        {!loading && data.map((category) => {
-          const relatedOptions = options.filter(opt => opt.category_id === category.id);
+        <TouchableOpacity onPress={handleDone}>
+          <Text style={styles.doneText}>DONE</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ===== CONTENT ===== */}
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+        {data.map((category) => {
+          const categoryOptions = options.filter(
+            (o) => o.category_id === category.id
+          );
 
           return (
-            <View key={category.id} style={{ marginBottom: 20 }}>
-              <Text style={styles.label}>{category.name}</Text>
+            <View key={category.id} style={styles.section}>
+              <Text style={styles.categoryTitle}>{category.name}</Text>
 
-              <View style={styles.dropdownWrapper}>
-                <Picker
-                  selectedValue={selectedChoices[category.id] || ""}
-                  onValueChange={(value) => handleSelect(category.id, value)}
-                >
-                  <Picker.Item label="Select..." value="" />
-                  
-                  {relatedOptions.map((opt) => (
-                    <Picker.Item
-                      key={opt.lifestyle_id}
-                      label={opt.lifestyle_name}
-                      value={opt.lifestyle_id}
-                    />
-                  ))}
-                </Picker>
-              </View>
+              {categoryOptions.length > 0 ? (
+                <View style={styles.dropdown}>
+                  <Picker
+                    selectedValue={selectedChoices[category.id] || ""}
+                    onValueChange={(value) =>
+                      handleSelect(category, value)
+                    }
+                  >
+                    <Picker.Item label="Select..." value="" />
+                    {categoryOptions.map((opt) => (
+                      <Picker.Item
+                        key={opt.lifestyle_id}
+                        label={opt.lifestyle_name}
+                        value={opt.lifestyle_id}
+                      />
+                    ))}
+                  </Picker>
+                </View>
+              ) : (
+                <Text style={styles.notAvailable}>
+                  Not available
+                </Text>
+              )}
             </View>
           );
         })}
-
-        <Text style={styles.label}>About</Text>
-        <TextInput
-          style={styles.textArea}
-          placeholder="Type Here..."
-          multiline
-          value={about}
-          onChangeText={setAbout}
-        />
-
-        <TouchableOpacity style={{ marginTop: 30 }} onPress={handleSubmit}>
-          <LinearGradient colors={["#9D4CF1", "#D800F4"]} style={styles.button}>
-            <Text style={styles.buttonText}>CONTINUE</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
-export default LifeStyleScreen;
+export default EditUserLifestyleScreen;
+
+/* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FDF9FF" },
-  inner: { paddingHorizontal: 20, paddingBottom: 40 },
-  headerRow: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
-  header: { fontSize: 20, fontWeight: "600", marginLeft: 8 },
-  label: { fontSize: 15, fontWeight: "500", marginBottom: 6, marginTop: 14 },
-  dropdownWrapper: {
-    borderWidth: 1,
-    borderColor: "#dddddd",
-    borderRadius: 10,
-    height: 48,
-    justifyContent: "center",
-    backgroundColor: "#fff",
-    overflow: "hidden",
+  container: { flex: 1, backgroundColor: "#fff" },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    marginTop: 40,
   },
-  textArea: {
+
+  headerTitle: { fontSize: 18, fontWeight: "600" },
+  doneText: { color: PURPLE, fontWeight: "700" },
+
+  section: {
+    paddingHorizontal: 20,
+    marginTop: 16,
+  },
+
+  categoryTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 6,
+    color: "#444",
+  },
+
+  dropdown: {
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 10,
-    padding: 10,
-    height: 120,
-    textAlignVertical: "top",
+    overflow: "hidden",
     backgroundColor: "#fff",
   },
-  button: {
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
+
+  notAvailable: {
+    color: "#999",
+    fontSize: 14,
+    paddingVertical: 10,
   },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });

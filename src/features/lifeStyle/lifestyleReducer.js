@@ -8,6 +8,9 @@ import {
   USER_LIFESTYLE_REQUEST,
   USER_LIFESTYLE_SUCCESS,
   USER_LIFESTYLE_FAILURE,
+  EDIT_USER_LIFESTYLE_REQUEST,
+  EDIT_USER_LIFESTYLE_SUCCESS,
+  EDIT_USER_LIFESTYLE_FAILURE,
 } from "./lifestyleTypes";
 
 const initialState = {
@@ -44,6 +47,25 @@ const lifestyleReducer = (state = initialState, action) => {
 
     case USER_LIFESTYLE_FAILURE:
       return { ...state, loading: false, error: action.payload };
+
+
+case EDIT_USER_LIFESTYLE_REQUEST:
+      return { ...state, loading: true, error: null };
+
+    case EDIT_USER_LIFESTYLE_SUCCESS:
+      return {
+        ...state,
+        loading: false,
+        response: action.payload, // reuse response
+      };
+
+    case EDIT_USER_LIFESTYLE_FAILURE:
+      return { ...state, loading: false, error: action.payload };
+
+
+
+
+
 
       default:
       return state;

@@ -125,7 +125,7 @@ const ProfileScreen = () => {
             color="#2ECC71"
             title="Need Help?"
             sub="FAQ, tutorial and contact"
-            onPress={() => navigation.navigate("EditProfileScreen")}
+            onPress={() => navigation.navigate("HelpCenterScreen")}
           />
         </View>
       </View>
