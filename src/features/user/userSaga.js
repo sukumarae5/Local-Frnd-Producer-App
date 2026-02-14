@@ -15,7 +15,6 @@ import { user_Edit, USER_DATA, newuserapi } from "../../api/userApi";
 import { USER_LOGOUT_REQUEST } from "./userType";
 import { cancel, take, race } from "redux-saga/effects";
 
-console.log(USER_DATA)
 // ------------------ EDIT USER ------------------
 function* handleUserEdit(action) {
   try {
@@ -27,8 +26,8 @@ console.log(token)
         headers: { Authorization: `Bearer ${token}` },
       })
     );
-
-    yield put(userEditSuccess(response.data));
+console.log(response)
+    yield put(userEditSuccess(response));
   } catch (error) {
     const msg = error.response?.data?.message || error.message;
     yield put(userEditFailed(msg));
@@ -50,7 +49,7 @@ function* handleUserData() {
         },
       })
     );
-
+console.log(response)
     yield put(userDataSuccess(response.data)); // store user data
   } catch (error) {
     const msg = error.response?.data?.message || error.message;

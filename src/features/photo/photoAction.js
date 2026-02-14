@@ -37,18 +37,20 @@ export const userupdatephotofailed=(error)=>({
 
 // -------------------DELETE---------------------------------------
 
-export const userdeletephotorequest=(data)=>({
+// ------------------- DELETE PHOTO -------------------
 
-    type:USER_DELETE_PHOTO_REQUEST,
-    payload:data
-})
-export const userdeletephotosuccess=(data)=>({
+export const userdeletephotorequest = (payload, callback) => ({
+  type: USER_DELETE_PHOTO_REQUEST,
+  payload,   // { photo_id }
+  callback,
+});
 
-    type:USER_DELETE_PHOTO_SUCCESS,
-    payload:data
-})
-export const userdeletephotofailed=(error)=>({
+export const userdeletephotosuccess = (data) => ({
+  type: USER_DELETE_PHOTO_SUCCESS,
+  payload: data,
+});
 
-    type:USER_DELETE_PHOTO_FAILED,
-    payload:error
-})
+export const userdeletephotofailed = (error) => ({
+  type: USER_DELETE_PHOTO_FAILED,
+  payload: error,
+});

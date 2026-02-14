@@ -1,6 +1,10 @@
-// TrainersCallPage.js
-
-import React, { useContext, useRef, useState, useEffect } from "react";
+import React, {
+  useContext,
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
@@ -26,6 +30,7 @@ import {
 
 import { otherUserFetchRequest } from "../features/Otherusers/otherUserActions";
 import { SocketContext } from "../socket/SocketProvider";
+import { useFocusEffect } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
 const CELL_WIDTH = width / 3 - 18;
@@ -80,6 +85,15 @@ const TrainersCallPage = ({ navigation }) => {
       ).start();
     });
   }, [users]);
+  
+  useFocusEffect(
+    React.useCallback(() => {
+      setCallingRandom(false);
+      setCallingRandomVideo(false);
+      setCallingDirect(false);
+      hasNavigatedRef.current = false;
+    }, [])
+  );
 
   // useEffect(() => {
   //   if (!callstatus?.session_id) return;
@@ -112,7 +126,7 @@ const TrainersCallPage = ({ navigation }) => {
     setCallingRandom(true);
 
     dispatch(callRequest({ call_type: "AUDIO" }));
-    navigation.navigate("CallStatusScreen", { call_type: "AUDIO" });
+    navigation.navigate("CallStatusScreen", { call_type: "AUDIO",  role: "male", });
   };
 
   const startRandomVideoCall = () => {
@@ -123,7 +137,7 @@ const TrainersCallPage = ({ navigation }) => {
     setCallingRandomVideo(true);
 
     dispatch(callRequest({ call_type: "VIDEO" }));
-    navigation.navigate("CallStatusScreen", { call_type: "VIDEO" });
+    navigation.navigate("CallStatusScreen", { call_type: "VIDEO", role: "male", });
   };
 
   const startDirectCall = (item) => {

@@ -66,7 +66,7 @@ export const chatMarkReadRequest = (otherUserId, conversationId) => ({
 
 export const chatMarkReadSuccess = (otherUserId) => ({
   type: CHAT_MARK_READ_SUCCESS,
-  payload: otherUserId,
+  payload: {otherUserId},
 });
 
 export const chatMarkReadFailed = (error) => ({
@@ -96,4 +96,9 @@ export const chatClearActive = () => ({
 export const chatUnreadIncrease = (otherUserId) => ({
   type: CHAT_UNREAD_INCREASE,
   payload: otherUserId,
+});
+
+export const chatMessageReadBySocket = (messageId) => ({
+  type: CHAT_MARK_READ_SUCCESS,
+  payload: { messageId }
 });

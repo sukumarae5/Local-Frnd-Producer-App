@@ -97,7 +97,7 @@ const PhoneScreen = ({ navigation }) => {
                   C ${width * 0.2} 20, ${width * 0.8} 160, ${width} 90
                   L ${width} 160
                   L 0 160
-                  Z
+                  Z   
                 `}
                 fill="#fff"
               />

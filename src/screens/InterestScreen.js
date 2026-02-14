@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import LinearGradient from "react-native-linear-gradient";
@@ -19,12 +21,25 @@ import {
 const InterestScreen = ({ navigation }) => {
   const dispatch = useDispatch();
 
-  const { interests, loading } = useSelector((state) => state.interest);
+  // ✅ CORRECT REDUCER DATA
+  const {
+    interests,
+    loading,
+    message,
+    selectedInterests,
+  } = useSelector((state) => state.interest);
 
-  // stores ONLY interest IDs
+  // local state
   const [selected, setSelected] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResponseHandled, setIsResponseHandled] = useState(false);
 
-  // toggle by ID
+  // fetch interests
+  useEffect(() => {
+    dispatch(fetchInterestsRequest());
+  }, [dispatch]);
+
+  // toggle interest
   const toggleSelect = (item) => {
     setSelected((prev) =>
       prev.includes(item.id)
@@ -33,9 +48,51 @@ const InterestScreen = ({ navigation }) => {
     );
   };
 
+  // ✅ SINGLE, CORRECT BACKEND RESPONSE HANDLER
   useEffect(() => {
-    dispatch(fetchInterestsRequest());
-  }, [dispatch]);
+    if (!message || isResponseHandled) return;
+
+    const isSuccess = selectedInterests?.success === true;
+
+    setIsSubmitting(false);
+    setIsResponseHandled(true);
+
+    Alert.alert(
+      isSuccess ? "Success ✅" : "Error ❌",
+      message,
+      [
+        {
+          text: "OK",
+          onPress: () => {
+            if (isSuccess) {
+              navigation.navigate("GenderScreen");
+            }
+          },
+        },
+      ]
+    );
+  }, [message, selectedInterests, isResponseHandled, navigation]);
+
+  // reset alert guard when screen opens again
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      setIsResponseHandled(false);
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  // submit handler
+  const handleSubmit = () => {
+    if (selected.length === 0) return;
+
+    setIsSubmitting(true);
+
+    dispatch(
+      selectInterestsRequest({
+        interests: selected,
+      })
+    );
+  };
 
   return (
     <WelcomeScreenbackgroundgpage>
@@ -58,15 +115,15 @@ const InterestScreen = ({ navigation }) => {
         {/* LOADER */}
         {loading && <Text style={{ color: "#000" }}>Loading...</Text>}
 
-        {/* TAGS LIST */}
+        {/* TAGS */}
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={styles.tagsWrapper}>
             {interests?.map((item) => {
-              const active = selected.includes(item.id); // ✅ FIX
+              const active = selected.includes(item.id);
               return (
                 <TouchableOpacity
                   key={item.id}
-                  onPress={() => toggleSelect(item)} // ✅ FIX
+                  onPress={() => toggleSelect(item)}
                   style={[styles.tag, active && styles.tagActive]}
                 >
                   <Text
@@ -91,18 +148,14 @@ const InterestScreen = ({ navigation }) => {
             ]}
           >
             <TouchableOpacity
-              disabled={selected.length === 0}
-              onPress={() => {
-                dispatch(
-                  selectInterestsRequest({
-                    interests: selected, 
-                  })
-                );
-
-                navigation.navigate("GenderScreen");
-              }}
+              disabled={selected.length === 0 || isSubmitting}
+              onPress={handleSubmit}
             >
-              <Text style={styles.continueText}>CONTINUE</Text>
+              {isSubmitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.continueText}>CONTINUE</Text>
+              )}
             </TouchableOpacity>
           </LinearGradient>
 

@@ -273,7 +273,7 @@ console.log(
     pcRef.current?.close();
 
     const nextScreen =
-      role === "caller" ? "TrainersCallpage" : "ReciverHomeScreen";
+      role === "caller" ? "MaleHomeTabs" : "ReceiverBottomTabs";
 
     navigation.dispatch(
       CommonActions.reset({

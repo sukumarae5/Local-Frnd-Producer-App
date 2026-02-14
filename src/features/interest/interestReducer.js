@@ -16,6 +16,8 @@ const initialState = {
   selectedInterests:[],
   updateselectedInterests:[],
   error: null,
+
+message:null
 };
 
 const interestReducer = (state = initialState, action) => {
@@ -24,7 +26,7 @@ const interestReducer = (state = initialState, action) => {
       return { ...state, loading: true, error: null };
 
     case FETCH_INTERESTS_SUCCESS:
-      return { ...state, loading: false, interests: action.payload };
+      return { ...state, loading: false, interests: action.payload,message:action.payload.message };
 
     case FETCH_INTERESTS_FAILURE:
       return { ...state, loading: false, error: action.payload };
@@ -35,7 +37,7 @@ const interestReducer = (state = initialState, action) => {
       return { ...state, loading: true, error: null };
 
     case SELECT_INTERESTS_SUCCESS:
-      return { ...state, loading: false, selectedInterests: action.payload };
+      return { ...state, loading: false, selectedInterests: action.payload,message:action.payload.message };
 
     case SELECT_INTERESTS_FAILURE:
       return { ...state, loading: false, error: action.payload };
@@ -43,7 +45,7 @@ const interestReducer = (state = initialState, action) => {
     case UPDATE_SELECT_INTERESTS_REQUEST:
       return{...state,loading:true,error:null};
     case UPDATE_SELECT_INTERESTS_SUCCESS:
-      return{...state,loading:false, updateselectedInterests:action.payload} 
+      return{...state,loading:false, updateselectedInterests:action.payload,message:action.payload.message} 
     case UPDATE_SELECT_INTERESTS_FAILURE:
       return{...state,loading:false,error:action.payload}   
       default:

@@ -21,8 +21,20 @@ export default function photoReducer(state=initialState,action){
 case USER_DELETE_PHOTO_REQUEST:
       return { ...state, loading: true, error: null };
 
-    case USER_DELETE_PHOTO_SUCCESS:
-      return { ...state, loading: false };
+   case USER_DELETE_PHOTO_SUCCESS:
+  return {
+    ...state,
+    loading: false,
+    userphoto: {
+      ...state.userphoto,
+      images: {
+        ...state.userphoto?.images,
+        gallery: state.userphoto?.images?.gallery?.filter(
+          (img) => img.photo_id !== action.payload.photo_id
+        ),
+      },
+    },
+  };
 
     case USER_DELETE_PHOTO_FAILED:
       return { ...state, loading: false, error: action.payload };

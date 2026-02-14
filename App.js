@@ -16,7 +16,7 @@ import LocationScreen from "./src/screens/LocationScreen"
 import ProfileScreen from "./src/screens/ProfileScreen"
 import PlanScreen from "./src/screens/PlansScreen"
 import UplodePhotoScreen from './src/screens/UplodePhotoScreen';
-import TrainersCallpage from './src/screens/TrainersCallpage';
+// import TrainersCallpage from './src/screens/TrainersCallpage';
 import VideocallScreen from './src/screens/VideocallScreen';
 import AudiocallScreen from './src/screens/AudiocallScreen';
 import GirlsavatarScreen from './src/screens/GirlsavatarScreen';
@@ -54,6 +54,8 @@ import { LogBox } from "react-native";
 
 
 import EndCallConfirmModal from "./src/screens/EndCallConfirmationScreen"
+import NotificationScreen from "./src/screens/NotificationScreen"
+
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -82,7 +84,7 @@ LogBox.ignoreAllLogs();
         <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
         <Stack.Screen name="PlanScreen" component={PlanScreen} />
         <Stack.Screen name="UplodePhotoScreen" component={UplodePhotoScreen} />
- <Stack.Screen name="TrainersCallpage" component={TrainersCallpage} />    
+ {/* <Stack.Screen name="TrainersCallpage" component={TrainersCallpage} />     */}
   <Stack.Screen name="VideocallScreen" component={VideocallScreen} />    
     <Stack.Screen name="AudiocallScreen" component={AudiocallScreen} />    
 <Stack.Screen name='OnboardScreen' component={OnboardScreen}/>
@@ -119,6 +121,9 @@ LogBox.ignoreAllLogs();
 
    
 
+{/* <Stack.Screen name="EditUserGeneralInfoScreen" component={EditUserGeneralInfoScreen}/>   */}
+<Stack.Screen name="NotificationScreen" component={NotificationScreen}/>
+ 
    </Stack.Navigator>
       </NavigationContainer>
       </SocketProvider>

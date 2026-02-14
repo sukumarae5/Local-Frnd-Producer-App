@@ -1,10 +1,11 @@
 // CallStatusScreen.js
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef,useContext  } from "react";
 import { View, Text, StyleSheet, Image, Animated } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { useSelector, useDispatch } from "react-redux";
 import { callDetailsRequest } from "../features/calls/callAction";
+import { SocketContext } from "../socket/SocketProvider";
 
 /* ---------------- STATIC DATA ---------------- */
 const smallAvatars = [
@@ -21,58 +22,102 @@ const DOT_RADIUS = (CENTER_SIZE * 1.7) / 2;
 
 const CallStatusScreen = ({ navigation, route }) => {
 
+
   const dispatch = useDispatch();
+const { socketRef, connected } = useContext(SocketContext);
 
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const navigatedRef = useRef(false);
 
   const call = useSelector((state) => state.calls?.call);
+console.log(call)
+  const call_type = route?.params?.call_type || "AUDIO";
+  const role = route?.params?.role || "male";
+useEffect(() => {
+  console.log("CALL OBJECT =>", call);
+}, [call]);
 
-  const call_type = route.params?.call_type || "AUDIO";
-
-  /** ROTATION */
   useEffect(() => {
-    Animated.loop(
+    const anim = Animated.loop(
       Animated.timing(rotateAnim, {
         toValue: 1,
         duration: 10000,
         useNativeDriver: true,
       })
-    ).start();
-  }, []);
+    );
 
-  /** STATUS HANDLING */
+    anim.start();
+
+    return () => anim.stop();
+  }, [rotateAnim]);
+useEffect(() => {
+
+  if (role !== "female") return;
+  if (!connected || !socketRef.current) return;
+
+  const socket = socketRef.current;
+
+  const onIncomingCall = (data) => {
+
+    if (navigatedRef.current) return;
+
+    navigatedRef.current = true;
+
+    const screen =
+      data.call_type === "VIDEO"
+        ? "VideocallScreen"
+        : "AudiocallScreen";
+
+    navigation.replace(screen, {
+      session_id: data.session_id,
+      role: "receiver",
+    });
+  };
+
+  socket.on("incoming_call", onIncomingCall);
+
+  return () => {
+    socket.off("incoming_call", onIncomingCall);
+  };
+
+}, [role, connected, socketRef, navigation]);
+
   useEffect(() => {
 
-    if (!call?.status) return;
+    if (!call || !call.status) return;
 
     const status = call.status.toUpperCase();
+    if (role === "male") {
 
-    if (status === "RINGING") {
+      if (status === "RINGING") {
 
-      if (navigatedRef.current) return;
-      navigatedRef.current = true;
+        if (navigatedRef.current) return;
+        navigatedRef.current = true;
 
-      dispatch(callDetailsRequest());
+        dispatch(callDetailsRequest());
 
-      navigation.replace("PerfectMatchScreen", {
-        call_type: call.call_type,
-        session_id: call.session_id,
-      });
+        navigation.replace("PerfectMatchScreen", {
+          call_type: call.call_type,
+          session_id: call.session_id,
+        });
+
+        return;
+      }
     }
 
     if (status === "FAILED" || status === "CANCELED") {
       navigation.goBack();
     }
 
-  }, [call, navigation, dispatch]);
+  }, [call, role, navigation, dispatch]);
 
   /* ---------------- UI ANIMATIONS ---------------- */
   const ripple1 = useRef(new Animated.Value(0)).current;
   const ripple2 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.loop(
+
+    const anim = Animated.loop(
       Animated.parallel([
         Animated.timing(ripple1, {
           toValue: 1,
@@ -88,8 +133,13 @@ const CallStatusScreen = ({ navigation, route }) => {
           }),
         ]),
       ])
-    ).start();
-  }, []);
+    );
+
+    anim.start();
+
+    return () => anim.stop();
+
+  }, [ripple1, ripple2]);
 
   const rippleStyle1 = {
     position: "absolute",

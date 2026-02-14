@@ -241,7 +241,7 @@ const [activeBtn, setActiveBtn] = useState(null);
     pcRef.current?.close();
 
     const next =
-      role === "caller" ? "TrainersCallpage" : "ReciverHomeScreen";
+      role === "caller" ? "MaleHomeTabs" : "ReceiverBottomTabs";
 
     navigation.dispatch(
       CommonActions.reset({

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,41 +6,86 @@ import {
   Pressable,
   StyleSheet,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
-import AnimatedLogo from "../components/SampleLogo/AnimatedLogo";
-import BackgroundPagesOne from "../components/BackgroundPages/BackgroundPagesOne";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { newUserDataRequest } from "../features/user/userAction";
-import{ useravatarapifetchrequest} from"../features/Avatars/avatarsAction"
-import WelcomeScreenbackgroungpage from"../components/BackgroundPages/WelcomeScreenbackgroungpage"
+import { useravatarapifetchrequest } from "../features/Avatars/avatarsAction";
+import WelcomeScreenbackgroungpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
+
 const { width } = Dimensions.get("window");
 
 const GenderScreen = ({ navigation }) => {
-  const dispatch=useDispatch()
+  const dispatch = useDispatch();
+
   const [selectedGender, setSelectedGender] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResponseHandled, setIsResponseHandled] = useState(false);
+
+  // ✅ BACKEND RESPONSE FROM USER REDUCER
+  const { success, message } = useSelector((state) => state.user);
 
   /* ---------- HANDLE CONTINUE ---------- */
   const handleContinue = () => {
-    if (selectedGender === "Male") {
-      dispatch(newUserDataRequest({ gender:selectedGender }));
-      dispatch(useravatarapifetchrequest(selectedGender))
-      navigation.navigate("BoysavatarScreen");
-    } else if (selectedGender === "Female") {
-            dispatch(newUserDataRequest({ gender:selectedGender }));
-      dispatch(useravatarapifetchrequest(selectedGender))
+    if (!selectedGender) return;
 
-      navigation.navigate("GirlsavatarScreen");
-    }
+    setIsSubmitting(true);
+
+    dispatch(newUserDataRequest({ gender: selectedGender }));
+    dispatch(useravatarapifetchrequest(selectedGender));
   };
+
+  /* ---------- HANDLE BACKEND RESPONSE ---------- */
+  useEffect(() => {
+    if (!message || isResponseHandled) return;
+
+    setIsSubmitting(false);
+    setIsResponseHandled(true);
+
+    // ✅ FIX: normalize message (string only)
+    const alertMessage =
+      typeof message === "string"
+        ? message
+        : message?.message || "Something went wrong";
+
+    Alert.alert(
+      success ? "Success ✅" : "Error ❌",
+      alertMessage,
+      [
+        {
+          text: "OK",
+          onPress: () => {
+            if (success) {
+              if (selectedGender === "Male") {
+                navigation.navigate("BoysavatarScreen");
+              } else if (selectedGender === "Female") {
+                navigation.navigate("GirlsavatarScreen");
+              }
+            }
+          },
+        },
+      ]
+    );
+  }, [message, success, isResponseHandled, selectedGender, navigation]);
+
+  /* ---------- RESET ALERT WHEN SCREEN OPENS AGAIN ---------- */
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      setIsResponseHandled(false);
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   return (
     <WelcomeScreenbackgroungpage>
       <View style={styles.container}>
         {/* Logo */}
-<Image
+        <Image
           source={require("../components/BackgroundPages/main_log1.png")}
           style={styles.logo}
         />
+
         {/* Title */}
         <Text style={styles.title}>Select your gender</Text>
 
@@ -85,10 +130,14 @@ const GenderScreen = ({ navigation }) => {
             styles.button,
             selectedGender ? styles.buttonActive : styles.buttonDisabled,
           ]}
-          disabled={!selectedGender}
+          disabled={!selectedGender || isSubmitting}
           onPress={handleContinue}
         >
-          <Text style={styles.buttonText}>Continue</Text>
+          {isSubmitting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Continue</Text>
+          )}
         </Pressable>
       </View>
     </WelcomeScreenbackgroungpage>
@@ -106,13 +155,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
   },
- logo: {
+  logo: {
     width: 100,
     height: 120,
-  // marginLeft:100,
     resizeMode: "contain",
-    // marginBottom: 100,
-    margin:100
+    margin: 100,
   },
   title: {
     color: "#fff",
@@ -122,13 +169,11 @@ const styles = StyleSheet.create({
     marginTop: -55,
     marginBottom: 50,
   },
-
   cardRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 8,
   },
-
   card: {
     width: CARD_SIZE,
     height: CARD_SIZE,
@@ -138,19 +183,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 6,
   },
-
   selectedCard: {
     borderWidth: 3,
     borderColor: "#db0afc",
     transform: [{ scale: 1.05 }],
   },
-
   avatar: {
     width: "95%",
     height: "95%",
     resizeMode: "contain",
   },
-
   label: {
     color: "#fff",
     textAlign: "center",
@@ -158,7 +200,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "500",
   },
-
   button: {
     marginTop: "auto",
     marginLeft: 20,
@@ -168,15 +209,12 @@ const styles = StyleSheet.create({
     width: "90%",
     height: "7%",
   },
-
   buttonActive: {
     backgroundColor: "#db0afc",
   },
-
   buttonDisabled: {
     backgroundColor: "#444",
   },
-
   buttonText: {
     color: "#fff",
     textAlign: "center",

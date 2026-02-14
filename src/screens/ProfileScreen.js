@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext ,useCallback} from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Ionicons";
@@ -13,6 +14,7 @@ import Svg, { Path } from "react-native-svg";
 import { useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import { SocketContext } from "../socket/SocketProvider";
+import { useFocusEffect } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
 
@@ -23,6 +25,11 @@ const ProfileScreen = () => {
 
   // 🔥 REDUX USER DATA
   const { userdata } = useSelector((state) => state.user);
+useFocusEffect(
+  useCallback(() => {
+    dispatch({ type: "USER_DATA_REQUEST" });
+  }, [])
+);
 
   return (
     <SafeAreaView style={styles.safe}>

@@ -130,6 +130,8 @@ const OnboardScreen = ({ navigation }) => {
 
         {/* CENTER AREA */}
         <View style={styles.centerWrapper}>
+          <View style={styles.orbitContainer}>
+
 
           {/* DOTTED ORBIT */}
           <View style={styles.dottedCircle} />
@@ -157,10 +159,11 @@ const OnboardScreen = ({ navigation }) => {
                       { translateY: RADIUS * Math.sin(rad) - offset },
                     ],
                   }}
-                />
-              );
+                  />
+                );
             })}
           </Animated.View>
+                </View>
 
           {/* DOUBLE RIPPLE */}
           <Animated.View style={rippleStyle1} />
@@ -222,6 +225,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     position: "relative",
   },
+  orbitContainer: {
+  width: RADIUS * 2 + 40,
+  height: RADIUS * 2 + 40,
+  alignItems: "center",
+  justifyContent: "center",
+  position: "absolute",
+},
+
+dottedOrbit: {
+  position: "absolute",
+  width: RADIUS * 2,
+  height: RADIUS * 2,
+  borderRadius: RADIUS,
+  borderWidth: 2,
+  borderColor: "#C78CFF",
+  borderStyle: "dotted", // ⭐ THIS creates the dotted line
+  opacity: 0.8,
+},
+
   dottedCircle: {
     width: 270,
     height: 270,
