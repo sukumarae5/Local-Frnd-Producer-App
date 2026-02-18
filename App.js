@@ -50,6 +50,7 @@ import EditUserLifestyleScreen from "./src/screens/EditUserLifestyleScreen";
 import EditUserGeneralInfoScreen from "./src/screens/EditUserGeneralInfoScreen";
 import EndCallConfirmModal from "./src/screens/EndCallConfirmationScreen";
 import NotificationScreen from "./src/screens/NotificationScreen";
+import HelpCenterScreen from"./src/screens/HelpCenterScreen"
 /* 
 IMPORTANT
 If you really navigate to IncomingCallScreen,
@@ -133,6 +134,7 @@ useEffect(() => {
       <Stack.Screen name="NotificationScreen"component={NotificationScreen}/>
       <Stack.Screen name="FriendRequestsScreen" component={FriendRequestsScreen}/>
       <Stack.Screen name="IncomingCallScreen" component={IncomingCallScreen}/>
+      <Stack.Screen name="HelpCenterScreen" component={HelpCenterScreen}/>
       </Stack.Navigator>
   );
 }
