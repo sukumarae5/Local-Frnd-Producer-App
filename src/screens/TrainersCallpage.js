@@ -280,9 +280,6 @@ const TrainersCallPage = ({ navigation }) => {
           })}
         </View>
       </LinearGradient>
-
-      {/* ---------------- BOTTOM WHITE ---------------- */}
-      {/* ---------------- BOTTOM WHITE ---------------- */}
 <View style={styles.bottomWhiteArea}>
 
   {/* Random audio */}
