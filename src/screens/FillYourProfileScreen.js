@@ -164,6 +164,7 @@ useEffect(() => {
         {showMandatoryMsg && (
           <Text style={styles.mandatoryText}>* All fields are mandatory</Text>
         )}
+<Text style={styles.label}>Full Name</Text>
 
         <TextInput
           style={styles.input}
@@ -172,6 +173,7 @@ useEffect(() => {
           value={name}
           onChangeText={setName}
         />
+<Text style={styles.label}>Username</Text>
 
         <TextInput
           style={styles.input}
@@ -180,6 +182,7 @@ useEffect(() => {
           value={username}
           onChangeText={setUsername}
         />
+<Text style={styles.label}>Date of Birth</Text>
 
         {/* DOB Calendar Input */}
         <TouchableOpacity
@@ -222,6 +225,8 @@ useEffect(() => {
         <Text style={styles.sectionTitle}>General Information</Text>
 
         {/* Language Dropdown */}
+        <Text style={styles.label}>Language</Text>
+
         <TouchableOpacity
           style={styles.dropdown}
           onPress={() => setShowLanguageDrop(!showLanguageDrop)}
@@ -252,6 +257,8 @@ useEffect(() => {
         )}
 
         {/* State Dropdown */}
+        <Text style={styles.label}>State</Text>
+
         <TouchableOpacity
           style={styles.dropdown}
           onPress={() => setShowStateDrop(!showStateDrop)}
@@ -284,6 +291,8 @@ useEffect(() => {
         )}
 
         {/* City Dropdown */}
+        <Text style={styles.label}>City</Text>
+
         <TouchableOpacity
           style={styles.dropdown}
           onPress={() => setShowCityDrop(!showCityDrop)}
@@ -390,6 +399,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 15,
   },
+  label: {
+  fontSize: 14,
+  fontWeight: "600",
+  color: "#444",
+  marginBottom: 6,
+  marginTop: 5,
+},
+
   dropdownText: { flex: 1, fontSize: 16, color: "#000" },
   dropdownList: {
     backgroundColor: "#FFF",

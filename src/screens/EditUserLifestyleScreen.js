@@ -5,14 +5,18 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigation, useRoute } from "@react-navigation/native";
+
 import {
   FETCH_LIFESTYLE_REQUEST,
   FETCH_LIFESTYLE_OPTIONS_REQUEST,
   EDIT_USER_LIFESTYLE_REQUEST,
+  CLEAR_LIFESTYLE_RESPONSE,
 } from "../features/lifeStyle/lifestyleTypes";
 
 const PURPLE = "#B832F9";
@@ -26,21 +30,21 @@ const EditUserLifestyleScreen = () => {
   const { selected = [] } = route.params || {};
 
   /* ===== REDUX ===== */
-  const { data = [], options = [] } = useSelector(
-    (state) => state.lifestyle
-  );
+  const { data = [], options = [], response, loading } =
+    useSelector((state) => state.lifestyle);
 
   /* ===== LOCAL STATE ===== */
   const [openCategory, setOpenCategory] = useState(null);
   const [localSelection, setLocalSelection] = useState(selected);
+  const [isHandled, setIsHandled] = useState(false);
 
-  /* ===== FETCH ===== */
+  /* ===== FETCH DATA ===== */
   useEffect(() => {
     dispatch({ type: FETCH_LIFESTYLE_REQUEST });
     dispatch({ type: FETCH_LIFESTYLE_OPTIONS_REQUEST });
-  }, []);
+  }, [dispatch]);
 
-  /* ===== GET SELECTED TEXT ===== */
+  /* ===== GET SELECTED LABEL ===== */
   const getSelectedLabel = (categoryId) => {
     const found = localSelection.find(
       (i) => i.categoryId === categoryId
@@ -54,6 +58,7 @@ const EditUserLifestyleScreen = () => {
       const filtered = prev.filter(
         (i) => i.categoryId !== category.id
       );
+
       return [
         ...filtered,
         {
@@ -64,25 +69,59 @@ const EditUserLifestyleScreen = () => {
         },
       ];
     });
+
     setOpenCategory(null);
   };
 
-  /* ===== DONE ===== */
- const handleDone = () => {
-  // 🔹 extract only lifestyle IDs
-  const lifestyleIds = localSelection.map((item) =>
-    Number(item.id)
-  );
+  /* ===== DONE BUTTON ===== */
+  const handleDone = () => {
+    const lifestyleIds = localSelection.map((item) =>
+      Number(item.id)
+    );
 
-  dispatch({
-    type: EDIT_USER_LIFESTYLE_REQUEST,
-    payload: {
-      lifestyles: lifestyleIds, // ✅ ONLY THIS
-    },
-  });
+    dispatch({
+      type: EDIT_USER_LIFESTYLE_REQUEST,
+      payload: {
+        lifestyles: lifestyleIds,
+      },
+    });
+  };
 
-  navigation.goBack();
-};
+  /* ===== SUCCESS / ERROR HANDLER ===== */
+  useEffect(() => {
+    if (!response || isHandled) return;
+
+    const isSuccess = response?.success === true;
+
+    Alert.alert(
+      isSuccess ? "Success ✅" : "Error ❌",
+      response?.message || "Operation completed",
+      [
+        {
+          text: "OK",
+          onPress: () => {
+            if (isSuccess) {
+              dispatch({ type: CLEAR_LIFESTYLE_RESPONSE });
+              navigation.navigate("EditProfileScreen");
+            } else {
+              dispatch({ type: CLEAR_LIFESTYLE_RESPONSE });
+            }
+          },
+        },
+      ]
+    );
+
+    setIsHandled(true);
+  }, [response, isHandled, dispatch, navigation]);
+
+  /* Reset when screen reopens */
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      setIsHandled(false);
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   return (
     <View style={styles.container}>
@@ -94,8 +133,12 @@ const EditUserLifestyleScreen = () => {
 
         <Text style={styles.headerTitle}>Edit Lifestyle</Text>
 
-        <TouchableOpacity onPress={handleDone}>
-          <Text style={styles.doneText}>DONE</Text>
+        <TouchableOpacity onPress={handleDone} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator color={PURPLE} />
+          ) : (
+            <Text style={styles.doneText}>DONE</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -108,10 +151,8 @@ const EditUserLifestyleScreen = () => {
 
           return (
             <View key={category.id} style={styles.section}>
-              {/* CATEGORY NAME */}
               <Text style={styles.label}>{category.name}</Text>
 
-              {/* DROPDOWN */}
               <TouchableOpacity
                 style={styles.dropdown}
                 onPress={() =>
@@ -134,7 +175,6 @@ const EditUserLifestyleScreen = () => {
                 )}
               </TouchableOpacity>
 
-              {/* OPTIONS */}
               {openCategory === category.id &&
                 relatedOptions.map((opt) => {
                   const selectedItem = localSelection.some(
@@ -185,7 +225,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -195,29 +234,24 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
     marginTop: 40,
   },
-
   headerTitle: {
     fontSize: 18,
     fontWeight: "600",
   },
-
   doneText: {
     color: PURPLE,
     fontWeight: "700",
   },
-
   section: {
     paddingHorizontal: 20,
     marginTop: 20,
   },
-
   label: {
     fontSize: 15,
     fontWeight: "500",
     marginBottom: 6,
     color: "#333",
   },
-
   dropdown: {
     height: 48,
     borderRadius: 10,
@@ -229,12 +263,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: "#fff",
   },
-
   dropdownText: {
     fontSize: 14,
     color: "#333",
   },
-
   optionRow: {
     paddingVertical: 14,
     paddingHorizontal: 14,
@@ -244,11 +276,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   selectedRow: {
     backgroundColor: "#F6ECFF",
   },
-
   optionText: {
     fontSize: 14,
     color: "#333",

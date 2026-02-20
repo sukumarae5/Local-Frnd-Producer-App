@@ -8,6 +8,7 @@ import {
   Image,
   ActivityIndicator,
   ScrollView,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Ionicons";
@@ -28,6 +29,9 @@ const EditUserGeneralInfoScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const dispatch = useDispatch();
+const { message: apiMessage, userDataResponse } = useSelector(
+  (state) => state.user
+);
 
   /* ===== PARAMS ===== */
   const { locationIds = {}, language = "" } = route.params || {};
@@ -44,6 +48,8 @@ const EditUserGeneralInfoScreen = () => {
   const [openCity, setOpenCity] = useState(false);
 
   const [query, setQuery] = useState("");
+const [isResponseHandled, setIsResponseHandled] = useState(false);
+const [isSubmitting, setIsSubmitting] = useState(false);
 
   /* ===== REDUX ===== */
   const { countries = [], states = [], cities = [], loading } = useSelector(
@@ -103,23 +109,57 @@ const EditUserGeneralInfoScreen = () => {
 
   /* ===== DONE → DISPATCH ===== */
   const handleDone = () => {
-    const payload = {
-      language_id: selectedLanguage?.id,
-      country_id: selectedCountry?.id,
-      state_id: selectedState?.id,
-      city_id: selectedCity?.id,
-    };
-
-    console.log("✅ GENERAL INFO PAYLOAD", payload);
-
-    dispatch(newUserDataRequest(payload));
-
-    navigation.navigate({
-      name: "EditProfileScreen",
-      params: { refresh: Date.now() },
-      merge: true,
-    });
+  const payload = {
+    language_id: selectedLanguage?.id,
+    country_id: selectedCountry?.id,
+    state_id: selectedState?.id,
+    city_id: selectedCity?.id,
   };
+
+  console.log("✅ GENERAL INFO PAYLOAD", payload);
+
+  setIsSubmitting(true);
+
+  dispatch(newUserDataRequest(payload));
+};
+useEffect(() => {
+  if (!userDataResponse || isResponseHandled) return;
+
+  const isSuccess = userDataResponse?.success === true;
+
+  // Make sure message is STRING
+  const safeMessage =
+    typeof userDataResponse?.message === "string"
+      ? userDataResponse.message
+      : "Operation completed";
+
+  setIsSubmitting(false);
+  setIsResponseHandled(true);
+
+  Alert.alert(
+    isSuccess ? "Success ✅" : "Error ❌",
+    safeMessage,
+    [
+      {
+        text: "OK",
+        onPress: () => {
+          if (isSuccess) {
+            navigation.navigate("EditProfileScreen");
+          }
+        },
+      },
+    ]
+  );
+}, [userDataResponse, isResponseHandled]);
+
+
+useEffect(() => {
+  const unsubscribe = navigation.addListener("focus", () => {
+    setIsResponseHandled(false);
+  });
+
+  return unsubscribe;
+}, [navigation]);
 
   return (
     <SafeAreaView style={styles.safe}>

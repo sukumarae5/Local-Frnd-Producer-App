@@ -20,6 +20,8 @@ import StoriesScreen from './StoriesScreen';
 import LikeMindedSectionScreen from '../screens/LikeMindedSectionScreen';
 import OffersSectionScreen from '../screens/OffersSectionScreen';
 import ActiveDostSectionScreen from '../screens/ActiveDostSectionScreen';
+import coinImg from "../assets/coin1.png"
+import LinearGradient from 'react-native-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 const wp = v => (width * v) / 100;
@@ -33,11 +35,13 @@ const HomeScreen = () => {
   const socket = socketRef?.current;
   const { userdata } = useSelector(state => state.user);
   const { incoming } = useSelector(state => state.friends);
+console.log(userdata)
+  const profilePhotoURL = userdata?.images?.profile_image;
 
-  const profilePhotoURL = userdata?.primary_image?.photo_url;
-  const imageUrl = profilePhotoURL
-    ? { uri: profilePhotoURL }
-    : require('../assets/boy2.jpg');
+const imageUrl = profilePhotoURL
+  ? { uri: profilePhotoURL }
+  : require('../assets/boy2.jpg');
+
 
   useEffect(() => {
     dispatch(userDatarequest());
@@ -63,23 +67,29 @@ const HomeScreen = () => {
           {/* HEADER */}
           <View style={styles.headerRow}>
             {/* COIN BOX */}
-            <View style={styles.coinBox}>
-              <Icon name="currency-eth" size={iconSize(5)} color="#FFD700" />
+            <LinearGradient colors={['#F9E31B', '#F8373A']}  // light gold → deep gold
+  start={{ x: 0, y: 0 }}
+  end={{ x: 1, y: 0 }}
+  style={styles.coinBox}>
+
+            
+<Image source={coinImg} style={styles.coinImage} />
               <Text style={styles.coinText}>
                 {userdata?.user?.coin_balance ?? 0}
               </Text>
-            </View>
+            
+            </LinearGradient>
 
             {/* MESSAGE ICON */}
             <TouchableOpacity
               style={{ marginHorizontal: wp(2) }}
               onPress={() => navigation.navigate('MessagesScreen')}
             >
-              <Icon
-                name="message-text-outline"
-                size={iconSize(6)}
-                color="#000"
-              />
+              <View style={styles.iconCircle}>
+
+                             <Icon name="message-processing-outline" size={wp(5)} color="#fff" backgroundColor="#ce17fc" />
+              </View>
+
             </TouchableOpacity>
 
             {/* BELL + BADGE */}
@@ -87,7 +97,9 @@ const HomeScreen = () => {
               style={styles.bellWrap}
               onPress={() => navigation.navigate('NotificationScreen')}
             >
-              <Icon name="bell-outline" size={iconSize(6)} color="#000" />
+<View style={styles.iconCircle}>
+  <Icon name="bell-outline" size={iconSize(6)} color="#fff" />
+</View>
               {incoming?.length > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{incoming.length}</Text>
@@ -105,7 +117,7 @@ const HomeScreen = () => {
 
           {/* SEARCH */}
           <View style={styles.searchContainer}>
-            <Icon name="magnify" size={iconSize(6)} color="#999" />
+            <Icon name="magnify" size={iconSize(8)} color="#999" marginLeft="30" />
             <TextInput
               placeholder="Search"
               placeholderTextColor="#8E8E93"
@@ -163,6 +175,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(5),
     paddingTop: hp(2),
   },
+coinImage: {
+  width: wp(8),
+  height: wp(8),
+  resizeMode: 'contain',
+},
 
   headerRow: {
     flexDirection: 'row',
@@ -175,11 +192,11 @@ const styles = StyleSheet.create({
   coinBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF5D8',
     paddingHorizontal: wp(3),
     paddingVertical: hp(1),
     borderRadius: wp(4),
-    marginRight: wp(40),
+    marginRight: wp(30),
+    
   },
 
   coinText: {
@@ -201,6 +218,15 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#A35DFE',
   },
+  iconCircle: {
+  width: wp(8),
+  height: wp(8),
+  borderRadius: wp(5.5),
+  backgroundColor: '#ce17fc',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
 
   badge: {
     position: 'absolute',

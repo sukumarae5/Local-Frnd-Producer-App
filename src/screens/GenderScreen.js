@@ -160,9 +160,10 @@ const styles = StyleSheet.create({
     height: 120,
     resizeMode: "contain",
     margin: 100,
+    marginLeft:140
   },
   title: {
-    color: "#fff",
+    color: "#080808",
     fontSize: 31,
     fontWeight: "600",
     textAlign: "center",
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   label: {
-    color: "#fff",
+    color: "#121111",
     textAlign: "center",
     marginTop: 20,
     fontSize: 20,
