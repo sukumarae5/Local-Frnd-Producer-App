@@ -8,7 +8,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { selectinterest, yourinterest } from "../../api/userApi";
-import { fetchInterestsFailure, fetchInterestsSuccess, selectInterestsFailure, selectInterestsSuccess } from "./interestActions";
+import { fetchInterestsFailure, fetchInterestsSuccess, selectInterestsFailure, selectInterestsSuccess, updateselectinterestsfailure, updateselectinterestssuccess } from "./interestActions";
 import { USER_DATA_REQUEST } from "../user/userType";
 
 function* fetchInterests() {
@@ -84,12 +84,12 @@ function* handelupdateinterst(action){
       )
     );
 
-    yield put(selectInterestsSuccess(response.data));
-        yield put({ type: USER_DATA_REQUEST });
+    yield put(updateselectinterestssuccess(response.data));
+     
     
   } catch (error) {
     const msg = error.response?.data?.message || error.message;
-    yield put(selectInterestsFailure(msg));
+    yield put(updateselectinterestsfailure(msg));
   }
 }
 

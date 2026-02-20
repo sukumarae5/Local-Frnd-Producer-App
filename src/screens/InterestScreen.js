@@ -185,6 +185,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: "#000",
+    marginLeft:-120
   },
   subText: {
     color: "#6A6A6A",
