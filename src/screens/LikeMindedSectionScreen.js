@@ -79,8 +79,9 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: wp(5),
     fontWeight: "700",
-    marginTop: hp(3),
-    marginBottom: hp(0.5),
+     paddingTop: hp(2),
+    paddingHorizontal: wp(4),
+  
   },
 
   card: {

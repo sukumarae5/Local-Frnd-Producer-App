@@ -127,7 +127,7 @@ tabBarItemStyle: {
         component={RecentsCallHistoryScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused} name="chatbubble-ellipses-outline" />
+            <TabIcon focused={focused} name="time-outline" />
           ),
         }}
       />

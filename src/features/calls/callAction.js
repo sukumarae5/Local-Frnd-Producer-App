@@ -127,3 +127,18 @@ export const incomingCallReject = (payload) => ({
   payload
 });
 
+
+/* 📞 RECENT CALL HISTORY */
+export const recentCallRequest = () => ({
+  type: T.RECENT_CALL_REQUEST,
+});
+
+export const recentCallSuccess = (data) => ({
+  type: T.RECENT_CALL_SUCCESS,
+  payload: data,
+});
+
+export const recentCallFailed = (error) => ({
+  type: T.RECENT_CALL_FAILED,
+  payload: error,
+});

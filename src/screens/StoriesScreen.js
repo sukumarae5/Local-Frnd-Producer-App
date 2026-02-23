@@ -27,7 +27,6 @@ const StoriesScreen = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.sectionLabel}>Stories</Text>
-
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -63,15 +62,10 @@ const styles = StyleSheet.create({
     fontSize: wp(5),
     fontWeight: "700",
     color: "#111",
-
-    marginBottom: hp(1.5),
   },
   storyContainer: {
     alignItems: "center",
     marginRight: wp(4),
-   
-
-
   },
   yourStoryCircle: {
     width: wp(18),

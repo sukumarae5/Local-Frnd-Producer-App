@@ -6,7 +6,10 @@ import {
   USER_LOGIN_FETCH_SUCCESS,
   USER_LOGIN_FETCH_FAILED,USER_OTP_FETCH_REQUEST,
   USER_OTP_FETCH_SUCCESS,
-  USER_OTP_FETCH_FAILED,USER_LOGOUT_REQUEST
+  USER_OTP_FETCH_FAILED,USER_LOGOUT_REQUEST,
+  USER_RESEND_OTP_FETCH_REQUEST,
+  USER_RESEND_OTP_FETCH_SUCCESS,
+  USER_RESEND_OTP_FETCH_FAILED
 } from "./authType";
 
 const initialState = {
@@ -18,7 +21,7 @@ const initialState = {
   success:null,
   mode:null,
   message:null
-
+  
 };
 
 export default function authReducer(state = initialState, action) {
@@ -51,6 +54,18 @@ export default function authReducer(state = initialState, action) {
     case USER_LOGOUT_REQUEST:
   return { ...initialState };
 
+
+  case "AUTH_RESET":
+    return { ...initialState };
+
+  case USER_RESEND_OTP_FETCH_REQUEST:
+    return { ...state, loading: true, error: null };
+
+  case USER_RESEND_OTP_FETCH_SUCCESS:
+    return { ...state, loading: false, message: action.payload.message, success: action.payload.success };
+
+  case USER_RESEND_OTP_FETCH_FAILED:
+    return { ...state, loading: false, error: action.payload };
 
     default:
       return state;

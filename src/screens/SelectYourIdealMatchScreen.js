@@ -10,12 +10,35 @@ import Icon from "react-native-vector-icons/Ionicons";
 import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import WelcomeScreenbackgroundgpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
+import { useSelector } from "react-redux";
 
 const SelectYourIdealMatchScreen = ({ navigation }) => {
+  const { userdata } = useSelector(state => state.user);
+  console.log("Selected Gender:", userdata.user.gender)
+
+const handleContinue = () => {
+  const gender = userdata?.user?.gender;
+
+  if (!gender) {
+    alert("Gender not found");
+    return;
+  }
+
+  navigation.reset({
+    index: 0,
+    routes: [
+      {
+        name:
+          gender === "Male"
+            ? "MaleHomeTabs"
+            : "ReceiverBottomTabs",
+      },
+    ],
+  });
+};
   return (
     <WelcomeScreenbackgroundgpage>
       <SafeAreaView style={styles.container}>
-
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -77,7 +100,7 @@ const SelectYourIdealMatchScreen = ({ navigation }) => {
         {/* CONTINUE BUTTON */}
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={() => navigation.navigate("Home")}
+          onPress={handleContinue}
           style={styles.continueWrapper}
         >
           <LinearGradient

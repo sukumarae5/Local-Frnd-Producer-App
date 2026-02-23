@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,15 @@ const offers = [
 ];
 
 const OffersSectionScreen = () => {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const handleScroll = (event) => {
+    const index = Math.round(
+      event.nativeEvent.contentOffset.x / width
+    );
+    setActiveIndex(index);
+  };
+
   return (
     <View>
       <Text style={styles.sectionLabel}>Offers</Text>
@@ -26,6 +35,7 @@ const OffersSectionScreen = () => {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleScroll}
         style={{ marginTop: hp(1) }}
       >
         {offers.map((o) => (
@@ -35,11 +45,15 @@ const OffersSectionScreen = () => {
         ))}
       </ScrollView>
 
+      {/* Dots */}
       <View style={styles.dotsRow}>
         {offers.map((_, idx) => (
           <View
             key={idx}
-            style={[styles.dot, idx === 0 && styles.dotActive]}
+            style={[
+              styles.dot,
+              activeIndex === idx && styles.dotActive,
+            ]}
           />
         ))}
       </View>
@@ -54,20 +68,20 @@ const styles = StyleSheet.create({
     fontSize: wp(5),
     fontWeight: "700",
     color: "#111",
-    marginTop: hp(3),
-    marginBottom: hp(1),
+    paddingTop: hp(2),
+    paddingHorizontal: wp(4),
   },
 
   offerCard: {
-    width: width - wp(10),
+    width: width, // FULL WIDTH
     height: hp(15),
     backgroundColor: "#F0EAFF",
-    borderRadius: wp(5),
     justifyContent: "center",
     alignItems: "center",
-    marginRight: wp(4),
+    paddingHorizontal: wp(4),
     borderWidth: 1,
     borderColor: "#E0D6FF",
+    borderRadius: wp(3),
   },
 
   offerText: {
@@ -80,7 +94,7 @@ const styles = StyleSheet.create({
   dotsRow: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: hp(1),
+    marginTop: hp(1.5),
   },
 
   dot: {
@@ -93,5 +107,6 @@ const styles = StyleSheet.create({
 
   dotActive: {
     backgroundColor: "#8B5CF6",
+    width: wp(5),
   },
 });

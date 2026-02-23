@@ -24,14 +24,15 @@ const styles = StyleSheet.create({
     fontSize: wp(5),
     fontWeight: "700",
     color: "#111",
-    marginTop: hp(3),
-    marginBottom: hp(1),
+     paddingTop: hp(2),
+    paddingHorizontal: wp(4),
   },
 
   placeholderText: {
     fontSize: wp(3.5),
     color: "#777",
-    paddingLeft: wp(2),
     marginTop: hp(1),
+    paddingHorizontal: wp(4),
+    alignContent: "center",
   },
 });

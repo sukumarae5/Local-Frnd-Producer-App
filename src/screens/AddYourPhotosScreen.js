@@ -200,12 +200,12 @@ const AddYourPhotosScreen = ({ navigation, route }) => {
         </View>
 
         {/* SKIP */}
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ marginTop: 10, alignSelf: "center" }}
-        >
-          <Text style={styles.skipText}>NOT NOW</Text>
-        </TouchableOpacity>
+       <TouchableOpacity
+  onPress={() => navigation.navigate("SelectYourIdealMatchScreen")}
+  style={{ marginTop: 10, alignSelf: "center" }}
+>
+  <Text style={styles.skipText}>NOT NOW</Text>
+</TouchableOpacity>
 
       </ScrollView>
     </SafeAreaView>

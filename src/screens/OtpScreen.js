@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import Svg, { Path } from "react-native-svg";
-import { userLoginRequest, userOtpRequest } from "../features/Auth/authAction";
+import { userLoginRequest, userOtpRequest, userResendOtpRequest } from "../features/Auth/authAction";
 import { useDispatch, useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -23,7 +23,7 @@ const OTP_LENGTH = 6;
 
 const OtpScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
-  const { mode, Otp } = useSelector((state) => state.auth);
+  const { Otp } = useSelector((state) => state.auth);
 
   console.log("📩 OTP STATE:", Otp);
 
@@ -31,7 +31,7 @@ const OtpScreen = ({ route, navigation }) => {
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
   const [timer, setTimer] = useState(15);
 const [canResend, setCanResend] = useState(false);
-
+const mode = route?.params?.mode;
   const inputRefs = useRef([]);
 useEffect(() => {
   if (timer === 0) {
@@ -151,7 +151,7 @@ useEffect(() => {
 const handleResend = () => {
   if (!canResend) return;
 
-  dispatch(userLoginRequest({ mobile_number })); // or resend action
+  dispatch(userResendOtpRequest({ mobile_number })); // or resend action
 
   setTimer(15);
   setCanResend(false);

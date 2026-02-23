@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,168 +8,288 @@ import {
   Image,
   TextInput,
   StatusBar,
-} from "react-native";
+  Platform,
+  RefreshControl,
+} from 'react-native';
 
-import LinearGradient from "react-native-linear-gradient";
-import Ionicons from "react-native-vector-icons/Ionicons";
-
-import { useDispatch, useSelector } from "react-redux";
-import { chatListRequest } from "../features/chat/chatAction";
-import { useFocusEffect } from "@react-navigation/native";
+import LinearGradient from 'react-native-linear-gradient';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useDispatch, useSelector } from 'react-redux';
+import { chatListRequest } from '../features/chat/chatAction';
+import { friendCallRequest } from '../features/calls/callAction';
+import { useFocusEffect } from '@react-navigation/native';
+import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
 
 const MessagesScreen = ({ navigation }) => {
-
   const dispatch = useDispatch();
 
-  const chatList = useSelector((s) => s.chat.chatList) ?? [];
-  const unread   = useSelector((s) => s.chat.unread) ?? {};
+  const chatList = useSelector(state => state.chat.chatList) ?? [];
+  const unread = useSelector(state => state.chat.unread) ?? {};
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [callingId, setCallingId] = useState(null);
 
+  /* Fetch chat list when screen focused */
   useFocusEffect(
     useCallback(() => {
       dispatch(chatListRequest());
-    }, [dispatch])
+    }, [dispatch]),
   );
 
-  const openChat = (item) => {
-    navigation.navigate("ChatScreen", { user: item });
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await dispatch(chatListRequest());
+    setRefreshing(false);
   };
 
-  const filtered = useMemo(() => {
+  /* Open Chat */
+  const openChat = useCallback(
+    item => {
+      navigation.navigate('ChatScreen', { user: item });
+    },
+    [navigation],
+  );
+
+  /* Start Friend Call */
+  const startFriendCall = useCallback(
+    async (item, type = 'AUDIO') => {
+      if (callingId === item.user_id) return;
+
+      setCallingId(item.user_id);
+
+      await dispatch(
+        friendCallRequest({
+          friend_id: item.user_id,
+          call_type: type,
+        }),
+      );
+
+      setCallingId(null);
+
+      navigation.navigate('CallStatusScreen', {
+        call_type: type,
+        friend: item,
+      });
+    },
+    [dispatch, navigation, callingId],
+  );
+
+  /* Search Filter */
+  const filteredData = useMemo(() => {
     if (!search.trim()) return chatList;
 
-    return chatList.filter(i =>
-      i.name?.toLowerCase().includes(search.toLowerCase())
+    return chatList.filter(item =>
+      item.name?.toLowerCase().includes(search.toLowerCase()),
     );
   }, [search, chatList]);
 
-  const renderItem = ({ item }) => {
+  /* Render Each Row */
+  const renderItem = useCallback(
+    ({ item }) => {
+      const count = unread[item.user_id] || 0;
 
-    const count = unread[item.user_id] || 0;
+      const avatar =
+        item.avatar ||
+        item.profile_pic ||
+        item.profile_image ||
+        item.image ||
+        null;
 
-    const avatar =
-      item.avatar ||
-      item.profile_pic ||
-      item.profile_image ||
-      item.image ||
-      null;
+      const firstLetter = item.name?.[0]?.toUpperCase() || '?';
 
-    const first = item.name?.[0]?.toUpperCase() || "?";
+      return (
+        <TouchableOpacity
+          style={styles.row}
+          activeOpacity={0.85}
+          onPress={() => openChat(item)}
+        >
+          {/* Avatar */}
+          <View style={styles.avatarWrap}>
+            {avatar ? (
+              <Image source={{ uri: avatar }} style={styles.avatar} />
+            ) : (
+              <View style={styles.placeholderAvatar}>
+                <Text style={styles.placeholderText}>
+                  {firstLetter}
+                </Text>
+              </View>
+            )}
 
-    return (
-      <TouchableOpacity style={styles.row} onPress={() => openChat(item)}>
+            {Number(item.is_online) === 1 && (
+              <View style={styles.onlineDot} />
+            )}
+          </View>
 
-        <View style={styles.avatarWrap}>
-          {avatar ? (
-            <Image source={{ uri: avatar }} style={styles.avatar} />
-          ) : (
-            <View style={styles.placeholderAvatar}>
-              <Text style={styles.placeholderText}>{first}</Text>
-            </View>
-          )}
-
-          {Number(item.is_online) === 1 && <View style={styles.onlineDot} />}
-        </View>
-
-        <View style={styles.centerPart}>
-          <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-
-          {count > 0 ? (
-            <Text style={styles.newMsgText}>{count} new messages</Text>
-          ) : (
-            <Text style={styles.last} numberOfLines={1}>
-              {item.last_message || ""}
+          {/* Name + Last Message */}
+          <View style={styles.centerPart}>
+            <Text style={styles.name} numberOfLines={1}>
+              {item.name}
             </Text>
-          )}
-        </View>
 
-        <Ionicons name="chevron-forward" size={18} color="#bbb" />
+            {count > 0 ? (
+              <Text style={styles.newMsgText}>
+                {count} New Message{count > 1 ? 's' : ''}
+              </Text>
+            ) : (
+              <Text style={styles.last} numberOfLines={1}>
+                {item.last_message || ''}
+              </Text>
+            )}
+          </View>
 
-      </TouchableOpacity>
-    );
-  };
+          {/* Call Buttons */}
+          <View style={styles.callSection}>
+            <TouchableOpacity
+              style={styles.callBtn}
+              onPress={() => startFriendCall(item, 'AUDIO')}
+              disabled={callingId === item.user_id}
+            >
+              <Ionicons
+                name="call-outline"
+                size={20}
+                color="#C51DAF"
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.callBtn}
+              onPress={() => startFriendCall(item, 'VIDEO')}
+              disabled={callingId === item.user_id}
+            >
+              <Ionicons
+                name="videocam-outline"
+                size={20}
+                color="#C51DAF"
+              />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [unread, openChat, startFriendCall, callingId],
+  );
 
   return (
-    <View style={styles.root}>
+    <WelcomeScreenbackgroungpage>
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" />
 
-      <StatusBar barStyle="dark-content" />
+        {/* HEADER */}
+        <View style={styles.headerContainer}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons
+              name="chevron-back"
+              size={22}
+              color="#4A4A4A"
+            />
+          </TouchableOpacity>
 
-      <LinearGradient
-        colors={["#F3E7FF", "#FCE6F6"]}
-        style={styles.headerGradient}
-      >
-
-        <Text style={styles.headerTitle}>Messages</Text>
-
-        <View style={styles.searchBox}>
-          <Ionicons name="search" size={16} color="#999" />
-          <TextInput
-            placeholder="Search"
-            value={search}
-            onChangeText={setSearch}
-            style={styles.searchInput}
-          />
+          <Text style={styles.headerTitle}>Messages</Text>
         </View>
 
-      </LinearGradient>
+        {/* SEARCH */}
+        <View style={styles.searchRow}>
+          <LinearGradient
+            colors={['#D51BF9', '#8C37F8']}
+            style={styles.searchGradientBorder}
+          >
+            <View style={styles.searchBox}>
+              <Ionicons name="search" size={18} color="#999" />
+              <TextInput
+                placeholder="Search"
+                value={search}
+                onChangeText={setSearch}
+                style={styles.searchInput}
+                placeholderTextColor="#999"
+              />
+            </View>
+          </LinearGradient>
+        </View>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(i) => String(i.user_id)}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-      />
-
-    </View>
+        {/* LIST */}
+        <FlatList
+          data={filteredData}
+          keyExtractor={item => String(item.user_id)}
+          renderItem={renderItem}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+            />
+          }
+          ItemSeparatorComponent={() => (
+            <View style={styles.separator} />
+          )}
+          contentContainerStyle={styles.listContent}
+        />
+      </View>
+    </WelcomeScreenbackgroungpage>
   );
 };
 
 export default MessagesScreen;
 
+/* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
-
-  root: { flex: 1, backgroundColor: "#fff" },
-
-  headerGradient: {
-    paddingTop: 18,
+  container: {
+    flex: 1,
+    paddingTop: Platform.OS === 'ios' ? 50 : 25,
     paddingHorizontal: 16,
-    paddingBottom: 12,
+  },
+
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
   },
 
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 10,
-    textAlign: "center",
+    fontSize: 22,
+    fontWeight: '700',
+    marginLeft: 12,
+  },
+
+  searchRow: {
+    marginBottom: 14,
+  },
+
+  searchGradientBorder: {
+    borderRadius: 25,
+    padding: 1.5,
   },
 
   searchBox: {
-    height: 38,
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    flexDirection: "row",
-    alignItems: "center",
+    height: 40,
+    backgroundColor: '#fff',
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
   },
 
   searchInput: {
     flex: 1,
-    marginLeft: 6,
-    fontSize: 13,
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#000',
   },
 
-  listContent: { paddingHorizontal: 14 },
+  listContent: {
+    paddingBottom: 20,
+  },
 
   row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 0.6,
-    borderColor: "#eee",
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
   },
 
-  avatarWrap: { marginRight: 12 },
+  avatarWrap: {
+    marginRight: 12,
+  },
 
   avatar: {
     width: 48,
@@ -181,35 +301,62 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#C51DAF",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: '#C51DAF',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
-  placeholderText: { color: "#fff", fontWeight: "700", fontSize: 18 },
+  placeholderText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
+  },
 
   onlineDot: {
-    position: "absolute",
+    position: 'absolute',
     right: 2,
     bottom: 2,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#31D158",
-    borderWidth: 1.5,
-    borderColor: "#fff",
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#31D158',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
 
-  centerPart: { flex: 1 },
+  centerPart: {
+    flex: 1,
+  },
 
-  name: { fontSize: 15, fontWeight: "700" },
+  name: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
 
-  last: { fontSize: 12, color: "#8E8E8E", marginTop: 2 },
+  last: {
+    fontSize: 13,
+    color: '#8E8E8E',
+    marginTop: 4,
+  },
 
   newMsgText: {
-    fontSize: 12,
-    marginTop: 2,
-    color: "#C51DAF",
-    fontWeight: "600",
+    fontSize: 13,
+    marginTop: 4,
+    color: '#C51DAF',
+    fontWeight: '600',
+  },
+
+  callSection: {
+    flexDirection: 'row',
+  },
+
+  callBtn: {
+    padding: 6,
+    marginLeft: 4,
+  },
+
+  separator: {
+    height: 1,
+    backgroundColor: '#f2f2f2',
   },
 });

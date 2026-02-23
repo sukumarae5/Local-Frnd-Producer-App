@@ -56,7 +56,7 @@ const ChooseAvatarScreen = () => {
     );
 
     // ✅ NAVIGATE AFTER DISPATCH
-    navigation.navigate("ReciverHomeScreen");
+    navigation.navigate("AddYourPhotosScreen");
   };
 
   return (
