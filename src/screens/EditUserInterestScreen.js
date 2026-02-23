@@ -18,7 +18,12 @@ import {
   fetchInterestsRequest,
   updateselectinterestsrequest,
 } from "../features/interest/interestActions";
+import { Dimensions } from "react-native";
 
+const { width, height } = Dimensions.get("window");
+
+const wp = (percent) => (width * percent) / 100;
+const hp = (percent) => (height * percent) / 100;
 const PURPLE = "#B832F9";
 
 const EditUserInterestScreen = () => {
@@ -178,41 +183,51 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 16,
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(2),
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
-    marginTop: 30,
   },
+
   headerTitle: {
-    fontSize: 18,
+    fontSize: wp(4.5),
     fontWeight: "600",
   },
+
   done: {
     color: PURPLE,
     fontWeight: "700",
+    fontSize: wp(4),
   },
+
   empty: {
     textAlign: "center",
-    marginTop: 40,
+    marginTop: hp(5),
     color: "#999",
+    fontSize: wp(3.8),
   },
+
   row: {
-    paddingHorizontal: 18,
-    paddingVertical: 16,
+    paddingHorizontal: wp(5),
+    paddingVertical: hp(2),
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#F2F2F2",
   },
+
   selectedRow: {
     backgroundColor: "#F6ECFF",
   },
+
   text: {
-    fontSize: 15,
+    fontSize: wp(4),
     color: "#333",
   },
 });

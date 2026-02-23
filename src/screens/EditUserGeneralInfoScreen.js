@@ -22,7 +22,12 @@ import {
 } from "../features/Countries/locationActions";
 import { languageApiFetchRequest } from "../features/language/languageAction";
 import { newUserDataRequest } from "../features/user/userAction";
+import { Dimensions } from "react-native";
 
+const { width, height } = Dimensions.get("window");
+
+const wp = (percent) => (width * percent) / 100;
+const hp = (percent) => (height * percent) / 100;
 const PURPLE = "#B832F9";
 
 const EditUserGeneralInfoScreen = () => {
@@ -335,27 +340,49 @@ export default EditUserGeneralInfoScreen;
 /* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#fff" },
+  safe: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
 
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 16,
+    alignItems: "center",
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(2),
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
-  headerTitle: { fontSize: 18, fontWeight: "600" },
-  done: { color: PURPLE, fontWeight: "700" },
 
-  section: { padding: 20 },
-  label: { marginBottom: 6, color: "#444" },
+  headerTitle: {
+    fontSize: wp(4.5),
+    fontWeight: "600",
+  },
+
+  done: {
+    color: PURPLE,
+    fontWeight: "700",
+    fontSize: wp(4),
+  },
+
+  section: {
+    paddingHorizontal: wp(5),
+    paddingVertical: hp(2),
+  },
+
+  label: {
+    marginBottom: hp(0.8),
+    color: "#444",
+    fontSize: wp(3.8),
+  },
 
   dropdown: {
-    height: 50,
+    minHeight: hp(6),
     borderRadius: 28,
     borderWidth: 1,
     borderColor: "#E3D8FF",
-    paddingHorizontal: 18,
+    paddingHorizontal: wp(4),
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -366,14 +393,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#E3D8FF",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    marginTop: 10,
-    height: 44,
+    borderRadius: 12,
+    paddingHorizontal: wp(3),
+    marginTop: hp(1.2),
+    minHeight: hp(5.5),
   },
 
   option: {
-    padding: 12,
+    paddingVertical: hp(1.5),
+    paddingHorizontal: wp(3),
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
     flexDirection: "row",
@@ -381,8 +409,9 @@ const styles = StyleSheet.create({
   },
 
   flag: {
-    width: 26,
-    height: 18,
-    marginRight: 10,
+    width: wp(6),
+    height: wp(4),
+    marginRight: wp(3),
+    resizeMode: "cover",
   },
 });

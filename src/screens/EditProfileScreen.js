@@ -37,7 +37,13 @@ import { launchImageLibrary } from "react-native-image-picker";
 import { userdeletephotorequest } from "../features/photo/photoAction";
 
 /* ================================================= */
+import { Dimensions } from "react-native";
 
+const { width, height } = Dimensions.get("window");
+
+// Responsive helpers
+const wp = (percent) => (width * percent) / 100;
+const hp = (percent) => (height * percent) / 100;
 const EditProfileScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -598,80 +604,247 @@ const PURPLE = "#B832F9";
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", padding: 16 },
-  headerTitle: { fontSize: 20, fontWeight: "600", marginLeft: 10 },
-  avatarSection: { alignItems: "center", marginVertical: 24 },
-  avatarRing: {width: 120,height: 120,borderRadius: 60,borderWidth: 4,borderColor: PURPLE,alignItems: "center",justifyContent: "center",},
-  avatar: { width: 95, height: 95, borderRadius: 48 },
-  cameraBtn:{position: "absolute",bottom: 6,right: 6,backgroundColor: PURPLE,width: 30,height: 30,borderRadius: 15,alignItems: "center",justifyContent: "center",},
-  form:{ paddingHorizontal: 20 },
-  label:{ marginTop: 14, marginBottom: 6, color: "#444" },
-  inputBox:{backgroundColor:"#FAFAFA",borderRadius:28,paddingHorizontal:18,height: 50,flexDirection:"row",alignItems: "center",borderWidth:1,borderColor: "#eee",},
-  input: { flex: 1 },
-  genderRow: { flexDirection: "row", marginTop: 8 },
-  genderItem: { flexDirection: "row", alignItems: "center", marginRight:30 },
-  radio:{width: 18,height: 18,borderRadius: 9,borderWidth: 2,borderColor:"#ccc",marginRight: 6,},
-  radioActive: { borderColor: PURPLE },
-  radioDot:{width:8,height:8,borderRadius:4,backgroundColor:PURPLE,alignSelf:"center",marginTop: 3,},
-  accordionRow:{marginTop:26,paddingVertical:14,flexDirection:"row",justifyContent:"space-between",borderBottomWidth:1,borderBottomColor:"#F0F0F0",},
-  accordionTitle:{ fontSize: 15, fontWeight: "600" },
-  accordionArrow:{width:26,height: 26,borderRadius: 13,backgroundColor:PURPLE,alignItems:"center",justifyContent:"center",},
-  saveWrapper: { marginVertical: 30 },
-  saveBtn:{backgroundColor:PURPLE,height: 54,borderRadius: 30,alignItems:"center",justifyContent:"center",},
-  saveText:{color: "#fff", fontSize: 16, fontWeight: "700" },
-  generalContainer:{ marginTop: 12 },
-  selectInput:{height:48,backgroundColor:"#FAFAFA",borderRadius:25,paddingHorizontal:18,flexDirection:"row",alignItems:"center",justifyContent:"space-between",borderWidth:1,borderColor: "#eee",
-    marginBottom: 14,  },
-  sectionTitle: {marginTop:26,marginBottom:12,fontSize:15,fontWeight: "600",},
-galleryGrid: {flexDirection: "row",flexWrap: "wrap",justifyContent: "space-between",},
-galleryItem:{width: "48%",height: 140,borderRadius: 16,marginBottom: 12,backgroundColor: "#F2F2F2",overflow: "hidden",alignItems: "center",justifyContent:"center",},
 
-galleryImage:{width: "100%",height: "100%",resizeMode: "cover",},
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(2),
+  },
 
+  headerTitle: {
+    fontSize: wp(5),
+    fontWeight: "600",
+    marginLeft: wp(2),
+  },
 
-emptyGallery: {
-  borderWidth: 1,
-  borderStyle: "dashed",
-  borderColor: "#ccc",
-},
-galleryTouch: {
-  width: "100%",
-  height: "100%",
-},
+  avatarSection: {
+    alignItems: "center",
+    marginVertical: hp(3),
+  },
 
-deleteBtn: {
-  position: "absolute",
-  top: 8,
-  right: 8,
-  backgroundColor: "#000",
-  width: 22,
-  height: 22,
-  borderRadius: 11,
-  alignItems: "center",
-  justifyContent: "center",
-},
-emptyLifestyleBox: {
-  alignItems: "center",
-  paddingVertical: 20,
-},
+  avatarRing: {
+    width: wp(30),
+    height: wp(30),
+    borderRadius: wp(15),
+    borderWidth: 4,
+    borderColor: PURPLE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-emptyText: {
-  color: "#999",
-  marginBottom: 10,
-  fontSize: 14,
-},
+  avatar: {
+    width: wp(22),
+    height: wp(22),
+    borderRadius: wp(11),
+  },
 
-addNowBtn: {
-  paddingHorizontal: 20,
-  paddingVertical: 8,
-  borderRadius: 20,
-  backgroundColor: "#B832F9",
-},
+  cameraBtn: {
+    position: "absolute",
+    bottom: hp(0.8),
+    right: wp(1.5),
+    backgroundColor: PURPLE,
+    width: wp(8),
+    height: wp(8),
+    borderRadius: wp(4),
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-addNowText: {
-  color: "#fff",
-  fontWeight: "600",
-},
+  form: {
+    paddingHorizontal: wp(5),
+  },
 
+  label: {
+    marginTop: hp(1.8),
+    marginBottom: hp(0.8),
+    color: "#444",
+    fontSize: wp(3.8),
+  },
 
+  inputBox: {
+    backgroundColor: "#FAFAFA",
+    borderRadius: 28,
+    paddingHorizontal: wp(4),
+    minHeight: hp(6),
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+
+  input: {
+    flex: 1,
+    fontSize: wp(4),
+  },
+
+  genderRow: {
+    flexDirection: "row",
+    marginTop: hp(1),
+  },
+
+  genderItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: wp(6),
+  },
+
+  radio: {
+    width: wp(4.5),
+    height: wp(4.5),
+    borderRadius: wp(2.25),
+    borderWidth: 2,
+    borderColor: "#ccc",
+    marginRight: wp(2),
+  },
+
+  radioActive: {
+    borderColor: PURPLE,
+  },
+
+  radioDot: {
+    width: wp(2),
+    height: wp(2),
+    borderRadius: wp(1),
+    backgroundColor: PURPLE,
+    alignSelf: "center",
+    marginTop: 3,
+  },
+
+  accordionRow: {
+    marginTop: hp(3),
+    paddingVertical: hp(1.8),
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+  },
+
+  accordionTitle: {
+    fontSize: wp(4),
+    fontWeight: "600",
+  },
+
+  accordionArrow: {
+    width: wp(6),
+    height: wp(6),
+    borderRadius: wp(3),
+    backgroundColor: PURPLE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  saveWrapper: {
+    marginVertical: hp(4),
+  },
+
+  saveBtn: {
+    backgroundColor: PURPLE,
+    height: hp(6.5),
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  saveText: {
+    color: "#fff",
+    fontSize: wp(4),
+    fontWeight: "700",
+  },
+
+  generalContainer: {
+    marginTop: hp(1.5),
+  },
+
+  selectInput: {
+    minHeight: hp(6),
+    backgroundColor: "#FAFAFA",
+    borderRadius: 25,
+    paddingHorizontal: wp(4),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#eee",
+    marginBottom: hp(1.5),
+  },
+
+  sectionTitle: {
+    marginTop: hp(3),
+    marginBottom: hp(1.5),
+    fontSize: wp(4),
+    fontWeight: "600",
+  },
+
+  /* ===== GALLERY ===== */
+
+  galleryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+
+  galleryItem: {
+    width: wp(44),
+    height: wp(44), // square
+    borderRadius: 16,
+    marginBottom: hp(1.5),
+    backgroundColor: "#F2F2F2",
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  galleryImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+
+  emptyGallery: {
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "#ccc",
+  },
+
+  galleryTouch: {
+    width: "100%",
+    height: "100%",
+  },
+
+  deleteBtn: {
+    position: "absolute",
+    top: hp(1),
+    right: wp(2),
+    backgroundColor: "#000",
+    width: wp(6),
+    height: wp(6),
+    borderRadius: wp(3),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  emptyLifestyleBox: {
+    alignItems: "center",
+    paddingVertical: hp(3),
+  },
+
+  emptyText: {
+    color: "#999",
+    marginBottom: hp(1.2),
+    fontSize: wp(3.5),
+  },
+
+  addNowBtn: {
+    paddingHorizontal: wp(6),
+    paddingVertical: hp(1),
+    borderRadius: 20,
+    backgroundColor: PURPLE,
+  },
+
+  addNowText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: wp(3.8),
+  },
 });

@@ -2,7 +2,6 @@ import { call, put, takeLatest } from "redux-saga/effects";
 import axios from "axios";
 import {
   FETCH_LIFESTYLE_REQUEST,
-  FETCH_LIFESTYLE_SUCCESS,
   FETCH_LIFESTYLE_FAILURE,
   FETCH_LIFESTYLE_OPTIONS_REQUEST,
   FETCH_LIFESTYLE_OPTIONS_SUCCESS,
@@ -22,16 +21,17 @@ import {
   userlifestyleapi
 } from "../../api/userApi";
 import { USER_DATA_REQUEST } from "../user/userType";
+import { fetchLifestyleSuccess } from "./lifestyleActions";
 
 /* ================== FETCH CATEGORY ================== */
 function* fetchLifestyle() {
   try {
     const response = yield call(axios.get, lifestycategory);
 
-    yield put({
-      type: FETCH_LIFESTYLE_SUCCESS,
-      payload: response?.data?.data || [],
-    });
+    yield put(
+      fetchLifestyleSuccess(response?.data?.data || []),
+    );
+    console.log(response)
   } catch (error) {
     yield put({
       type: FETCH_LIFESTYLE_FAILURE,
