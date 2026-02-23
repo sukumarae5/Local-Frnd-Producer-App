@@ -1,218 +1,227 @@
-import React, { useEffect, useContext, useState } from 'react';
+import React, { useEffect, useContext } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
-  TextInput,
   ScrollView,
-  Modal,
+  TextInput,
+  Dimensions,
+  Image,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 import { SocketContext } from '../socket/SocketProvider';
 import { userDatarequest } from '../features/user/userAction';
-import { femaleSearchRequest } from '../features/calls/callAction';
+import coinImg from '../assets/coin1.png';
+
 import StoriesScreen from './StoriesScreen';
 import OffersSectionScreen from './OffersSectionScreen';
 import ActiveDostSectionScreen from './ActiveDostSectionScreen';
 import LikeMindedSectionScreen from '../screens/LikeMindedSectionScreen';
 import GoOnlineCard from '../components/GoOnlineCard';
+import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
+
+/* ================= RESPONSIVE ================= */
+
+const { width } = Dimensions.get('window');
+const guidelineBaseWidth = 375;
+
+const scale = size => (width / guidelineBaseWidth) * size;
+const moderateScale = (size, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
+
+/* ============================================= */
+
+const GradientIcon = ({ name, size = 20 }) => {
+  return (
+    <LinearGradient
+      colors={['#D51BF9', '#8C37F8']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.outerGradient}
+    >
+      <Icon name={name} size={size} color="#fff" />
+    </LinearGradient>
+  );
+};
 
 const ReciverHomeScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { connected } = useContext(SocketContext);
 
+  const { userdata } = useSelector(state => state.user);
   const incoming = useSelector(state => state?.friends?.incoming || []);
-
-  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     dispatch(userDatarequest());
-  }, []);
+  }, [dispatch]);
 
-  const handleGoOnline = type => {
-    if (!connected) return;
-
-    setShowModal(false);
-
-    dispatch(femaleSearchRequest({ call_type: type }));
-
-    navigation.navigate('CallStatusScreen', {
-      call_type: type,
-      role: 'female',
-    });
-  };
-
+  const coins = userdata?.user?.coin_balance ?? 0;
+const avatar =
+  userdata?.images?.avatar ||
+  userdata?.images?.profile_image ||
+  null;
   return (
-    <SafeAreaView style={styles.safe}>
+    <WelcomeScreenbackgroungpage>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* ===== HEADER ===== */}
-        <LinearGradient
-          colors={['#F6D8FF', '#FDE2F3']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.header}
-        >
-          <View style={styles.topRow}>
-            <View style={styles.coinBox}>
-              <Icon name="logo-bitcoin" size={14} color="#FFB800" />
-              <Text style={styles.coinText}>2999</Text>
-            </View>
 
-            <View style={styles.headerRightIcons}>
-              <TouchableOpacity style={styles.roundIcon}>
-                <Icon name="gift-outline" size={18} color="#A855F7" />
-              </TouchableOpacity>
+        {/* ===== TOP BAR ===== */}
+        <View style={styles.topBar}>
+          <View style={styles.coinWrapper}>
+            <LinearGradient
+              colors={['#D51BF9', '#8C37F8']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.coinGradient}
+            >
+              <Image
+                source={coinImg}
+                style={styles.coinImage}
+                resizeMode="contain"
+              />
+              <Text style={styles.coinText}>
+                {coins.toLocaleString()}
+              </Text>
+            </LinearGradient>
+          </View>
 
-              <TouchableOpacity
-                style={styles.roundIcon}
-                onPress={() => navigation.navigate('FriendRequestsScreen')}
-              >
-                <Icon name="notifications-outline" size={18} color="#A855F7" />
+          <View style={styles.headerRightIcons}>
+            <TouchableOpacity>
+              <GradientIcon name="gift-outline" />
+            </TouchableOpacity>
 
+            <TouchableOpacity
+              onPress={() => navigation.navigate('NotificationScreen')}
+            >
+              <View>
+                <GradientIcon name="notifications-outline" />
                 {incoming.length > 0 && (
                   <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{incoming.length}</Text>
+                    <Text style={styles.badgeText}>
+                      {incoming.length}
+                    </Text>
                   </View>
                 )}
-              </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.roundIcon}
-                onPress={() => navigation.navigate('MessagesScreen')}
-              >
-                <Icon
-                  name="chatbubble-ellipses-outline"
-                  size={18}
-                  color="#A855F7"
-                />
-              </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('MessagesScreen')}
+            >
+              <GradientIcon name="chatbubble-ellipses-outline" />
+            </TouchableOpacity>
 
-              <TouchableOpacity style={styles.avatarBox}>
-                <Icon name="person" size={16} color="#A855F7" />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+  onPress={() => navigation.navigate('UplodePhotoScreen')}
+>
+  {avatar ? (
+    <Image
+      source={{ uri: avatar }}
+      style={styles.avatar}
+    />
+  ) : (
+    <GradientIcon name="person-outline" />
+  )}
+</TouchableOpacity>
           </View>
+        </View>
 
-          <View style={styles.searchBox}>
-            <Icon name="search" size={16} color="#C084FC" />
-            <TextInput
-              placeholder="Search"
-              placeholderTextColor="#C084FC"
-              style={styles.searchInput}
-            />
-          </View>
-        </LinearGradient>
-
+        {/* ===== SEARCH BAR ===== */}
+        <View style={styles.searchWrapper}>
+          <Icon
+            name="search-outline"
+            size={moderateScale(18)}
+            color="#9CA3AF"
+            style={styles.searchIcon}
+          />
+          <TextInput
+            placeholder="Search"
+            placeholderTextColor="#9CA3AF"
+            style={styles.searchInput}
+          />
+        </View>
         <StoriesScreen />
-
         <OffersSectionScreen />
-
         <LikeMindedSectionScreen />
-
         <ActiveDostSectionScreen />
 
-       
         <View style={styles.goOnlineWrap}>
           <GoOnlineCard navigation={navigation} />
         </View>
+
       </ScrollView>
-
-      {/* ===== CALL TYPE MODAL ===== */}
-      <Modal transparent visible={showModal} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Go Online</Text>
-
-            <TouchableOpacity
-              style={styles.callBtn}
-              onPress={() => handleGoOnline('AUDIO')}
-            >
-              <Icon name="call-outline" size={22} color="#fff" />
-              <Text style={styles.callText}>Audio Call</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.callBtn, styles.videoBtn]}
-              onPress={() => handleGoOnline('VIDEO')}
-            >
-              <Icon name="videocam-outline" size={22} color="#fff" />
-              <Text style={styles.callText}>Video Call</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setShowModal(false)}>
-              <Text style={styles.closeText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+    </WelcomeScreenbackgroungpage>
   );
 };
 
 export default ReciverHomeScreen;
 
+/* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
 
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 14,
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
-  },
-
-  topRow: {
+  /* ===== TOP BAR ===== */
+  topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: moderateScale(16),
+    marginTop: moderateScale(30),
+    marginBottom: moderateScale(20),  // ✅ More space below topbar
   },
 
-  coinBox: {
+  /* ===== COIN BADGE ===== */
+  coinWrapper: {
+    borderRadius: moderateScale(30),
+    overflow: 'hidden',
+  },
+
+  coinGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
+    paddingHorizontal: moderateScale(18),
+    paddingVertical: moderateScale(8),
+    borderRadius: moderateScale(30),
+    shadowColor: '#8C37F8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+avatar: {
+  width: moderateScale(40),
+  height: moderateScale(40),
+  borderRadius: moderateScale(20),
+  borderWidth: 2,
+  borderColor: '#D51BF9',
+},
+  coinImage: {
+    width: moderateScale(24),
+    height: moderateScale(24),
+    marginRight: moderateScale(8),
   },
 
   coinText: {
-    color: '#FFB800',
+    color: '#FFFFFF',
     fontWeight: '700',
-    marginLeft: 6,
-    fontSize: 13,
+    fontSize: moderateScale(18),
   },
 
+  /* ===== HEADER ICONS ===== */
   headerRightIcons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: moderateScale(10),
   },
 
-  roundIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
+  outerGradient: {
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
     justifyContent: 'center',
-  },
-
-  avatarBox: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    justifyContent: 'center',
   },
 
   badge: {
@@ -220,9 +229,9 @@ const styles = StyleSheet.create({
     top: -4,
     right: -4,
     backgroundColor: '#FF3B3B',
-    borderRadius: 9,
-    minWidth: 16,
-    height: 16,
+    borderRadius: moderateScale(9),
+    minWidth: moderateScale(16),
+    height: moderateScale(16),
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 3,
@@ -230,111 +239,37 @@ const styles = StyleSheet.create({
 
   badgeText: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: moderateScale(10),
     fontWeight: '700',
   },
 
-  searchBox: {
-    marginTop: 12,
+  /* ===== SEARCH BAR ===== */
+  searchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 40,
+    marginHorizontal: moderateScale(16),
+    marginBottom: moderateScale(22),  // ✅ Space below search
+    paddingHorizontal: moderateScale(16),
+    height: moderateScale(50),
+    backgroundColor: '#FFFFFF',       // ✅ WHITE background
+    borderWidth: 1.5,
+    borderColor: '#D51BF9',
+    borderRadius: moderateScale(16),
+  },
+
+  searchIcon: {
+    marginRight: moderateScale(10),
   },
 
   searchInput: {
     flex: 1,
-    marginLeft: 6,
-    fontSize: 14,
-    color: '#A855F7',
+    fontSize: moderateScale(15),
+    color: '#111827',
   },
 
   goOnlineWrap: {
-    paddingHorizontal: 16,
-    paddingBottom: 30,
-    marginTop: 10,
-  },
-
-  outerPill: {
-    width: '100%',
-    height: 110,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-    elevation: 5,
-  },
-
-  innerPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 26,
-    paddingVertical: 10,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-  },
-
-  innerText: {
-    marginLeft: 10,
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-
-  heart1: { position: 'absolute', left: 18, top: 12 },
-  heart2: { position: 'absolute', left: 120, top: 8 },
-  heart3: { position: 'absolute', right: 70, top: 10 },
-  heart4: { position: 'absolute', right: 30, bottom: 10 },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  modalBox: {
-    backgroundColor: '#1a0033',
-    padding: 25,
-    borderRadius: 20,
-    width: '80%',
-    alignItems: 'center',
-  },
-
-  modalTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 20,
-  },
-
-  callBtn: {
-    flexDirection: 'row',
-    backgroundColor: '#ff00ff',
-    padding: 14,
-    borderRadius: 30,
-    alignItems: 'center',
-    marginBottom: 14,
-    width: '100%',
-    justifyContent: 'center',
-  },
-
-  videoBtn: {
-    backgroundColor: '#ff005c',
-  },
-
-  callText: {
-    color: '#fff',
-    fontSize: 16,
-    marginLeft: 10,
-  },
-
-  closeText: {
-    color: '#aaa',
-    marginTop: 10,
+    paddingHorizontal: moderateScale(16),
+    paddingBottom: moderateScale(30),
+    marginTop: moderateScale(10),
   },
 });

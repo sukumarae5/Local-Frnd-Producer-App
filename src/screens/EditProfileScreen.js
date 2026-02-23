@@ -211,9 +211,9 @@ const onDateChange = (event, selectedDate) => {
       dispatch(fetchCitiesRequest(userdata.location.state.id));
     }
 
-    if (userdata?.language?.id) {
-      dispatch(newUserDataRequest({ language_id: userdata.language.id }));
-    }
+    // if (userdata?.language?.id) {
+    //   dispatch(newUserDataRequest({ language_id: userdata.language.id }));
+    // }
   };
 
   const openLifestyle = () => {

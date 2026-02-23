@@ -6,14 +6,16 @@ import {
   ScrollView,
   StyleSheet,
   SafeAreaView,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { CLEAR_UPDATE_INTERESTS } from "../features/interest/interestTypes";
 
 import {
   fetchInterestsRequest,
-  
   updateselectinterestsrequest,
 } from "../features/interest/interestActions";
 
@@ -28,19 +30,25 @@ const EditUserInterestScreen = () => {
   const { selected = [] } = route.params || {};
 
   /* ===== REDUX STATE ===== */
-  const { interests = [], loading } = useSelector(
-    (state) => state.interest
-  );
-
+  const {
+    interests = [],
+    updateselectedInterests,
+    updateResponse,
+    selectedInterests,
+    loading,
+  } = useSelector((state) => state.interest);
+console.log(selectedInterests)
   /* ===== LOCAL STATE ===== */
   const [localSelection, setLocalSelection] = useState(selected);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isHandled, setIsHandled] = useState(false);
 
   /* ===== FETCH INTERESTS ===== */
   useEffect(() => {
     dispatch(fetchInterestsRequest());
   }, [dispatch]);
 
-  /* ===== TOGGLE INTEREST ===== */
+  /* ===== TOGGLE ===== */
   const toggleInterest = (item) => {
     setLocalSelection((prev) =>
       prev.some((i) => i.id === item.id)
@@ -49,26 +57,58 @@ const EditUserInterestScreen = () => {
     );
   };
 
-  /* ===== DONE ACTION ===== */
+  /* ===== DONE ===== */
   const handleDone = () => {
     const interestIds = localSelection.map((item) => item.id);
-console.log(interestIds)
-    // 🔥 UPDATE INTERESTS API (PUT via saga)
+
+    setIsSubmitting(true);
+
     dispatch(
       updateselectinterestsrequest({
         interests: interestIds,
       })
     );
-
-    // 🔁 Navigate back with updated data
-    navigation.navigate({
-      name: "EditProfileScreen",
-      params: {
-        updatedInterests: localSelection,
-      },
-      merge: true,
-    });
   };
+
+  /* ===== SUCCESS / ERROR HANDLER ===== */
+useEffect(() => {
+  if (!updateselectedInterests || isHandled) return;
+
+  const isSuccess = updateselectedInterests?.success === true;
+
+  const safeMessage =
+    typeof updateselectedInterests?.message === "string"
+      ? updateselectedInterests.message
+      : "Operation completed";
+
+  setIsSubmitting(false);
+  setIsHandled(true);
+
+  Alert.alert(
+    isSuccess ? "Success ✅" : "Error ❌",
+    safeMessage,
+    [
+      {
+        text: "OK",
+        onPress: () => {
+          if (isSuccess) {
+            dispatch({ type: CLEAR_UPDATE_INTERESTS }); // ✅ CLEAR HERE
+            navigation.navigate("EditProfileScreen");
+          }
+        },
+      },
+    ]
+  );
+}, [updateselectedInterests]);
+
+
+  /* Reset when screen opens again */
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      setIsHandled(false);
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -80,10 +120,15 @@ console.log(interestIds)
 
         <Text style={styles.headerTitle}>Edit Interests</Text>
 
-        <TouchableOpacity onPress={handleDone} disabled={loading}>
-          <Text style={[styles.done, loading && { opacity: 0.5 }]}>
-            DONE
-          </Text>
+        <TouchableOpacity
+          onPress={handleDone}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator color={PURPLE} />
+          ) : (
+            <Text style={styles.done}>DONE</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -126,14 +171,13 @@ console.log(interestIds)
 
 export default EditUserInterestScreen;
 
-/* ================= STYLES ================= */
+/* ===== STYLES ===== */
 
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: "#fff",
   },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -143,23 +187,19 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
     marginTop: 30,
   },
-
   headerTitle: {
     fontSize: 18,
     fontWeight: "600",
   },
-
   done: {
     color: PURPLE,
     fontWeight: "700",
   },
-
   empty: {
     textAlign: "center",
     marginTop: 40,
     color: "#999",
   },
-
   row: {
     paddingHorizontal: 18,
     paddingVertical: 16,
@@ -168,11 +208,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F2F2F2",
   },
-
   selectedRow: {
     backgroundColor: "#F6ECFF",
   },
-
   text: {
     fontSize: 15,
     color: "#333",

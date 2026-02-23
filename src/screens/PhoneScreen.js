@@ -27,8 +27,7 @@ const { width, height } = Dimensions.get("window");
 
 const PhoneScreen = ({ navigation }) => {
   const dispatch = useDispatch();
-  const { success } = useSelector((state) => state.auth);
-
+const { success, mode } = useSelector((state) => state.auth);
   const [mobile_number, setMobile_number] = useState("");
   const phoneInputRef = useRef(null);
 
@@ -45,8 +44,8 @@ const PhoneScreen = ({ navigation }) => {
     if (success === null) return;
 
     if (success === true) {
-      navigation.navigate("Otp", { mobile_number });
-    }
+  navigation.navigate("Otp", { mobile_number, mode });
+}
 
     if (success === false) {
       dispatch(userLoginRequest({ mobile_number }));

@@ -1,12 +1,12 @@
 import { call, put, takeLatest } from "redux-saga/effects";
 import axios from "axios";
-import {userRegisterSuccess,userRegisterFailed,} from "./authAction";
-import { USER_REGISTER_FETCH_REQUEST } from "./authType";
+import {userRegisterSuccess,userRegisterFailed, userResendOtpSuccess, userResendOtpFailed,} from "./authAction";
+import { USER_REGISTER_FETCH_REQUEST, USER_RESEND_OTP_FETCH_REQUEST } from "./authType";
 import {userLoginSuccess,userLoginFailed,} from "./authAction";
 import { USER_LOGIN_FETCH_REQUEST } from "./authType"; 
 import {userOtpSuccess,userOtpFailed,} from "./authAction";
 import { USER_OTP_FETCH_REQUEST } from "./authType";   // ✔️ FIXED
-import { user_login, user_Otp,user_Register } from "../../api/userApi";
+import { user_login, user_ResendOtp, user_Otp,user_Register } from "../../api/userApi";
 
 function* handleUserRegister(action) {
   try {
@@ -69,11 +69,26 @@ function* handleUserOtp(action) {
   }
 }
 
+function* userResendOtp(action) {
+  try {
+    console.log("🚀 Saga received data for OTP resend:", action.payload);
+    const response = yield call(() =>
+      axios.post(user_ResendOtp, action.payload)
+    );
+    console.log("📥 API Response for OTP resend:", response.data);
+    yield put(userResendOtpSuccess(response.data));
+  } catch (error) {
+    const errorMsg = error.response?.data?.message || error.message;
+    console.log("❌ API Error for OTP resend:", errorMsg);
+    yield put(userResendOtpFailed(errorMsg));
+  } 
+
+}
 
 
 export default function* authSaga() {
   yield takeLatest(USER_REGISTER_FETCH_REQUEST,handleUserRegister);
   yield takeLatest(USER_LOGIN_FETCH_REQUEST,handleUserLogin)
   yield takeLatest(USER_OTP_FETCH_REQUEST,handleUserOtp);
-
+  yield takeLatest(USER_RESEND_OTP_FETCH_REQUEST,userResendOtp);
 }

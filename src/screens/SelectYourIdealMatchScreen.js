@@ -10,12 +10,35 @@ import Icon from "react-native-vector-icons/Ionicons";
 import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import WelcomeScreenbackgroundgpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
+import { useSelector } from "react-redux";
 
 const SelectYourIdealMatchScreen = ({ navigation }) => {
+  const { userdata } = useSelector(state => state.user);
+  console.log("Selected Gender:", userdata.user.gender)
+
+const handleContinue = () => {
+  const gender = userdata?.user?.gender;
+
+  if (!gender) {
+    alert("Gender not found");
+    return;
+  }
+
+  navigation.reset({
+    index: 0,
+    routes: [
+      {
+        name:
+          gender === "Male"
+            ? "MaleHomeTabs"
+            : "ReceiverBottomTabs",
+      },
+    ],
+  });
+};
   return (
     <WelcomeScreenbackgroundgpage>
       <SafeAreaView style={styles.container}>
-
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -48,12 +71,12 @@ const SelectYourIdealMatchScreen = ({ navigation }) => {
 
           {/* OVERLAY HEARTS */}
           <Image
-            source={require("../assets/leftheart.png")}
-            style={[styles.smallHeart, { top: 15, left: 40 }]}
+            source={require("../assets/smallheart.png")}
+            style={[styles.smallHeart, { top: 120, left: 40 }]}
           />
           <Image
-            source={require("../assets/rightheart.png")}
-            style={[styles.smallHeart, { top: 60, right: 40 }]}
+            source={require("../assets/smallheart.png")}
+            style={[styles.smallHeart, { top: 120, right: 40 ,width:70,height:40}]}
           />
 
           {/* HANDSHAKE IMAGE */}
@@ -65,11 +88,19 @@ const SelectYourIdealMatchScreen = ({ navigation }) => {
           {/* TITLE TEXT */}
           <Text style={styles.bottomText}>Lets{"\n"}Make{"\n"}Friends</Text>
         </View>
+         <Image
+            source={require("../assets/smallheart.png")}
+            style={[styles.smallHeart, { top: 610, left: -12 ,width:30,height:40}]}
+          />
+ <Image
+            source={require("../assets/smallheart.png")}
+            style={[styles.smallHeart, { top: 570, right: 40 ,width:30,height:40}]}
+          />
 
         {/* CONTINUE BUTTON */}
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={() => navigation.navigate("Home")}
+          onPress={handleContinue}
           style={styles.continueWrapper}
         >
           <LinearGradient
@@ -98,12 +129,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 10,
+    
   },
 
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#000",
+    marginLeft:-100,
+        
+
   },
 
   bgGradient: {
@@ -112,12 +147,14 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     left: 0,
+    
   },
 
   mainWrapper: {
     flex: 1,
     alignItems: "center",
     marginTop: 40,
+    paddingTop: 80,
   },
 
   topCard: {
@@ -153,7 +190,7 @@ const styles = StyleSheet.create({
 
   handImage: {
     marginTop: 20,
-    width: 260,
+    width: 300,
     height: 180,
     resizeMode: "contain",
   },

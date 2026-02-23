@@ -147,6 +147,7 @@ const styles = StyleSheet.create({
     color: "#111",
     textAlign: "center",
     marginBottom: 30,
+    marginLeft:-111
   },
   searchBox: {
     flexDirection: "row",

@@ -17,7 +17,9 @@ import {
   directCallSuccess,
   directCallFailed,
   friendCallSuccess,
-  friendCallFailed
+  friendCallFailed,
+  recentCallSuccess,
+  recentCallFailed
 } from "./callAction";
 
 import {
@@ -27,7 +29,8 @@ import {
   searching_females,
   call_connected_details,
   direct_call,
-  friend_connect 
+  friend_connect ,
+  recent_calls ,
 } from "../../api/userApi";
 
 function* maleCallSaga(action) {
@@ -166,6 +169,30 @@ console.log("Friend Call Response:", res);
   }
 }
 
+function* recentCallSaga() {
+  try {
+    const token = yield call(AsyncStorage.getItem, "twittoke");
+
+    const res = yield call(
+      axios.get,
+      recent_calls,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    console.log("Recent Calls Response:", res.data);
+
+    yield put(recentCallSuccess(res.data.data));
+  } catch (e) {
+    yield put(
+      recentCallFailed(
+        e.response?.data?.error || e.message
+      )
+    );
+  }
+}
+
 
 export default function* callSaga() {
   yield takeLatest(T.CALL_REQUEST, maleCallSaga);
@@ -175,5 +202,5 @@ export default function* callSaga() {
   yield takeLatest(T.CALL_DETAILS_REQUEST, callDetailsSaga);
   yield takeLatest(T.DIRECT_CALL_REQUEST, directCallSaga);
   yield takeLatest(T.FRIEND_CALL_REQUEST, friendCallSaga);
-
+  yield takeLatest(T.RECENT_CALL_REQUEST, recentCallSaga);
 }

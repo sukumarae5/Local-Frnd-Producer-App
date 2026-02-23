@@ -161,36 +161,45 @@ const PerfectMatchScreen = () => {
 
   /* ---------------- UI ---------------- */
 
-  return (
-    <WelcomeScreenbackgroungpage>
-      <View style={styles.container}>
-        <StatusBar barStyle="dark-content" />
+  /* ---------------- UI ---------------- */
 
-        <View style={styles.profileRow}>
-          <View style={styles.profileBlock}>
-            {me?.avatar && (
-              <>
-                <HeartImage source={{ uri: me.avatar }} size={170} />
-                <Text style={styles.name}>{me.name}</Text>
-              </>
-            )}
-          </View>
+return (
+  <WelcomeScreenbackgroungpage>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
 
-          <View style={styles.profileBlock}>
-            {other?.avatar && (
-              <>
-                <HeartImage source={{ uri: other.avatar }} size={170} />
-                <Text style={styles.name}>{other.name}</Text>
-              </>
-            )}
-          </View>
+      {/* Floating Hearts */}
+      <Text style={[styles.floatingHeart, { top: 120, left: 40 }]}>💜</Text>
+      <Text style={[styles.floatingHeart, { top: 100, right: 50 }]}>💜</Text>
+      <Text style={[styles.floatingHeart, { bottom: 200, left: 60 }]}>💜</Text>
+      <Text style={[styles.floatingHeart, { bottom: 180, right: 60 }]}>💜</Text>
+
+      {/* Profiles */}
+      <View style={styles.profileRow}>
+        <View style={styles.profileBlock}>
+          {me?.avatar && (
+            <>
+              <HeartImage source={{ uri: me.avatar }} size={180} />
+              <Text style={styles.name}>{me.name}</Text>
+            </>
+          )}
         </View>
 
-        <Text style={styles.matchText}>Perfect Match</Text>
-        <Text style={styles.congrats}>Congratulations!</Text>
+        <View style={styles.profileBlock}>
+          {other?.avatar && (
+            <>
+              <HeartImage source={{ uri: other.avatar }} size={180} />
+              <Text style={styles.name}>{other.name}</Text>
+            </>
+          )}
+        </View>
       </View>
-    </WelcomeScreenbackgroungpage>
-  );
+
+      <Text style={styles.matchText}>Perfect Match</Text>
+      <Text style={styles.congrats}>Congratulations!</Text>
+    </View>
+  </WelcomeScreenbackgroungpage>
+);
 };
 
 export default PerfectMatchScreen;
@@ -212,9 +221,10 @@ const styles = StyleSheet.create({
 
   profileRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    width: "80%",
-    marginBottom: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 30,
+    marginBottom: 50,
   },
 
   profileBlock: {
@@ -222,22 +232,29 @@ const styles = StyleSheet.create({
   },
 
   name: {
-    marginTop: 10,
+    marginTop: 12,
     fontSize: 18,
     fontWeight: "600",
-    color: "#333",
+    color: "#222",
   },
 
   matchText: {
-    color: "#ce7df7",
+    color: "#c464ff",
     fontSize: 18,
     fontWeight: "700",
-    marginTop: 50,
+    marginTop: 20,
   },
 
   congrats: {
-    color: "#ce7df7",
-    fontSize: 30,
+    color: "#c464ff",
+    fontSize: 32,
     fontWeight: "700",
+    fontStyle: "italic",
+  },
+
+  floatingHeart: {
+    position: "absolute",
+    fontSize: 22,
+    opacity: 0.7,
   },
 });

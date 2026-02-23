@@ -20,6 +20,11 @@ import StoriesScreen from './StoriesScreen';
 import LikeMindedSectionScreen from '../screens/LikeMindedSectionScreen';
 import OffersSectionScreen from '../screens/OffersSectionScreen';
 import ActiveDostSectionScreen from '../screens/ActiveDostSectionScreen';
+import coinImg from '../assets/coin1.png';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomCallPills from '../components/BottomCallPills';
+import { callRequest } from '../features/calls/callAction';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 const wp = v => (width * v) / 100;
@@ -33,8 +38,46 @@ const HomeScreen = () => {
   const socket = socketRef?.current;
   const { userdata } = useSelector(state => state.user);
   const { incoming } = useSelector(state => state.friends);
+  console.log(userdata);
+  const profilePhotoURL = userdata?.images?.profile_image;
+  const { connected } = useContext(SocketContext);
 
-  const profilePhotoURL = userdata?.primary_image?.photo_url;
+  const [callingRandom, setCallingRandom] = React.useState(false);
+  const [callingRandomVideo, setCallingRandomVideo] = React.useState(false);
+
+  const startRandomAudioCall = () => {
+    if (!connected || callingRandom || callingRandomVideo) return;
+
+    setCallingRandom(true);
+
+    dispatch(callRequest({ call_type: 'AUDIO' }));
+
+    navigation.navigate('CallStatusScreen', {
+      call_type: 'AUDIO',
+      role: 'male',
+    });
+  };
+
+  const startRandomVideoCall = () => {
+    if (!connected || callingRandom || callingRandomVideo) return;
+
+    setCallingRandomVideo(true);
+
+    dispatch(callRequest({ call_type: 'VIDEO' }));
+
+    navigation.navigate('CallStatusScreen', {
+      call_type: 'VIDEO',
+      role: 'male',
+    });
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setCallingRandom(false);
+      setCallingRandomVideo(false);
+    }, []),
+  );
+
   const imageUrl = profilePhotoURL
     ? { uri: profilePhotoURL }
     : require('../assets/boy2.jpg');
@@ -63,23 +106,31 @@ const HomeScreen = () => {
           {/* HEADER */}
           <View style={styles.headerRow}>
             {/* COIN BOX */}
-            <View style={styles.coinBox}>
-              <Icon name="currency-eth" size={iconSize(5)} color="#FFD700" />
+            <LinearGradient
+              colors={['#FFA726', '#FF7043']} // orange → reddish gradient (like image)
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.coinBox}
+            >
+              <Image source={coinImg} style={styles.coinImage} />
               <Text style={styles.coinText}>
                 {userdata?.user?.coin_balance ?? 0}
               </Text>
-            </View>
+            </LinearGradient>
 
             {/* MESSAGE ICON */}
             <TouchableOpacity
               style={{ marginHorizontal: wp(2) }}
               onPress={() => navigation.navigate('MessagesScreen')}
             >
-              <Icon
-                name="message-text-outline"
-                size={iconSize(6)}
-                color="#000"
-              />
+              <View style={styles.iconCircle}>
+                <Icon
+                  name="message-processing-outline"
+                  size={wp(5)}
+                  color="#fff"
+                  backgroundColor="#ce17fc"
+                />
+              </View>
             </TouchableOpacity>
 
             {/* BELL + BADGE */}
@@ -87,7 +138,9 @@ const HomeScreen = () => {
               style={styles.bellWrap}
               onPress={() => navigation.navigate('NotificationScreen')}
             >
-              <Icon name="bell-outline" size={iconSize(6)} color="#000" />
+              <View style={styles.iconCircle}>
+                <Icon name="bell-outline" size={iconSize(6)} color="#fff" />
+              </View>
               {incoming?.length > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{incoming.length}</Text>
@@ -105,7 +158,12 @@ const HomeScreen = () => {
 
           {/* SEARCH */}
           <View style={styles.searchContainer}>
-            <Icon name="magnify" size={iconSize(6)} color="#999" />
+            <Icon
+              name="magnify"
+              size={iconSize(8)}
+              color="#999"
+              marginLeft="30"
+            />
             <TextInput
               placeholder="Search"
               placeholderTextColor="#8E8E93"
@@ -125,26 +183,12 @@ const HomeScreen = () => {
           {/* ACTIVE DOST SECTION */}
           <ActiveDostSectionScreen />
 
-          {/* RANDOM CALL BUTTONS */}
-          <View style={styles.bottomActionRow}>
-            <TouchableOpacity
-              style={styles.connectBox}
-              onPress={() => navigation.navigate('TrainersCallpage')}
-            >
-              <Icon name="dice-5" size={iconSize(6)} color="#fff" />
-              <Text style={styles.connectText}>Random Calls</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.connectBox}>
-              <Icon name="map-marker" size={iconSize(6)} color="#fff" />
-              <Text style={styles.connectText}>Local Calls</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.connectBoxActive}>
-              <Icon name="account-multiple" size={iconSize(6)} color="#fff" />
-              <Text style={styles.connectText}>Followed Calls</Text>
-            </TouchableOpacity>
-          </View>
+          <BottomCallPills
+            callingRandom={callingRandom}
+            callingRandomVideo={callingRandomVideo}
+            onRandomAudio={startRandomAudioCall}
+            onRandomVideo={startRandomVideoCall}
+          />
 
           <View style={{ height: hp(12) }} />
         </ScrollView>
@@ -155,13 +199,17 @@ const HomeScreen = () => {
 
 export default HomeScreen;
 
-
 const styles = StyleSheet.create({
   root: { flex: 1 },
 
   container: {
-    paddingHorizontal: wp(5),
-    paddingTop: hp(2),
+    // paddingHorizontal: wp(5),
+    // paddingTop: hp(2),
+  },
+  coinImage: {
+    width: wp(8),
+    height: wp(8),
+    resizeMode: 'contain',
   },
 
   headerRow: {
@@ -169,24 +217,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     marginBottom: hp(2),
-    marginTop: 30,
+    marginTop: hp(4),
+    paddingHorizontal: wp(3),
   },
 
   coinBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF5D8',
-    paddingHorizontal: wp(3),
-    paddingVertical: hp(1),
-    borderRadius: wp(4),
-    marginRight: wp(40),
+    paddingHorizontal: wp(4),
+    height: hp(4.8),
+    borderRadius: wp(10), // fully rounded pill
+    marginRight: 'auto', // push to left properly
+    elevation: 4, // soft shadow (Android)
   },
 
   coinText: {
     marginLeft: wp(2),
-    fontSize: wp(4),
-    fontWeight: '700',
-    color: '#000',
+    fontSize: wp(3.8),
+    fontWeight: '800',
+    color: '#fff',
   },
 
   bellWrap: {
@@ -200,6 +249,14 @@ const styles = StyleSheet.create({
     borderRadius: wp(5),
     borderWidth: 2,
     borderColor: '#A35DFE',
+  },
+  iconCircle: {
+    width: wp(8),
+    height: wp(8),
+    borderRadius: wp(5.5),
+    backgroundColor: '#ce17fc',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   badge: {
@@ -223,13 +280,15 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#b678f5ff',
-    borderRadius: wp(4),
-    paddingHorizontal: wp(3),
-    paddingVertical: hp(1),
-    marginTop: hp(1),
-    backgroundColor: '#faf8fbff',
+    borderWidth: 1.5,
+    borderColor: '#C084FC', // soft purple
+    borderRadius: wp(6), // more rounded like image
+    paddingHorizontal: wp(4),
+    height: hp(5.5),
+    marginTop: hp(2),
+    marginHorizontal: wp(3), // 👈 Add this
+
+    backgroundColor: '#fff',
   },
 
   searchInput: {

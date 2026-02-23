@@ -9,7 +9,10 @@ import {
   USER_OTP_FETCH_SUCCESS,
   USER_OTP_FETCH_FAILED,
   AUTH_RESET,
-  USER_LOGOUT_REQUEST
+  USER_LOGOUT_REQUEST,
+  USER_RESEND_OTP_FETCH_FAILED,
+  USER_RESEND_OTP_FETCH_SUCCESS,
+  USER_RESEND_OTP_FETCH_REQUEST
 } from "./authType";
 
 export const userRegisterRequest = (data) => ({
@@ -55,4 +58,19 @@ export const authReset = () => ({ type: AUTH_RESET });
 
 export const userlogoutrequest = () => ({
   type: USER_LOGOUT_REQUEST,
+});
+
+export const userResendOtpRequest = (data) => ({
+  type: USER_RESEND_OTP_FETCH_REQUEST,
+  payload: data,
+});
+
+export const userResendOtpSuccess = (data) => ({
+  type: USER_RESEND_OTP_FETCH_SUCCESS,  
+  payload: data,
+});
+
+export const userResendOtpFailed = (error) => ({
+  type: USER_RESEND_OTP_FETCH_FAILED,
+  payload: error,
 });

@@ -6,8 +6,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  FlatList,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -18,20 +20,16 @@ import { languageApiFetchRequest } from "../features/language/languageAction";
 import { fetchCitiesRequest } from "../features/Countries/locationActions";
 import { newUserDataRequest } from "../features/user/userAction";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 const FillYourProfileScreen = ({ navigation, route }) => {
-  console.log(route.params.country_id);
+  const country_id = route?.params?.country_id ?? null;
 
   const dispatch = useDispatch();
 
   const { languages } = useSelector((state) => state.language);
   const { states, cities } = useSelector((state) => state.location);
-  const { userdata, message: apiResponse } = useSelector(
-    (state) => state.user
-  );
-
-  console.log(apiResponse);
+  const { message: apiResponse } = useSelector((state) => state.user);
 
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -47,21 +45,12 @@ const FillYourProfileScreen = ({ navigation, route }) => {
   const [showStateDrop, setShowStateDrop] = useState(false);
   const [showCityDrop, setShowCityDrop] = useState(false);
   const [showMandatoryMsg, setShowMandatoryMsg] = useState(true);
-const [isResponseHandled, setIsResponseHandled] = useState(false);
+  const [isResponseHandled, setIsResponseHandled] = useState(false);
 
   useEffect(() => {
     dispatch(languageApiFetchRequest());
-  }, []);
+  }, [dispatch]);
 
-  useEffect(() => {
-    if (isFormValid) {
-      setShowMandatoryMsg(false);
-    } else {
-      setShowMandatoryMsg(true);
-    }
-  }, [isFormValid]);
-
-  // ✅ Validation Check (All fields required)
   const isFormValid =
     name.trim() !== "" &&
     username.trim() !== "" &&
@@ -70,9 +59,11 @@ const [isResponseHandled, setIsResponseHandled] = useState(false);
     stateValue !== null &&
     cityValue !== null;
 
-  // 🔞 AGE CALCULATION (ADDED)
+  useEffect(() => {
+    setShowMandatoryMsg(!isFormValid);
+  }, [isFormValid]);
+
   const calculateAge = (dobString) => {
-    // dobString format: DD-MM-YYYY
     const [day, month, year] = dobString.split("-").map(Number);
     const birthDate = new Date(year, month - 1, day);
     const today = new Date();
@@ -90,7 +81,6 @@ const [isResponseHandled, setIsResponseHandled] = useState(false);
     return age;
   };
 
-  // 🚀 Submit Handler (UPDATED WITH AGE CHECK)
   const handleSubmit = () => {
     if (!isFormValid) return;
 
@@ -99,250 +89,254 @@ const [isResponseHandled, setIsResponseHandled] = useState(false);
     if (age < 18) {
       Alert.alert(
         "Age Restriction ❌",
-        "You must be at least 18 years old to continue.",
-        [{ text: "OK" }]
+        "You must be at least 18 years old to continue."
       );
       return;
     }
 
-    const payload = {
-      name,
-      username,
-      date_of_birth: dob,
-      language_id: language.id,
-      state_id: stateValue.id,
-      city_id: cityValue.id,
-      country_id: route.params.country_id,
-    };
+    if (!country_id) {
+      Alert.alert("Error", "Country ID missing.");
+      return;
+    }
 
-    dispatch(newUserDataRequest(payload));
+    dispatch(
+      newUserDataRequest({
+        name,
+        username,
+        date_of_birth: dob,
+        language_id: language.id,
+        state_id: stateValue.id,
+        city_id: cityValue.id,
+        country_id,
+      })
+    );
   };
 
-  // ✅ BACKEND RESPONSE ALERT (UNCHANGED LOGIC)
   useEffect(() => {
-  if (!apiResponse || isResponseHandled) return;
+    if (!apiResponse || isResponseHandled) return;
 
-  setIsResponseHandled(true); // ✅ stop future alerts
+    setIsResponseHandled(true);
 
-  Alert.alert(
-    apiResponse.success ? "Success ✅" : "Error ❌",
-    apiResponse.message,
-    [
-      {
-        text: "OK",
-        onPress: () => {
-          if (apiResponse.success) {
-            navigation.navigate("LifeStyleScreen");
-          }
+    Alert.alert(
+      apiResponse.success ? "Success ✅" : "Error ❌",
+      apiResponse.message,
+      [
+        {
+          text: "OK",
+          onPress: () => {
+            if (apiResponse.success) {
+              navigation.navigate("LifeStyleScreen");
+            }
+          },
         },
-      },
-    ]
-  );
-}, [apiResponse, isResponseHandled]);
+      ]
+    );
+  }, [apiResponse, isResponseHandled, navigation]);
 
-useEffect(() => {
-  const unsubscribe = navigation.addListener("focus", () => {
-    setIsResponseHandled(false);
-  });
-
-  return unsubscribe;
-}, [navigation]);
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      setIsResponseHandled(false);
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   return (
     <WelcomeScreenbackgroundgpage>
-      <View style={styles.container}>
-        {/* Back Button */}
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Icon name="chevron-back" size={26} color="#000" />
-        </TouchableOpacity>
-
-        <Text style={styles.title}>Fill Your Profile</Text>
-
-        {showMandatoryMsg && (
-          <Text style={styles.mandatoryText}>* All fields are mandatory</Text>
-        )}
-
-        <TextInput
-          style={styles.input}
-          placeholder="Full Name"
-          placeholderTextColor="#999"
-          value={name}
-          onChangeText={setName}
-        />
-
-        <TextInput
-          style={styles.input}
-          placeholder="Username"
-          placeholderTextColor="#999"
-          value={username}
-          onChangeText={setUsername}
-        />
-
-        {/* DOB Calendar Input */}
-        <TouchableOpacity
-          style={styles.inputIconBox}
-          onPress={() => setShowDatePicker(true)}
-        >
-          <Text style={{ flex: 1, fontSize: 16, color: dob ? "#000" : "#999" }}>
-            {dob || "DD/MM/YYYY"}
-          </Text>
-          <Icon name="calendar-outline" size={20} color="#999" />
-        </TouchableOpacity>
-
-        {showDatePicker && (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display="default"
-            maximumDate={new Date()}
-            onChange={(event, selectedDate) => {
-              setShowDatePicker(false);
-              if (selectedDate) {
-                setDate(selectedDate);
-
-                const day = selectedDate
-                  .getDate()
-                  .toString()
-                  .padStart(2, "0");
-                const month = (selectedDate.getMonth() + 1)
-                  .toString()
-                  .padStart(2, "0");
-                const year = selectedDate.getFullYear();
-
-                const formatted = `${day}-${month}-${year}`;
-                setDob(formatted);
-              }
-            }}
-          />
-        )}
-
-        <Text style={styles.sectionTitle}>General Information</Text>
-
-        {/* Language Dropdown */}
-        <TouchableOpacity
-          style={styles.dropdown}
-          onPress={() => setShowLanguageDrop(!showLanguageDrop)}
-        >
-          <Text style={styles.dropdownText}>
-            {language?.native_name || "Select Language"}
-          </Text>
-          <Icon name="chevron-down" size={20} color="#666" />
-        </TouchableOpacity>
-
-        {showLanguageDrop && (
-          <FlatList
-            data={languages || []}
-            keyExtractor={(item) => item.id.toString()}
-            style={styles.dropdownList}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.dropdownItem}
-                onPress={() => {
-                  setLanguage(item);
-                  setShowLanguageDrop(false);
-                }}
-              >
-                <Text style={styles.dropdownItemText}>{item.name_en}</Text>
-              </TouchableOpacity>
-            )}
-          />
-        )}
-
-        {/* State Dropdown */}
-        <TouchableOpacity
-          style={styles.dropdown}
-          onPress={() => setShowStateDrop(!showStateDrop)}
-        >
-          <Text style={styles.dropdownText}>
-            {stateValue?.name || "Select State"}
-          </Text>
-          <Icon name="chevron-down" size={20} color="#666" />
-        </TouchableOpacity>
-
-        {showStateDrop && (
-          <FlatList
-            data={states || []}
-            keyExtractor={(item) => item.id.toString()}
-            style={styles.dropdownList}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.dropdownItem}
-                onPress={() => {
-                  setStateValue(item);
-                  dispatch(fetchCitiesRequest(item.id));
-                  setCityValue(null);
-                  setShowStateDrop(false);
-                }}
-              >
-                <Text style={styles.dropdownItemText}>{item.name}</Text>
-              </TouchableOpacity>
-            )}
-          />
-        )}
-
-        {/* City Dropdown */}
-        <TouchableOpacity
-          style={styles.dropdown}
-          onPress={() => setShowCityDrop(!showCityDrop)}
-        >
-          <Text style={styles.dropdownText}>
-            {cityValue?.name || "Select City"}
-          </Text>
-          <Icon name="chevron-down" size={20} color="#666" />
-        </TouchableOpacity>
-
-        {showCityDrop && (
-          <FlatList
-            data={cities || []}
-            keyExtractor={(item) => item.id.toString()}
-            style={styles.dropdownList}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.dropdownItem}
-                onPress={() => {
-                  setCityValue(item);
-                  setShowCityDrop(false);
-                }}
-              >
-                <Text style={styles.dropdownItemText}>{item.name}</Text>
-              </TouchableOpacity>
-            )}
-          />
-        )}
-
-        {/* CONTINUE BUTTON */}
-        <TouchableOpacity
-          style={[
-            styles.continueButton,
-            { backgroundColor: isFormValid ? "#B45BFA" : "#D3C8F6" },
-          ]}
-          disabled={!isFormValid}
-          onPress={handleSubmit}
-        >
-          <Text
-            style={[
-              styles.continueText,
-              { color: isFormValid ? "#fff" : "#eee" },
-            ]}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <View style={styles.container}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
           >
-            CONTINUE
-          </Text>
-        </TouchableOpacity>
+            <Icon name="chevron-back" size={26} color="#000" />
+          </TouchableOpacity>
 
-        <View style={styles.bottomIndicator} />
-      </View>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: height * 0.18 }}
+          >
+            <Text style={styles.title}>Fill Your Profile</Text>
+
+            {showMandatoryMsg && (
+              <Text style={styles.mandatoryText}>
+                * All fields are mandatory
+              </Text>
+            )}
+
+            <Text style={styles.label}>Full Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Full Name"
+              value={name}
+              onChangeText={setName}
+            />
+
+            <Text style={styles.label}>Username</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Username"
+              value={username}
+              onChangeText={setUsername}
+            />
+
+            <Text style={styles.label}>Date of Birth</Text>
+            <TouchableOpacity
+              style={styles.inputIconBox}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={{ flex: 1 }}>{dob || "DD/MM/YYYY"}</Text>
+              <Icon name="calendar-outline" size={20} />
+            </TouchableOpacity>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                maximumDate={new Date()}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) {
+                    const day = selectedDate.getDate().toString().padStart(2, "0");
+                    const month = (selectedDate.getMonth() + 1)
+                      .toString()
+                      .padStart(2, "0");
+                    const year = selectedDate.getFullYear();
+                    setDob(`${day}-${month}-${year}`);
+                  }
+                }}
+              />
+            )}
+
+            <Text style={styles.sectionTitle}>General Information</Text>
+
+            {/* Language */}
+            <Text style={styles.label}>Language</Text>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowLanguageDrop(!showLanguageDrop)}
+            >
+              <Text style={styles.dropdownText}>
+                {language?.native_name || "Select Language"}
+              </Text>
+              <Icon name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
+
+            {showLanguageDrop && (
+              <View style={styles.dropdownList}>
+                {(languages || []).map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setLanguage(item);
+                      setShowLanguageDrop(false);
+                    }}
+                  >
+                    <Text style={styles.dropdownItemText}>
+                      {item.name_en}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* State */}
+            <Text style={styles.label}>State</Text>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowStateDrop(!showStateDrop)}
+            >
+              <Text style={styles.dropdownText}>
+                {stateValue?.name || "Select State"}
+              </Text>
+              <Icon name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
+
+            {showStateDrop && (
+              <View style={styles.dropdownList}>
+                {(states || []).map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setStateValue(item);
+                      dispatch(fetchCitiesRequest(item.id));
+                      setCityValue(null);
+                      setShowStateDrop(false);
+                    }}
+                  >
+                    <Text style={styles.dropdownItemText}>
+                      {item.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* City */}
+            <Text style={styles.label}>City</Text>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowCityDrop(!showCityDrop)}
+            >
+              <Text style={styles.dropdownText}>
+                {cityValue?.name || "Select City"}
+              </Text>
+              <Icon name="chevron-down" size={20} color="#666" />
+            </TouchableOpacity>
+
+            {showCityDrop && (
+              <View style={styles.dropdownList}>
+                {(cities || []).map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setCityValue(item);
+                      setShowCityDrop(false);
+                    }}
+                  >
+                    <Text style={styles.dropdownItemText}>
+                      {item.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </ScrollView>
+
+          <TouchableOpacity
+            style={[
+              styles.continueButton,
+              { backgroundColor: isFormValid ? "#B45BFA" : "#D3C8F6" },
+            ]}
+            disabled={!isFormValid}
+            onPress={handleSubmit}
+          >
+            <Text
+              style={[
+                styles.continueText,
+                { color: isFormValid ? "#fff" : "#eee" },
+              ]}
+            >
+              CONTINUE
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.bottomIndicator} />
+        </View>
+      </KeyboardAvoidingView>
     </WelcomeScreenbackgroundgpage>
   );
 };
 
 export default FillYourProfileScreen;
-
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 70, paddingHorizontal: 20 },
-  backButton: { position: "absolute", top: 60, left: 15, padding: 4, zIndex: 10 },
+  container: { flex: 1, paddingTop: height * 0.08, paddingHorizontal: 20 },
+  backButton: { position: "absolute", top: height * 0.07, left: 15, zIndex: 10 },
   title: {
     fontSize: 22,
     fontWeight: "700",
@@ -358,7 +352,6 @@ const styles = StyleSheet.create({
     borderColor: "#E3D8FF",
     paddingHorizontal: 12,
     fontSize: 16,
-    color: "#000",
     marginBottom: 15,
   },
   inputIconBox: {
@@ -375,7 +368,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#444",
     marginTop: 10,
     marginBottom: 8,
   },
@@ -390,6 +382,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 15,
   },
+  label: { fontSize: 14, fontWeight: "600", marginBottom: 6, marginTop: 5 },
   dropdownText: { flex: 1, fontSize: 16, color: "#000" },
   dropdownList: {
     backgroundColor: "#FFF",
@@ -400,7 +393,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   dropdownItem: { paddingVertical: 12, paddingHorizontal: 12 },
-  dropdownItemText: { fontSize: 16, color: "#000" },
+  dropdownItemText: { fontSize: 16 },
   continueButton: {
     position: "absolute",
     bottom: 50,

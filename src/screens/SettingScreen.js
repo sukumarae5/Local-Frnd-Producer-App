@@ -6,6 +6,8 @@ import {
   StyleSheet,
   SafeAreaView,
   Modal,
+  ScrollView,
+  Dimensions,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
@@ -14,6 +16,8 @@ import { useDispatch } from "react-redux";
 import { userlogoutrequest } from "../features/user/userAction";
 import { SocketContext } from "../socket/SocketProvider";
 import WelcomeScreenbackgroungpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
+
+const { height } = Dimensions.get("window");
 
 const SettingScreen = () => {
   const navigation = useNavigation();
@@ -37,46 +41,47 @@ const SettingScreen = () => {
   return (
     <WelcomeScreenbackgroungpage>
       <SafeAreaView style={styles.safe}>
-        {/* ---------- HEADER ---------- */}
-        <View style={styles.header}>
-          <Icon
-            name="arrow-back"
-            size={22}
-            onPress={() => navigation.goBack()}
-          />
-          <Text style={styles.headerTitle}>Setting</Text>
-        </View>
-
-        {/* ---------- SETTINGS LIST ---------- */}
-        <View style={styles.listBox}>
-          <Item icon="person-outline" title="Personal Information" />
-          <Item icon="shield-checkmark-outline" title="Privacy & Permission" />
-          <Item icon="notifications-outline" title="Notification" />
-          <Item icon="lock-closed-outline" title="Security" />
-          <Item icon="server-outline" title="Data & Storage" />
-          <Item icon="chatbox-ellipses-outline" title="Feedback" />
-          <Item icon="language-outline" title="Language" />
-          <Item icon="information-circle-outline" title="About lokal frnd" />
-        </View>
-
-        {/* ---------- LOG OUT ---------- */}
-        <TouchableOpacity
-          style={styles.logoutItem}
-          onPress={() => setShowLogoutModal(true)}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContainer}
         >
-          <View style={styles.logoutIcon}>
-            <Icon name="log-out-outline" size={20} color="#fff" />
+          {/* ---------- HEADER ---------- */}
+          <View style={styles.header}>
+            <Icon
+              name="arrow-back"
+              size={22}
+              onPress={() => navigation.goBack()}
+            />
+            <Text style={styles.headerTitle}>Setting</Text>
           </View>
-          <Text style={styles.logoutText}>Log Out</Text>
-          <Icon name="chevron-forward" size={18} color="#aaa" />
-        </TouchableOpacity>
+
+          {/* ---------- SETTINGS LIST ---------- */}
+          <View style={styles.listBox}>
+            <Item icon="person-outline" title="Personal Information" />
+            <Item icon="shield-checkmark-outline" title="Privacy & Permission" />
+            <Item icon="notifications-outline" title="Notification" />
+            <Item icon="lock-closed-outline" title="Security" />
+            <Item icon="server-outline" title="Data & Storage" />
+            <Item icon="chatbox-ellipses-outline" title="Feedback" />
+            <Item icon="language-outline" title="Language" />
+            <Item icon="information-circle-outline" title="About lokal frnd" />
+          </View>
+
+          {/* ---------- LOG OUT ---------- */}
+          <TouchableOpacity
+            style={styles.logoutItem}
+            onPress={() => setShowLogoutModal(true)}
+          >
+            <View style={styles.logoutIcon}>
+              <Icon name="log-out-outline" size={20} color="#fff" />
+            </View>
+            <Text style={styles.logoutText}>Log Out</Text>
+            <Icon name="chevron-forward" size={18} color="#aaa" />
+          </TouchableOpacity>
+        </ScrollView>
 
         {/* ---------- LOGOUT MODAL ---------- */}
-        <Modal
-          transparent
-          visible={showLogoutModal}
-          animationType="fade"
-        >
+        <Modal transparent visible={showLogoutModal} animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalBox}>
               <View style={styles.modalIcon}>
@@ -130,12 +135,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  scrollContainer: {
+    flexGrow: 1,
+    paddingBottom: height * 0.04,
+  },
+
   /* HEADER */
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
+    padding: 15,
+    marginTop: height * 0.07,
   },
+
   headerTitle: {
     fontSize: 20,
     fontWeight: "600",
@@ -179,7 +191,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     paddingHorizontal: 20,
     backgroundColor: "#fff",
-    marginTop: 100,
+    marginTop: height * 0.1,
   },
 
   logoutIcon: {

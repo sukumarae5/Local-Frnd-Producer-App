@@ -2,47 +2,60 @@ import React, { useEffect, useMemo } from "react";
 import {
   View,
   Text,
-  FlatList,
+  SectionList,
   TouchableOpacity,
   StyleSheet,
   Image,
+  SafeAreaView,
+  StatusBar,
+  Dimensions,
 } from "react-native";
+import LinearGradient from "react-native-linear-gradient";
 import { useDispatch, useSelector } from "react-redux";
-
+import { useNavigation } from "@react-navigation/native";
 import {
   friendPendingRequest,
   friendAcceptRequest,
   friendUnfriendRequest,
 } from "../features/friend/friendAction";
 
-/* ================= TIME HELPER ================= */
-const getDayLabel = (dateString) => {
-  if (!dateString) return "Earlier";
+const { width } = Dimensions.get("window");
 
+/* ================= TIME HELPERS ================= */
+
+const getDayLabel = (dateString) => {
   const date = new Date(dateString);
   const today = new Date();
 
-  const startOfToday = new Date(
+  const startToday = new Date(
     today.getFullYear(),
     today.getMonth(),
     today.getDate()
   );
 
-  const startOfDate = new Date(
+  const startDate = new Date(
     date.getFullYear(),
     date.getMonth(),
     date.getDate()
   );
 
-  const diffDays =
-    (startOfToday - startOfDate) / (1000 * 60 * 60 * 24);
+  const diff = (startToday - startDate) / (1000 * 60 * 60 * 24);
 
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
   return "Earlier";
 };
 
+const formatTimeAgo = (dateString) => {
+  const diffMin = Math.floor((Date.now() - new Date(dateString)) / 60000);
+
+  if (diffMin < 60) return `${diffMin} min ago`;
+  if (diffMin < 1440) return `${Math.floor(diffMin / 60)} hr ago`;
+  return `${Math.floor(diffMin / 1440)} d ago`;
+};
+
 const NotificationScreen = () => {
+  const navigation = useNavigation();
   const dispatch = useDispatch();
   const { incoming = [], loading } = useSelector((s) => s.friends);
 
@@ -50,103 +63,112 @@ const NotificationScreen = () => {
     dispatch(friendPendingRequest());
   }, [dispatch]);
 
-  const accept = (requestId) => {
-    dispatch(friendAcceptRequest(requestId));
-  };
-
-  const reject = (senderId) => {
-    dispatch(friendUnfriendRequest(senderId));
-  };
-
-  /* ================= GROUP BY DAY ================= */
   const sections = useMemo(() => {
-    const groups = { Today: [], Yesterday: [], Earlier: [] };
-
+    const grouped = {};
     incoming.forEach((item) => {
-      const label = getDayLabel(item.requested_at); // ✅ FIX
-      groups[label].push(item);
+      const label = getDayLabel(item.requested_at);
+      if (!grouped[label]) grouped[label] = [];
+      grouped[label].push(item);
     });
 
-    return groups;
+    return Object.keys(grouped).map((key) => ({
+      title: key,
+      data: grouped[key],
+    }));
   }, [incoming]);
 
-  const renderItem = ({ item }) => {
-    return (
-      <View style={styles.row}>
-        {/* Avatar */}
+  const renderItem = ({ item }) => (
+    <View style={styles.row}>
+      {/* Avatar with Gradient Border */}
+      <LinearGradient
+        colors={["#B620E0", "#7B2FF7"]}
+        style={styles.avatarBorder}
+      >
         <Image
           source={{
-            uri: item.avatar_id
-              ? item.avatar_id
-              : "https://i.pravatar.cc/150?img=12",
+            uri:
+              item.avatar_id ||
+              "https://i.pravatar.cc/150?img=12",
           }}
           style={styles.avatar}
         />
+      </LinearGradient>
 
-        {/* Center text */}
-        <View style={styles.center}>
-          <Text style={styles.name}>{item.sender_name}</Text>
+      {/* Text */}
+      <View style={styles.textContainer}>
+        <Text style={styles.name}>{item.sender_name}</Text>
+        <Text style={styles.subtitle}>
+          Sent You a Request
+        </Text>
+        <Text style={styles.time}>
+          {formatTimeAgo(item.requested_at)}
+        </Text>
+      </View>
 
-          <Text style={styles.message}>
-            Sent you a friend request
-          </Text>
-
-          <Text style={styles.time}>
-            {new Date(item.requested_at).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </Text>
-        </View>
-
-        {/* Right actions */}
-        <View style={styles.right}>
+      {/* Buttons OR Preview */}
+      {item.type === "like" ? (
+        <Image
+          source={{ uri: item.preview_image }}
+          style={styles.previewImage}
+        />
+      ) : (
+        <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.acceptBtn}
-            onPress={() => accept(item.request_id)}
+            onPress={() =>
+              dispatch(friendAcceptRequest(item.request_id))
+            }
           >
             <Text style={styles.acceptText}>Accept</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => reject(item.sender_id)}
+            style={styles.deleteBtn}
+            onPress={() =>
+              dispatch(friendUnfriendRequest(item.sender_id))
+            }
           >
             <Text style={styles.deleteText}>Delete</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    );
-  };
-
-  const renderSection = (title, data) => {
-    if (!data.length) return null;
-
-    return (
-      <View style={styles.sectionBlock}>
-        <Text style={styles.section}>{title}</Text>
-
-        <FlatList
-          data={data}
-          keyExtractor={(i) => String(i.request_id)}
-          renderItem={renderItem}
-          scrollEnabled={false}
-        />
-      </View>
-    );
-  };
-
-  return (
-    <View style={styles.container}>
-      {renderSection("Today", sections.Today)}
-      {renderSection("Yesterday", sections.Yesterday)}
-      {renderSection("Earlier", sections.Earlier)}
-
-      {!incoming.length && (
-        <Text style={styles.empty}>
-          {loading ? "Loading..." : "No notifications"}
-        </Text>
       )}
     </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+
+
+<View style={styles.header}>
+  <TouchableOpacity
+    onPress={() => navigation.goBack()}
+    style={styles.backButton}
+  >
+    <Text style={styles.backArrow}>‹</Text>
+  </TouchableOpacity>
+
+  <Text style={styles.headerTitle}>Notification</Text>
+</View>
+
+      <SectionList
+        sections={sections}
+        keyExtractor={(item) => item.request_id.toString()}
+        renderItem={renderItem}
+        renderSectionHeader={({ section }) => (
+          <Text style={styles.sectionTitle}>
+            {section.title}
+          </Text>
+        )}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 30 }}
+        ListEmptyComponent={
+          <Text style={styles.empty}>
+            {loading ? "Loading..." : "No notifications"}
+          </Text>
+        }
+      />
+    </SafeAreaView>
   );
 };
 
@@ -157,76 +179,95 @@ export default NotificationScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f4e9fb",
-    paddingHorizontal: 14,
-    paddingTop: 12,
+    backgroundColor: "#F3F3F5",
+    paddingHorizontal: 18,
   },
 
-  sectionBlock: {
-    marginBottom: 8,
-  },
+ header: {
+  paddingTop: 10,
+  paddingBottom: 15,
+},
 
-  section: {
-    fontSize: 13,
+header: {
+  flexDirection: "row",
+  alignItems: "center",
+  paddingVertical: 30,
+},
+
+backButton: {
+  marginRight: 10,
+},
+
+backArrow: {
+  fontSize: 26,
+  color: "#000",
+},
+
+headerTitle: {
+  fontSize: 18,
+  fontWeight: "600",
+  color: "#000",
+},
+
+  sectionTitle: {
+    fontSize: 16,
     fontWeight: "600",
-    color: "#6b6b6b",
-    marginBottom: 8,
-    marginLeft: 4,
+    marginTop: 10,
+    marginBottom: 18,
+    color: "#444",
   },
 
   row: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    marginBottom: 10,
-    elevation: 1,
+    marginBottom: 25,
+  },
+
+  avatarBorder: {
+    padding: 2,
+    borderRadius: 40,
+    marginRight: 12,
   },
 
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginRight: 10,
-    backgroundColor: "#eee",
+    width: 55,
+    height: 55,
+    borderRadius: 30,
   },
 
-  center: {
+  textContainer: {
     flex: 1,
-    justifyContent: "center",
   },
 
   name: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
-    color: "#1f1f1f",
+    color: "#222",
   },
 
-  message: {
-    fontSize: 12,
-    color: "#7a7a7a",
-    marginTop: 2,
+  subtitle: {
+    fontSize: 13,
+    color: "#777",
+    marginTop: 3,
   },
 
   time: {
-    fontSize: 11,
-    color: "#a0a0a0",
-    marginTop: 2,
+    fontSize: 12,
+    color: "#9A9A9A",
+    marginTop: 3,
   },
 
-  right: {
-    alignItems: "flex-end",
-    justifyContent: "center",
+  buttonContainer: {
+    flexDirection: "row",
+    alignItems: "center",
   },
 
   acceptBtn: {
-    backgroundColor: "#7c3aed",
+    backgroundColor: "#B620E0",
     paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: 12,
-    marginBottom: 6,
+    paddingVertical: 6,
+    borderRadius: 14,
+    marginRight: 8,
   },
 
   acceptText: {
@@ -235,10 +276,23 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
+  deleteBtn: {
+    backgroundColor: "#E5E5EA",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+
   deleteText: {
-    color: "#ff3b30",
+    color: "#555",
     fontSize: 12,
     fontWeight: "500",
+  },
+
+  previewImage: {
+    width: 55,
+    height: 55,
+    borderRadius: 10,
   },
 
   empty: {
