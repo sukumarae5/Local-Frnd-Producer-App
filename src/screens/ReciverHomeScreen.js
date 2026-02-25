@@ -69,7 +69,10 @@ const avatar =
 
         {/* ===== TOP BAR ===== */}
         <View style={styles.topBar}>
-          <View style={styles.coinWrapper}>
+          <TouchableOpacity
+  style={styles.coinWrapper}
+  onPress={() => navigation.navigate('ReciverWalletScreen')} // your new screen name
+>
             <LinearGradient
               colors={['#D51BF9', '#8C37F8']}
               start={{ x: 0, y: 0 }}
@@ -85,7 +88,7 @@ const avatar =
                 {coins.toLocaleString()}
               </Text>
             </LinearGradient>
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.headerRightIcons}>
             <TouchableOpacity>
