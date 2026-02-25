@@ -43,53 +43,16 @@ const HomeScreen = () => {
   const unread = useSelector(state => state.notification.unread);
   console.log('Unread notifications:', unread);
   const profilePhotoURL = userdata?.images?.profile_image;
-  const { connected } = useContext(SocketContext);
-
-  const [callingRandom, setCallingRandom] = React.useState(false);
-  const [callingRandomVideo, setCallingRandomVideo] = React.useState(false);
-
-  const startRandomAudioCall = () => {
-    if (!connected || callingRandom || callingRandomVideo) return;
-
-    setCallingRandom(true);
-
-    dispatch(callRequest({ call_type: 'AUDIO' }));
-
-    navigation.navigate('CallStatusScreen', {
-      call_type: 'AUDIO',
-      role: 'male',
-    });
-  };
-
-  const startRandomVideoCall = () => {
-    if (!connected || callingRandom || callingRandomVideo) return;
-
-    setCallingRandomVideo(true);
-
-    dispatch(callRequest({ call_type: 'VIDEO' }));
-
-    navigation.navigate('CallStatusScreen', {
-      call_type: 'VIDEO',
-      role: 'male',
-    });
-  };
-
-  useFocusEffect(
-    React.useCallback(() => {
-      setCallingRandom(false);
-      setCallingRandomVideo(false);
-    }, []),
-  );
 
   const imageUrl = profilePhotoURL
     ? { uri: profilePhotoURL }
     : require('../assets/boy2.jpg');
 
- useEffect(() => {
-  dispatch(userDatarequest());
-  dispatch(randomUserRequest());
-  dispatch(fetchUnreadCount()); // 👈 important
-}, [dispatch]);
+  useEffect(() => {
+    dispatch(userDatarequest());
+    dispatch(randomUserRequest());
+    dispatch(fetchUnreadCount()); // 👈 important
+  }, [dispatch]);
 
   useEffect(() => {
     if (!socket) return;
@@ -110,17 +73,22 @@ const HomeScreen = () => {
           {/* HEADER */}
           <View style={styles.headerRow}>
             {/* COIN BOX */}
-            <LinearGradient
-              colors={['#FFA726', '#FF7043']} // orange → reddish gradient (like image)
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.coinBox}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('PlanScreen')}
             >
-              <Image source={coinImg} style={styles.coinImage} />
-              <Text style={styles.coinText}>
-                {userdata?.user?.coin_balance ?? 0}
-              </Text>
-            </LinearGradient>
+              <LinearGradient
+                colors={['#F9E31B', '#F8373A']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.coinBox}
+              >
+                <Image source={coinImg} style={styles.coinImage} />
+                <Text style={styles.coinText}>
+                  {userdata?.user?.coin_balance ?? 0}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
 
             {/* MESSAGE ICON */}
             <TouchableOpacity
@@ -151,10 +119,10 @@ const HomeScreen = () => {
                 </View>
               )} */}
               {unread > 0 && (
-  <View style={styles.badge}>
-    <Text style={styles.badgeText}>{unread}</Text>
-  </View>
-)}
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unread}</Text>
+                </View>
+              )}
             </TouchableOpacity>
 
             {/* PROFILE */}
@@ -192,12 +160,26 @@ const HomeScreen = () => {
           {/* ACTIVE DOST SECTION */}
           <ActiveDostSectionScreen />
 
-          <BottomCallPills
-            callingRandom={callingRandom}
-            callingRandomVideo={callingRandomVideo}
-            onRandomAudio={startRandomAudioCall}
-            onRandomVideo={startRandomVideoCall}
-          />
+          {/* RANDOM CALL BUTTONS */}
+          <View style={styles.bottomActionRow}>
+            <TouchableOpacity
+              style={styles.connectBox}
+              onPress={() => navigation.navigate('TrainersCallpage')}
+            >
+              <Icon name="dice-5" size={iconSize(6)} color="#fff" />
+              <Text style={styles.connectText}>Random Calls</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.connectBox}>
+              <Icon name="map-marker" size={iconSize(6)} color="#fff" />
+              <Text style={styles.connectText}>Local Calls</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.connectBoxActive}>
+              <Icon name="account-multiple" size={iconSize(6)} color="#fff" />
+              <Text style={styles.connectText}>Followed Calls</Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={{ height: hp(12) }} />
         </ScrollView>
@@ -212,8 +194,8 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
 
   container: {
-    // paddingHorizontal: wp(5),
-    // paddingTop: hp(2),
+    paddingHorizontal: wp(5),
+    paddingTop: hp(2),
   },
   coinImage: {
     width: wp(8),
@@ -226,25 +208,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     marginBottom: hp(2),
-    marginTop: hp(4),
-    paddingHorizontal: wp(3),
+    marginTop: 30,
   },
 
   coinBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: wp(4),
-    height: hp(4.8),
-    borderRadius: wp(10), // fully rounded pill
-    marginRight: 'auto', // push to left properly
-    elevation: 4, // soft shadow (Android)
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(1),
+    borderRadius: wp(4),
+    marginRight: wp(30),
   },
 
   coinText: {
     marginLeft: wp(2),
-    fontSize: wp(3.8),
-    fontWeight: '800',
-    color: '#fff',
+    fontSize: wp(4),
+    fontWeight: '700',
+    color: '#000',
   },
 
   bellWrap: {
@@ -289,15 +269,13 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#C084FC', // soft purple
-    borderRadius: wp(6), // more rounded like image
-    paddingHorizontal: wp(4),
-    height: hp(5.5),
-    marginTop: hp(2),
-    marginHorizontal: wp(3), // 👈 Add this
-
-    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#b678f5ff',
+    borderRadius: wp(4),
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(1),
+    marginTop: hp(1),
+    backgroundColor: '#faf8fbff',
   },
 
   searchInput: {

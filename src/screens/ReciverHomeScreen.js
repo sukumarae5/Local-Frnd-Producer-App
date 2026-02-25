@@ -54,27 +54,27 @@ const ReciverHomeScreen = ({ navigation }) => {
 
   const { userdata } = useSelector(state => state.user);
   // const incoming = useSelector(state => state?.friends?.incoming || []);
-const unread = useSelector(state => state.notification.unread);
+  const unread = useSelector(state => state.notification.unread);
 
   useEffect(() => {
     dispatch(userDatarequest());
   }, [dispatch]);
   useEffect(() => {
-  dispatch(fetchUnreadCount());
-}, []);
+    dispatch(fetchUnreadCount());
+  }, []);
 
   const coins = userdata?.user?.coin_balance ?? 0;
-const avatar =
-  userdata?.images?.avatar ||
-  userdata?.images?.profile_image ||
-  null;
+  const avatar =
+    userdata?.images?.avatar || userdata?.images?.profile_image || null;
   return (
     <WelcomeScreenbackgroungpage>
       <ScrollView showsVerticalScrollIndicator={false}>
-
         {/* ===== TOP BAR ===== */}
         <View style={styles.topBar}>
-          <View style={styles.coinWrapper}>
+          <TouchableOpacity
+            style={styles.coinWrapper}
+            onPress={() => navigation.navigate('ReciverWalletScreen')} // your new screen name
+          >
             <LinearGradient
               colors={['#D51BF9', '#8C37F8']}
               start={{ x: 0, y: 0 }}
@@ -86,11 +86,9 @@ const avatar =
                 style={styles.coinImage}
                 resizeMode="contain"
               />
-              <Text style={styles.coinText}>
-                {coins.toLocaleString()}
-              </Text>
+              <Text style={styles.coinText}>{coins.toLocaleString()}</Text>
             </LinearGradient>
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.headerRightIcons}>
             <TouchableOpacity>
@@ -110,12 +108,10 @@ const avatar =
                   </View>
                 )} */}
                 {unread > 0 && (
-  <View style={styles.badge}>
-    <Text style={styles.badgeText}>
-      {unread}
-    </Text>
-  </View>
-)}
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{unread}</Text>
+                  </View>
+                )}
               </View>
             </TouchableOpacity>
 
@@ -126,17 +122,14 @@ const avatar =
             </TouchableOpacity>
 
             <TouchableOpacity
-  onPress={() => navigation.navigate('UplodePhotoScreen')}
->
-  {avatar ? (
-    <Image
-      source={{ uri: avatar }}
-      style={styles.avatar}
-    />
-  ) : (
-    <GradientIcon name="person-outline" />
-  )}
-</TouchableOpacity>
+              onPress={() => navigation.navigate('UplodePhotoScreen')}
+            >
+              {avatar ? (
+                <Image source={{ uri: avatar }} style={styles.avatar} />
+              ) : (
+                <GradientIcon name="person-outline" />
+              )}
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -162,7 +155,6 @@ const avatar =
         <View style={styles.goOnlineWrap}>
           <GoOnlineCard navigation={navigation} />
         </View>
-
       </ScrollView>
     </WelcomeScreenbackgroungpage>
   );
@@ -173,7 +165,6 @@ export default ReciverHomeScreen;
 /* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
-
   /* ===== TOP BAR ===== */
   topBar: {
     flexDirection: 'row',
@@ -181,7 +172,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: moderateScale(16),
     marginTop: moderateScale(30),
-    marginBottom: moderateScale(20),  // ✅ More space below topbar
+    marginBottom: moderateScale(20), // ✅ More space below topbar
   },
 
   /* ===== COIN BADGE ===== */
@@ -202,13 +193,13 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
-avatar: {
-  width: moderateScale(40),
-  height: moderateScale(40),
-  borderRadius: moderateScale(20),
-  borderWidth: 2,
-  borderColor: '#D51BF9',
-},
+  avatar: {
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
+    borderWidth: 2,
+    borderColor: '#D51BF9',
+  },
   coinImage: {
     width: moderateScale(24),
     height: moderateScale(24),
@@ -260,10 +251,10 @@ avatar: {
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: moderateScale(16),
-    marginBottom: moderateScale(22),  // ✅ Space below search
+    marginBottom: moderateScale(22), // ✅ Space below search
     paddingHorizontal: moderateScale(16),
     height: moderateScale(50),
-    backgroundColor: '#FFFFFF',       // ✅ WHITE background
+    backgroundColor: '#FFFFFF', // ✅ WHITE background
     borderWidth: 1.5,
     borderColor: '#D51BF9',
     borderRadius: moderateScale(16),
