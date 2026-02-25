@@ -16,6 +16,7 @@ export const recent_calls = `${MAIN_BASE_URL}/api/calls/recent-users`;
 export const friendrequest = `${MAIN_BASE_URL}/api/friend/request`;
 export const friendList = `${MAIN_BASE_URL}/api/friend/list`;
 export const friendAccept = `${MAIN_BASE_URL}/api/friend/accept`;
+export const friendReject = `${MAIN_BASE_URL}/api/friend/reject`;
 export const friendPending  = `${MAIN_BASE_URL}/api/friend/pending`;
 export const friendStatus =  `${MAIN_BASE_URL}/api/friend/status`;
 export const friendUnfriend = `${MAIN_BASE_URL}/api/friend/unfriend`;
@@ -45,6 +46,9 @@ export const chatDeleteApi  = `${MAIN_BASE_URL}/api/chat/messages`;
 export const chatListApi = `${MAIN_BASE_URL}/api/chat/list`;
 export const chatReadConversationApi =`${MAIN_BASE_URL}/api/chat/read/conversation`;
 
+export const notificationsApi = `${MAIN_BASE_URL}/notifications`;
+export const notificationUnreadApi = `${MAIN_BASE_URL}/notifications/unread-count`;
+export const notificationMarkReadApi = `${MAIN_BASE_URL}/notifications/read`;
 
 export const RATING_POST_URL  =`${MAIN_BASE_URL}/api/rating/submit`;
 

@@ -212,20 +212,40 @@ const ChatScreen = ({ route, navigation }) => {
       setIsRecording(false);
     }
   };
-  const startFriendCall = type => {
-    console.log('Starting friend call with type:', type);
-    dispatch(
-      friendCallRequest({
-        friend_id: user.user_id,
-        call_type: type,
-      }),
-    );
+  // const startFriendCall = type => {
+  //   console.log('Starting friend call with type:', type);
+  //   dispatch(
+  //     friendCallRequest({
+  //       friend_id: user.user_id,
+  //       call_type: type,
+  //     }),
+  //   );
 
-    navigation.navigate("CallStatusScreen", {
-    call_type: type,
+  //   navigation.navigate("CallStatusScreen", {
+  //   call_type: type,
     
+  // });
+  // };
+
+const startFriendCall = (type) => {
+
+  dispatch({
+    type: "OUTGOING_CALL_STARTED",
+    payload: {
+      session_id: null, // until API returns
+      call_type: type,
+      direction: "OUTGOING",
+      status: "RINGING"
+    }
   });
-  };
+
+  dispatch(friendCallRequest({
+    friend_id: user.user_id,
+    call_type: type,
+  }));
+
+  navigation.navigate("CallStatusScreen");
+};
 
   const messagesWithDate = useMemo(() => {
     const map = new Map();

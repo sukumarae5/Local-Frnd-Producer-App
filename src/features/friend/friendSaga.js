@@ -9,6 +9,9 @@ import {
   FRIEND_ACCEPT_REQUEST,
     FRIEND_STATUS_REQUEST,
   FRIEND_UNFRIEND_REQUEST,
+  FRIEND_REJECT_SUCCESS,
+  FRIEND_REJECT_FAILED,
+  FRIEND_REJECT_REQUEST,
 
 } from "./friendType";
 
@@ -39,7 +42,8 @@ import {
   friendList,
   friendPending,
   friendAccept,
-  friendStatus, friendUnfriend
+  friendStatus, friendUnfriend,
+  friendReject
 } from "../../api/userApi";
 import { chatListRequest } from "../chat/chatAction";
 
@@ -95,22 +99,48 @@ console.log("Pending Friends Response:", response);
   }
 }
 
+// function* acceptFriendSaga(action) {
+//   try {
+//     const token = yield call(AsyncStorage.getItem, "twittoke");
+//  console.log("Accept Friend Saga Payload:", action.payload);
+//     const response= yield call(
+//       axios.post,
+//       friendAccept,
+//       action.payload,
+//       { headers: { Authorization: `Bearer ${token}` } }
+//     );
+// console.log("Accept Friend Response:", response);
+//  yield put(friendAcceptSuccess(action.payload.request_id));
+//     yield put(friendPendingRequest());
+//     yield put(friendListRequest())
+//     yield put(chatListRequest());
+  
+//   } catch (e) {
+//     yield put(friendAcceptFailed(e.message));
+//   }
+// }
+
 function* acceptFriendSaga(action) {
   try {
     const token = yield call(AsyncStorage.getItem, "twittoke");
- console.log("Accept Friend Saga Payload:", action.payload);
-    const response= yield call(
+
+    yield call(
       axios.post,
       friendAccept,
-      action.payload,
+      { sender_id: action.payload.sender_id },  // FIXED
       { headers: { Authorization: `Bearer ${token}` } }
     );
-console.log("Accept Friend Response:", response);
- yield put(friendAcceptSuccess(action.payload.request_id));
+
+    // Remove notification from redux immediately
+    yield put({
+      type: "NOTIFICATION_REMOVE",
+      payload: action.meta.notificationId,
+    });
+
     yield put(friendPendingRequest());
-    yield put(friendListRequest())
+    yield put(friendListRequest());
     yield put(chatListRequest());
-  
+
   } catch (e) {
     yield put(friendAcceptFailed(e.message));
   }
@@ -150,6 +180,33 @@ function* unfriendSaga(action) {
     yield put(friendUnfriendFailed(e.message));
   }
 }
+
+function* rejectFriendSaga(action) {
+  try {
+    const token = yield call(AsyncStorage.getItem, "twittoke");
+
+    yield call(
+      axios.post,
+      friendReject,
+      { sender_id: action.payload.sender_id },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    // Remove notification from redux
+    yield put({
+      type: "NOTIFICATION_REMOVE",
+      payload: action.meta.notificationId,
+    });
+
+    yield put({ type: FRIEND_REJECT_SUCCESS });
+
+  } catch (e) {
+    yield put({
+      type: FRIEND_REJECT_FAILED,
+      payload: e.message,
+    });
+  }
+}
 /* ================= WATCHERS ================= */
 export default function* friendSaga() {
   yield takeLatest(FRIEND_REQUEST, sendFriendRequestSaga);
@@ -158,4 +215,5 @@ export default function* friendSaga() {
   yield takeLatest(FRIEND_ACCEPT_REQUEST, acceptFriendSaga);
   yield takeLatest(FRIEND_STATUS_REQUEST, fetchFriendStatusSaga);
   yield takeLatest(FRIEND_UNFRIEND_REQUEST, unfriendSaga);
+  yield takeLatest(FRIEND_REJECT_REQUEST, rejectFriendSaga);
 }

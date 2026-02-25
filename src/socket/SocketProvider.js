@@ -10,7 +10,7 @@ import {
   incomingCallReject,
   incomingCallRinging
 } from "../features/calls/callAction";
-
+import { fetchUnreadCount } from '../features/notification/notificationAction';
 import {
   chatMessageAdd,
   chatUnreadIncrease,
@@ -59,13 +59,17 @@ const SocketProvider = ({ children }) => {
 
       /* ---------------- FRIEND ---------------- */
 
-      socket.on('friend_request', () => {
-        dispatch(friendPendingRequest());
-      });
+      // socket.on('friend_request', () => {
+      //   dispatch(friendPendingRequest());
+      // });
 
-      socket.on('friend_accept', () => {
-        dispatch(friendPendingRequest());
-      });
+      // socket.on('friend_accept', () => {
+      //   dispatch(friendPendingRequest());
+      // });
+
+      socket.on("new_notification", () => {
+  dispatch(fetchUnreadCount());
+});
 
       /* ---------------- CHAT ---------------- */
 
@@ -124,13 +128,21 @@ const SocketProvider = ({ children }) => {
 
       socket.on("incoming_call", (data) => {
 
-        dispatch(incomingCallRinging({
-          session_id: data.session_id,
-          from: data.from,
+        // dispatch(incomingCallRinging({
+        //   session_id: data.session_id,
+        //   from: data.from,
          
-          call_type: data.call_type,
-          is_friend: data.is_friend || false
-        }));
+        //   call_type: data.call_type,
+        //   is_friend: data.is_friend || false
+        // }));
+        dispatch(incomingCallRinging({
+  session_id: data.session_id,
+  call_type: data.call_type,
+  direction: "INCOMING",
+  from_user: data.from,
+  is_friend: data.is_friend || false,
+  status: "RINGING"
+}));
 
       });
 

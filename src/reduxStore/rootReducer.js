@@ -15,6 +15,7 @@ import userLifestyleReducer from"../features/lifeStyle/lifestyleReducer"
 import otherusersSaga from "../features/Otherusers/otherUserReducer"
 import chatReducer from "../features/chat/chatReducer"
 import ratingReducer from "../features/rating/ratingReducer"
+import notificationReducer from "../features/notification/notificationReducer"
 
 const rootReducer = combineReducers({
   auth:authReducer,
@@ -32,7 +33,8 @@ const rootReducer = combineReducers({
   userLifestyle:userLifestyleReducer,
   otherUsers:otherusersSaga,
   chat:chatReducer,
-  rating:ratingReducer
+  rating:ratingReducer,
+  notification:notificationReducer
 });
 
 export default rootReducer;

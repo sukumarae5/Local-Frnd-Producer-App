@@ -18,6 +18,7 @@ import {
   FRIEND_STATUS_FAILED,
   FRIEND_STATUS_SUCCESS,
   FRIEND_STATUS_REQUEST,
+  FRIEND_REJECT_REQUEST,
 
 } from "./friendType";
 
@@ -66,11 +67,11 @@ export const friendPendingFailed = (error) => ({
   payload: error,
 });
 
-export const friendAcceptRequest = (request_id) => ({
+export const friendAcceptRequest = (sender_id, notificationId) => ({
   type: FRIEND_ACCEPT_REQUEST,
-  payload: { request_id },
+  payload: { sender_id },
+  meta: { notificationId }
 });
-
 export const friendAcceptSuccess = (request_id) => ({
   type: FRIEND_ACCEPT_SUCCESS,
   payload: request_id,
@@ -110,4 +111,10 @@ export const friendUnfriendSuccess = (other) => ({
 export const friendUnfriendFailed = (error) => ({
   type: FRIEND_UNFRIEND_FAILED,
   payload: error,
+});
+
+export const friendRejectRequest = (sender_id, notificationId) => ({
+  type: FRIEND_REJECT_REQUEST,
+  payload: { sender_id },
+  meta: { notificationId }
 });

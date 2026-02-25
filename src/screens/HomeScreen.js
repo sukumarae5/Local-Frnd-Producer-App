@@ -25,6 +25,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import BottomCallPills from '../components/BottomCallPills';
 import { callRequest } from '../features/calls/callAction';
 import { useFocusEffect } from '@react-navigation/native';
+import { fetchUnreadCount } from '../features/notification/notificationAction';
 
 const { width, height } = Dimensions.get('window');
 const wp = v => (width * v) / 100;
@@ -37,8 +38,10 @@ const HomeScreen = () => {
   const { socketRef } = useContext(SocketContext);
   const socket = socketRef?.current;
   const { userdata } = useSelector(state => state.user);
-  const { incoming } = useSelector(state => state.friends);
+  // const { incoming } = useSelector(state => state.friends);
   console.log(userdata);
+  const unread = useSelector(state => state.notification.unread);
+  console.log('Unread notifications:', unread);
   const profilePhotoURL = userdata?.images?.profile_image;
   const { connected } = useContext(SocketContext);
 
@@ -82,10 +85,11 @@ const HomeScreen = () => {
     ? { uri: profilePhotoURL }
     : require('../assets/boy2.jpg');
 
-  useEffect(() => {
-    dispatch(userDatarequest());
-    dispatch(randomUserRequest());
-  }, [dispatch]);
+ useEffect(() => {
+  dispatch(userDatarequest());
+  dispatch(randomUserRequest());
+  dispatch(fetchUnreadCount()); // 👈 important
+}, [dispatch]);
 
   useEffect(() => {
     if (!socket) return;
@@ -141,11 +145,16 @@ const HomeScreen = () => {
               <View style={styles.iconCircle}>
                 <Icon name="bell-outline" size={iconSize(6)} color="#fff" />
               </View>
-              {incoming?.length > 0 && (
+              {/* {incoming?.length > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{incoming.length}</Text>
                 </View>
-              )}
+              )} */}
+              {unread > 0 && (
+  <View style={styles.badge}>
+    <Text style={styles.badgeText}>{unread}</Text>
+  </View>
+)}
             </TouchableOpacity>
 
             {/* PROFILE */}

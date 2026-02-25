@@ -22,6 +22,7 @@ import ActiveDostSectionScreen from './ActiveDostSectionScreen';
 import LikeMindedSectionScreen from '../screens/LikeMindedSectionScreen';
 import GoOnlineCard from '../components/GoOnlineCard';
 import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
+import { fetchUnreadCount } from '../features/notification/notificationAction';
 
 /* ================= RESPONSIVE ================= */
 
@@ -52,11 +53,15 @@ const ReciverHomeScreen = ({ navigation }) => {
   const { connected } = useContext(SocketContext);
 
   const { userdata } = useSelector(state => state.user);
-  const incoming = useSelector(state => state?.friends?.incoming || []);
+  // const incoming = useSelector(state => state?.friends?.incoming || []);
+const unread = useSelector(state => state.notification.unread);
 
   useEffect(() => {
     dispatch(userDatarequest());
   }, [dispatch]);
+  useEffect(() => {
+  dispatch(fetchUnreadCount());
+}, []);
 
   const coins = userdata?.user?.coin_balance ?? 0;
 const avatar =
@@ -97,13 +102,20 @@ const avatar =
             >
               <View>
                 <GradientIcon name="notifications-outline" />
-                {incoming.length > 0 && (
+                {/* {incoming.length > 0 && (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>
                       {incoming.length}
                     </Text>
                   </View>
-                )}
+                )} */}
+                {unread > 0 && (
+  <View style={styles.badge}>
+    <Text style={styles.badgeText}>
+      {unread}
+    </Text>
+  </View>
+)}
               </View>
             </TouchableOpacity>
 

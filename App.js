@@ -60,28 +60,60 @@ import it here also.
 
 const Stack = createNativeStackNavigator();
 
+
 function MainNavigator() {
+
   const navigation = useNavigation();
 
   const call = useSelector((state) => state.calls?.call);
 
-useEffect(() => {
-  if (!call) return;
+  useEffect(() => {
+    if (!call || !call.status) return;
+    if (
+      call.direction === "INCOMING" &&
+      call.status === "RINGING"
+    ) {
 
-  // ✅ only chat calls can open accept / reject screen
-  if (
-    call.direction === "INCOMING" &&
-    call.status === "RINGING" &&
-    call.is_friend === true
+      navigation.navigate("IncomingCallScreen", {
+        session_id: call.session_id,
+        call_type: call.call_type,
+        fromUser: call.from_user,
+      });
 
-  ) {
-    navigation.navigate("IncomingCallScreen", {
-      session_id: call.session_id,
-      call_type: call.call_type,
-      fromUser: call.from_user
-    });
-  }
-}, [call]);
+      return;
+    }
+
+
+    if (call.status === "ACCEPTED") {
+
+      navigation.replace(
+        call.call_type === "VIDEO"
+          ? "VideocallScreen"
+          : "AudiocallScreen",
+        {
+          session_id: call.session_id,
+          role: call.direction === "OUTGOING" ? "caller" : "receiver"
+        }
+      );
+
+      return;
+    }
+
+    /* ================= REJECTED ================= */
+
+    if (call.status === "REJECTED") {
+      navigation.goBack();
+      return;
+    }
+
+    /* ================= TIMEOUT ================= */
+
+    if (call.status === "TIMEOUT") {
+      navigation.goBack();
+      return;
+    }
+
+  }, [call, navigation]);
 
 
   return (
@@ -138,6 +170,7 @@ useEffect(() => {
       </Stack.Navigator>
   );
 }
+
 export default function App() {
   return (
     <Provider store={store}>

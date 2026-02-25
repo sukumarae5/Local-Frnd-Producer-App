@@ -15,7 +15,7 @@ import lifestyleSaga from "../features/lifeStyle/lifestyleSaga"
 import otherusersSaga from "../features/Otherusers/otherUserSaga"
 import chatSaga from "../features/chat/chatSaga"
 import ratingSaga from "../features/rating/ratingSaga"
-
+import notificationSaga from "../features/notification/notificationSaga"
 
 export default function* rootSaga() {
   yield all([
@@ -35,6 +35,7 @@ export default function* rootSaga() {
     otherusersSaga(),
     chatSaga(),
         ratingSaga(),
+        notificationSaga()
 
   ]);
 }

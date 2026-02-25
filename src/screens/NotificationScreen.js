@@ -1,27 +1,32 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
   SectionList,
-  TouchableOpacity,
   StyleSheet,
   Image,
   SafeAreaView,
   StatusBar,
-  Dimensions,
+  TouchableOpacity,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigation } from "@react-navigation/native";
+
 import {
-  friendPendingRequest,
+  fetchNotifications,
+  markNotificationsRead,
+} from "../features/notification/notificationAction";
+
+import {
   friendAcceptRequest,
-  friendUnfriendRequest,
+  friendRejectRequest,
 } from "../features/friend/friendAction";
 
-const { width } = Dimensions.get("window");
-
-/* ================= TIME HELPERS ================= */
+import {
+  FRIEND_ACCEPT_REQUEST,
+  FRIEND_REJECT_REQUEST,
+} from "../features/friend/friendType";
 
 const getDayLabel = (dateString) => {
   const date = new Date(dateString);
@@ -57,16 +62,20 @@ const formatTimeAgo = (dateString) => {
 const NotificationScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
-  const { incoming = [], loading } = useSelector((s) => s.friends);
+  const { list = [], loading } = useSelector((s) => s.notification);
+
+  const [processingId, setProcessingId] = useState(null);
 
   useEffect(() => {
-    dispatch(friendPendingRequest());
+    dispatch(fetchNotifications());
+    dispatch(markNotificationsRead());
   }, [dispatch]);
 
   const sections = useMemo(() => {
     const grouped = {};
-    incoming.forEach((item) => {
-      const label = getDayLabel(item.requested_at);
+
+    list.forEach((item) => {
+      const label = getDayLabel(item.created_at);
       if (!grouped[label]) grouped[label] = [];
       grouped[label].push(item);
     });
@@ -75,11 +84,40 @@ const NotificationScreen = () => {
       title: key,
       data: grouped[key],
     }));
-  }, [incoming]);
+  }, [list]);
+
+  /* ================= ACCEPT ================= */
+
+  const handleAccept = (item) => {
+    if (processingId) return;
+
+    setProcessingId(item.id);
+
+    dispatch({
+      type: FRIEND_ACCEPT_REQUEST,
+      payload: { sender_id: item.sender_id },
+      meta: { notificationId: item.id }, // used in saga to remove notification
+    });
+  };
+
+  /* ================= REJECT ================= */
+
+  const handleReject = (item) => {
+    if (processingId) return;
+
+    setProcessingId(item.id);
+
+    dispatch({
+      type: FRIEND_REJECT_REQUEST,
+      payload: { sender_id: item.sender_id },
+      meta: { notificationId: item.id }, // used in saga to remove notification
+    });
+  };
+
+  /* ================= RENDER ITEM ================= */
 
   const renderItem = ({ item }) => (
     <View style={styles.row}>
-      {/* Avatar with Gradient Border */}
       <LinearGradient
         colors={["#B620E0", "#7B2FF7"]}
         style={styles.avatarBorder}
@@ -87,48 +125,43 @@ const NotificationScreen = () => {
         <Image
           source={{
             uri:
-              item.avatar_id ||
+              item.avatar_url ||
               "https://i.pravatar.cc/150?img=12",
           }}
           style={styles.avatar}
         />
       </LinearGradient>
 
-      {/* Text */}
       <View style={styles.textContainer}>
-        <Text style={styles.name}>{item.sender_name}</Text>
-        <Text style={styles.subtitle}>
-          Sent You a Request
+        <Text style={styles.name}>
+          {item.sender_name || "Notification"}
         </Text>
+        <Text style={styles.subtitle}>{item.message}</Text>
         <Text style={styles.time}>
-          {formatTimeAgo(item.requested_at)}
+          {formatTimeAgo(item.created_at)}
         </Text>
       </View>
 
-      {/* Buttons OR Preview */}
-      {item.type === "like" ? (
-        <Image
-          source={{ uri: item.preview_image }}
-          style={styles.previewImage}
-        />
-      ) : (
+      {item.type === "FRIEND_REQUEST" && (
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.acceptBtn}
-            onPress={() =>
-              dispatch(friendAcceptRequest(item.request_id))
-            }
+            disabled={processingId === item.id}
+            onPress={() => handleAccept(item)}
           >
-            <Text style={styles.acceptText}>Accept</Text>
+            <Text style={styles.acceptText}>
+              {processingId === item.id ? "..." : "Accept"}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.deleteBtn}
-            onPress={() =>
-              dispatch(friendUnfriendRequest(item.sender_id))
-            }
+            style={styles.rejectBtn}
+            disabled={processingId === item.id}
+            onPress={() => handleReject(item)}
           >
-            <Text style={styles.deleteText}>Delete</Text>
+            <Text style={styles.rejectText}>
+              {processingId === item.id ? "..." : "Reject"}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -139,21 +172,19 @@ const NotificationScreen = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-
-<View style={styles.header}>
-  <TouchableOpacity
-    onPress={() => navigation.goBack()}
-    style={styles.backButton}
-  >
-    <Text style={styles.backArrow}>‹</Text>
-  </TouchableOpacity>
-
-  <Text style={styles.headerTitle}>Notification</Text>
-</View>
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Text style={styles.backArrow}>‹</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Notification</Text>
+      </View>
 
       <SectionList
         sections={sections}
-        keyExtractor={(item) => item.request_id.toString()}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
         renderSectionHeader={({ section }) => (
           <Text style={styles.sectionTitle}>
@@ -182,33 +213,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3F3F5",
     paddingHorizontal: 18,
   },
-
- header: {
-  paddingTop: 10,
-  paddingBottom: 15,
-},
-
-header: {
-  flexDirection: "row",
-  alignItems: "center",
-  paddingVertical: 30,
-},
-
-backButton: {
-  marginRight: 10,
-},
-
-backArrow: {
-  fontSize: 26,
-  color: "#000",
-},
-
-headerTitle: {
-  fontSize: 18,
-  fontWeight: "600",
-  color: "#000",
-},
-
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 25,
+  },
+  backButton: {
+    marginRight: 10,
+  },
+  backArrow: {
+    fontSize: 26,
+    color: "#000",
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000",
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
@@ -216,85 +237,66 @@ headerTitle: {
     marginBottom: 18,
     color: "#444",
   },
-
   row: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 25,
   },
-
   avatarBorder: {
     padding: 2,
     borderRadius: 40,
     marginRight: 12,
   },
-
   avatar: {
     width: 55,
     height: 55,
     borderRadius: 30,
   },
-
   textContainer: {
     flex: 1,
   },
-
   name: {
     fontSize: 15,
     fontWeight: "600",
     color: "#222",
   },
-
   subtitle: {
     fontSize: 13,
     color: "#777",
     marginTop: 3,
   },
-
   time: {
     fontSize: 12,
     color: "#9A9A9A",
     marginTop: 3,
   },
-
   buttonContainer: {
     flexDirection: "row",
     alignItems: "center",
   },
-
   acceptBtn: {
     backgroundColor: "#B620E0",
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 14,
-    marginRight: 8,
+    marginRight: 6,
   },
-
   acceptText: {
     color: "#fff",
     fontSize: 12,
     fontWeight: "600",
   },
-
-  deleteBtn: {
+  rejectBtn: {
     backgroundColor: "#E5E5EA",
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 14,
   },
-
-  deleteText: {
+  rejectText: {
     color: "#555",
     fontSize: 12,
     fontWeight: "500",
   },
-
-  previewImage: {
-    width: 55,
-    height: 55,
-    borderRadius: 10,
-  },
-
   empty: {
     textAlign: "center",
     marginTop: 40,
