@@ -55,7 +55,7 @@ const ReciverHomeScreen = ({ navigation }) => {
   const { userdata } = useSelector(state => state.user);
   // const incoming = useSelector(state => state?.friends?.incoming || []);
   const unread = useSelector(state => state.notification.unread);
-
+console.log(userdata)
   useEffect(() => {
     dispatch(userDatarequest());
   }, [dispatch]);
@@ -63,7 +63,7 @@ const ReciverHomeScreen = ({ navigation }) => {
     dispatch(fetchUnreadCount());
   }, []);
 
-  const coins = userdata?.user?.coin_balance ?? 0;
+  const coins = userdata?.user?.rings_balance ?? 0;
   const avatar =
     userdata?.images?.avatar || userdata?.images?.profile_image || null;
   return (

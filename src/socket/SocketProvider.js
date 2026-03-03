@@ -28,162 +28,201 @@ const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
   const appState = useRef(AppState.currentState);
   const [connected, setConnected] = useState(false);
+const [token, setToken] = useState(null);
+//   useEffect(() => {
 
-  useEffect(() => {
+//     let mounted = true;
+//     let socket;
 
-    let mounted = true;
-    let socket;
+//     const init = async () => {
 
-    const init = async () => {
+//       const savedToken  = await AsyncStorage.getItem('twittoke');
 
-      const token = await AsyncStorage.getItem('twittoke');
+//       if (!savedToken ) {
+//         destroySocket();
+//         if (mounted) setConnected(false);
+//         return;
+//       }
 
-      if (!token) {
-        destroySocket();
-        if (mounted) setConnected(false);
-        return;
-      }
+//       socket = createSocket(token);
+//       socketRef.current = socket;
 
-      socket = createSocket(token);
-      socketRef.current = socket;
+//       /* ---------------- CONNECT ---------------- */
 
-      /* ---------------- CONNECT ---------------- */
+//       socket.on('connect', () => {
+//         if (mounted) setConnected(true);
+//       });
 
-      socket.on('connect', () => {
-        if (mounted) setConnected(true);
-      });
+//       socket.on('disconnect', () => {
+//         if (mounted) setConnected(false);
+//       });
 
-      socket.on('disconnect', () => {
-        if (mounted) setConnected(false);
-      });
+//       /* ---------------- FRIEND ---------------- */
 
-      /* ---------------- FRIEND ---------------- */
+//       // socket.on('friend_request', () => {
+//       //   dispatch(friendPendingRequest());
+//       // });
 
-      // socket.on('friend_request', () => {
-      //   dispatch(friendPendingRequest());
-      // });
+//       // socket.on('friend_accept', () => {
+//       //   dispatch(friendPendingRequest());
+//       // });
 
-      // socket.on('friend_accept', () => {
-      //   dispatch(friendPendingRequest());
-      // });
+//       socket.on("new_notification", () => {
+//   dispatch(fetchUnreadCount());
+// });
 
-      socket.on("new_notification", () => {
-  dispatch(fetchUnreadCount());
-});
+//       /* ---------------- CHAT ---------------- */
 
-      /* ---------------- CHAT ---------------- */
+//       socket.on('chat_receive', msg => {
 
-      socket.on('chat_receive', msg => {
+//         const state = store.getState();
+//         const myId = state.user.userdata?.user?.user_id;
 
-        const state = store.getState();
-        const myId = state.user.userdata?.user?.user_id;
+//         if (!myId) return;
 
-        if (!myId) return;
+//         const senderId = msg.sender_id ?? msg.senderId;
+//         const receiverId = msg.receiver_id ?? msg.receiverId;
 
-        const senderId = msg.sender_id ?? msg.senderId;
-        const receiverId = msg.receiver_id ?? msg.receiverId;
+//         if (senderId !== myId && receiverId !== myId) return;
 
-        if (senderId !== myId && receiverId !== myId) return;
+//         const otherUserId =
+//           Number(senderId) === Number(myId)
+//             ? receiverId
+//             : senderId;
 
-        const otherUserId =
-          Number(senderId) === Number(myId)
-            ? receiverId
-            : senderId;
+//         dispatch(
+//           chatMessageAdd(otherUserId, {
+//             ...msg,
+//             sender_id: senderId,
+//             receiver_id: receiverId,
+//           }),
+//         );
 
-        dispatch(
-          chatMessageAdd(otherUserId, {
-            ...msg,
-            sender_id: senderId,
-            receiver_id: receiverId,
-          }),
-        );
+//         if (Number(receiverId) !== Number(myId)) return;
 
-        if (Number(receiverId) !== Number(myId)) return;
+//         const activeChatUserId = state.chat.activeChatUserId;
 
-        const activeChatUserId = state.chat.activeChatUserId;
+//         if (Number(activeChatUserId) === Number(senderId)) {
 
-        if (Number(activeChatUserId) === Number(senderId)) {
+//           socket.emit('chat_read', {
+//             messageId: msg.message_id,
+//           });
 
-          socket.emit('chat_read', {
-            messageId: msg.message_id,
-          });
+//           return;
+//         }
 
-          return;
-        }
+//         dispatch(chatUnreadIncrease(senderId));
+//       });
 
-        dispatch(chatUnreadIncrease(senderId));
-      });
+//       socket.on('chat_read_update', ({ messageId }) => {
 
-      socket.on('chat_read_update', ({ messageId }) => {
+//         if (!messageId) return;
 
-        if (!messageId) return;
+//         dispatch({
+//           type: CHAT_MARK_READ_SUCCESS,
+//           payload: { messageId },
+//         });
+//       });
 
-        dispatch({
-          type: CHAT_MARK_READ_SUCCESS,
-          payload: { messageId },
-        });
-      });
+//       /* ---------------- CALL ---------------- */
 
-      /* ---------------- CALL ---------------- */
+//       socket.on("incoming_call", (data) => {
 
-      socket.on("incoming_call", (data) => {
-
-        // dispatch(incomingCallRinging({
-        //   session_id: data.session_id,
-        //   from: data.from,
+//         // dispatch(incomingCallRinging({
+//         //   session_id: data.session_id,
+//         //   from: data.from,
          
-        //   call_type: data.call_type,
-        //   is_friend: data.is_friend || false
-        // }));
-        dispatch(incomingCallRinging({
-  session_id: data.session_id,
-  call_type: data.call_type,
-  direction: "INCOMING",
-  from_user: data.from,
-  is_friend: data.is_friend || false,
-  status: "RINGING"
-}));
+//         //   call_type: data.call_type,
+//         //   is_friend: data.is_friend || false
+//         // }));
+//         dispatch(incomingCallRinging({
+//   session_id: data.session_id,
+//   call_type: data.call_type,
+//   direction: "INCOMING",
+//   from_user: data.from,
+//   is_friend: data.is_friend || false,
+//   status: "RINGING"
+// }));
 
-      });
+//       });
 
-      socket.on("call_accepted", (data) => {
-        dispatch(incomingCallAccept(data));
-      });
+//       socket.on("call_accepted", (data) => {
+//         dispatch(incomingCallAccept(data));
+//       });
 
-      socket.on("call_rejected", (data) => {
-        dispatch(incomingCallReject(data));
-      });
+//       socket.on("call_rejected", (data) => {
+//         dispatch(incomingCallReject(data));
+//       });
 
-    };
+//     };
 
-    init();
+//     init();
 
-    return () => {
+//     return () => {
 
-      mounted = false;
+//       mounted = false;
 
-      if (socket) {
+//       if (socket) {
 
-        socket.off('connect');
-        socket.off('disconnect');
+//         socket.off('connect');
+//         socket.off('disconnect');
 
-        socket.off('friend_request');
-        socket.off('friend_accept');
+//         socket.off('friend_request');
+//         socket.off('friend_accept');
 
-        socket.off('chat_receive');
-        socket.off('chat_read_update');
+//         socket.off('chat_receive');
+//         socket.off('chat_read_update');
 
-        socket.off('incoming_call');
-        socket.off('call_accepted');
-        socket.off('call_rejected');
+//         socket.off('incoming_call');
+//         socket.off('call_accepted');
+//         socket.off('call_rejected');
 
-        socket.disconnect();
-      }
+//         socket.disconnect();
+//       }
 
+//       destroySocket();
+//     };
+
+//   }, [dispatch, store]);
+
+useEffect(() => {
+  let mounted = true;
+  let socket;
+
+  const init = async () => {
+    const savedToken = await AsyncStorage.getItem('twittoke');
+
+    if (!savedToken) {
       destroySocket();
-    };
+      if (mounted) setConnected(false);
+      return;
+    }
 
-  }, [dispatch, store]);
+    setToken(savedToken); // 🔥 important
+  };
+
+  init();
+
+  return () => {
+    mounted = false;
+  };
+}, []);
+
+useEffect(() => {
+  if (!token) return;
+
+  const socket = createSocket(token);
+  socketRef.current = socket;
+
+  socket.on("connect", () => {
+    setConnected(true);
+  });
+
+  socket.on("disconnect", () => {
+    setConnected(false);
+  });
+
+}, [token]);
 
   useEffect(() => {
 

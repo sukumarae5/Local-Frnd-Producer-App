@@ -15,7 +15,7 @@ import { user_Edit, USER_DATA, newuserapi } from "../../api/userApi";
 import { USER_LOGOUT_REQUEST } from "./userType";
 import { cancel, take, race } from "redux-saga/effects";
 
-// ------------------ EDIT USER ------------------
+
 function* handleUserEdit(action) {
   try {
     const token = yield call([AsyncStorage, "getItem"], "twittoke");
@@ -35,7 +35,7 @@ console.log(response)
 }
 
 
-// ------------------ GET USER DATA ------------------
+
 function* handleUserData() {
   try {
     const token = yield call([AsyncStorage, "getItem"], "twittoke");
