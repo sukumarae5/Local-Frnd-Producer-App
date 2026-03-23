@@ -16,7 +16,6 @@ import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 // ✅ fix
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
-
 import { useDispatch, useSelector } from 'react-redux';
 import { SocketContext } from '../socket/SocketProvider';
 import { friendCallRequest } from '../features/calls/callAction';
@@ -27,6 +26,7 @@ import {
   chatMarkReadRequest,
   chatSetActive,
   chatClearActive,
+  chatMessageAdd
 } from '../features/chat/chatAction';
 
 /* helpers */
@@ -96,12 +96,10 @@ const HeartsBackground = () => (
 const ChatScreen = ({ route, navigation }) => {
   const { user } = route.params;
   const { socketRef } = useContext(SocketContext);
-  console.log(require('react-native-audio-recorder-player'));
 
   const dispatch = useDispatch();
   const flatRef = useRef(null);
   const audioRecorderPlayer = useRef(AudioRecorderPlayer).current;
-
   const [isRecording, setIsRecording] = useState(false);
   const recordPath = useRef(null);
 
@@ -130,11 +128,16 @@ const ChatScreen = ({ route, navigation }) => {
 
   /* mark whole conversation read (API) */
 
-  useEffect(() => {
-    if (!conversationId) return;
-    dispatch(chatMarkReadRequest(user.user_id, conversationId));
-  }, [conversationId, dispatch, user.user_id]);
+ 
 
+  useEffect(() => {
+  if (!conversationId) return;
+
+  socketRef.current?.emit('chat_read_all', {
+    conversationId,
+  });
+
+}, [conversationId]);
   /* clear badge */
 
   useEffect(() => {
@@ -143,42 +146,40 @@ const ChatScreen = ({ route, navigation }) => {
 
   /* ---------------- SOCKET READ ---------------- */
 
-  const lastReadSentRef = useRef(new Set());
-
-  useEffect(() => {
-    if (!socketRef.current) return;
-
-    messages.forEach(m => {
-      const msg = m.message ?? m;
-
-      if (
-        Number(msg.sender_id) === Number(user.user_id) &&
-        msg.is_read === 0 &&
-        !lastReadSentRef.current.has(msg.message_id)
-      ) {
-        lastReadSentRef.current.add(msg.message_id);
-
-        socketRef.current.emit('chat_read', {
-          messageId: msg.message_id,
-        });
-      }
-    });
-  }, [messages, socketRef, user.user_id]);
+ 
 
   /* send text */
+ 
+ const sendMessage = () => {
+  if (!text.trim()) return;
 
-  const sendMessage = () => {
-    if (!text.trim()) return;
+const tempMessage = {
+  message_id: 'temp-' + Date.now(),
+  sender_id: myId,
+  receiver_id: user.user_id,
+  content: text,
+  message_type: 'text',
+  sent_at: new Date().toISOString(),
+  status: 'sent', // ✅
+};
+  // ✅ CORRECT DISPATCH
+  dispatch(chatMessageAdd({
+    otherUserId: user.user_id,
+    message: tempMessage,
+  }));
 
-    socketRef.current?.emit('chat_send', {
-      receiverId: user.user_id,
-      content: text,
-      message_type: 'text',
-    });
+  // ✅ SOCKET SEND
+  socketRef.current?.emit('chat_send', {
+    receiverId: user.user_id,
+    content: text,
+    message_type: 'text',
+  });
 
-    setText('');
-  };
-
+  setText('');
+};
+useEffect(() => {
+  flatRef.current?.scrollToEnd({ animated: true });
+}, [messages]);
   /* audio record */
 
   const startRecording = async () => {
@@ -315,11 +316,22 @@ const startFriendCall = (type) => {
 
           {isMe && (
             <Ionicons
-              name={item.is_read ? 'checkmark-done' : 'checkmark'}
-              size={14}
-              color={item.is_read ? '#7CFCFF' : '#ddd'}
-              style={{ marginLeft: 4 }}
-            />
+  name={
+    item.is_read
+      ? 'checkmark-done'     // blue
+      : item.delivered
+      ? 'checkmark-done'     // gray
+      : 'checkmark'          // single
+  }
+  size={14}
+  color={
+    item.is_read
+      ? '#34B7F1'            // blue
+      : item.delivered
+      ? '#999'               // gray
+      : '#ddd'               // light
+  }
+/>
           )}
         </View>
       </View>
@@ -396,7 +408,7 @@ const startFriendCall = (type) => {
 
         <FlatList
           ref={flatRef}
-          data={messagesWithDate}
+data={[...messagesWithDate]}
           keyExtractor={i => (i.type === 'date' ? i.id : String(i.message_id))}
           renderItem={renderItem}
           contentContainerStyle={styles.list}

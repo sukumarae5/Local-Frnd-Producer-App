@@ -25,7 +25,7 @@ function* fetchNotificationsSaga() {
         },
       }
     );
-
+console.log("Notifications fetched:", res);
     yield put({
       type: T.NOTIFICATION_FETCH_SUCCESS,
       payload: res.data,

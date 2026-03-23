@@ -32,11 +32,12 @@ export const chatHistoryFailed = (error) => ({
   payload: error,
 });
 
-// export const chatMessageAdd = (message) => ({
-//   type: CHAT_MESSAGE_ADD,
-//   payload: message,
-// });
 
+
+export const chatMessageAdd = (payload) => ({
+  type: CHAT_MESSAGE_ADD,
+  payload,
+});
 
 export const chatListRequest = () => ({
   type: CHAT_LIST_REQUEST,
@@ -51,13 +52,6 @@ export const chatListFailed = (error) => ({
   type: CHAT_LIST_FAILED,
   payload: error,
 });
-
-export const chatMessageAdd = (otherUserId, message) => ({
-  type: CHAT_MESSAGE_ADD,
-  payload: { otherUserId, message },
-});
-
-
 
 export const chatMarkReadRequest = (otherUserId, conversationId) => ({
   type: CHAT_MARK_READ_REQUEST,

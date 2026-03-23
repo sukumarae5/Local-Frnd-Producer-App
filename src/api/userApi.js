@@ -46,9 +46,9 @@ export const chatDeleteApi  = `${MAIN_BASE_URL}/api/chat/messages`;
 export const chatListApi = `${MAIN_BASE_URL}/api/chat/list`;
 export const chatReadConversationApi =`${MAIN_BASE_URL}/api/chat/read/conversation`;
 
-export const notificationsApi = `${MAIN_BASE_URL}/notifications`;
-export const notificationUnreadApi = `${MAIN_BASE_URL}/notifications/unread-count`;
-export const notificationMarkReadApi = `${MAIN_BASE_URL}/notifications/read`;
+export const notificationsApi = `${MAIN_BASE_URL}/api/notifications`;
+export const notificationUnreadApi = `${MAIN_BASE_URL}/api/notifications/unread-count`;
+export const notificationMarkReadApi = `${MAIN_BASE_URL}/api/notifications/read`;
 
 export const RATING_POST_URL  =`${MAIN_BASE_URL}/api/rating/submit`;
 

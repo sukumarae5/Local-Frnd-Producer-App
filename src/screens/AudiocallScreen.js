@@ -8,20 +8,21 @@ import {
   PermissionsAndroid,
   Animated,
   Image,
+  Alert,
 } from 'react-native';
-import { otherUserFetchRequest } from '../features/Otherusers/otherUserActions';
-import { submitRatingRequest } from "../features/rating/ratingAction";
 
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { mediaDevices } from 'react-native-webrtc';
 import { CommonActions } from '@react-navigation/native';
 import InCallManager from 'react-native-incall-manager';
-import EndCallConfirmModal from '../screens/EndCallConfirmationScreen';
 
 import { useDispatch, useSelector } from 'react-redux';
 import { clearCall, callDetailsRequest } from '../features/calls/callAction';
+import { otherUserFetchRequest } from '../features/Otherusers/otherUserActions';
+import { submitRatingRequest } from '../features/rating/ratingAction';
 
+import EndCallConfirmModal from '../screens/EndCallConfirmationScreen';
 import { SocketContext } from '../socket/SocketProvider';
 import { createPC } from '../utils/webrtc';
 
@@ -29,55 +30,44 @@ const AudiocallScreen = ({ route, navigation }) => {
   const { session_id, role } = route.params;
   const { socketRef, connected } = useContext(SocketContext);
 
-  const [showEndModal, setShowEndModal] = useState(false);
-
   const dispatch = useDispatch();
 
   const connectedCallDetails = useSelector(
     state => state?.calls?.connectedCallDetails,
   );
-  console.log('connectedCallDetails', connectedCallDetails);
   const { userdata } = useSelector(state => state.user);
-  console.log('userdata', userdata);
-const myGender = userdata?.user?.gender;
-console.log('myGender:', myGender);
-const ratingState = useSelector(state => state.rating);
-const { loading: ratingLoading, success: ratingSuccess } = ratingState;
 
-
-  const myId = userdata?.user.user_id;
-
-  const myIdStr = String(myId);
+  const myGender = userdata?.user?.gender;
+  const myId = userdata?.user?.user_id;
 
   const caller = connectedCallDetails?.caller;
   const connectedUser = connectedCallDetails?.connected_user;
-  const myId1 = useSelector(state => state.auth);
-  console.log('myId1:', myId1);
-  const me = String(caller?.user_id) === myIdStr ? caller : connectedUser;
 
-  const other = String(caller?.user_id) === myIdStr ? connectedUser : caller;
-  console.log('myId:', myId, 'caller:', connectedCallDetails?.caller?.user_id);
+  const me = String(caller?.user_id) === String(myId) ? caller : connectedUser;
+
+  const other =
+    String(caller?.user_id) === String(myId) ? connectedUser : caller;
 
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
   const pendingIceRef = useRef([]);
+  const manualExitRef = useRef(false);
   const startedRef = useRef(false);
   const endedRef = useRef(false);
+
   const timerRef = useRef(null);
   const micAnim = useRef(new Animated.Value(1)).current;
-const showEndModalRef = useRef(false);
 
-  /* ================= STATE ================= */
   const [connectedUI, setConnectedUI] = useState(false);
   const [micOn, setMicOn] = useState(true);
   const [speakerOn, setSpeakerOn] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [iceState, setIceState] = useState('new');
-useEffect(() => {
-  showEndModalRef.current = showEndModal;
-}, [showEndModal]);
+
+  const [showEndModal, setShowEndModal] = useState(false);
 
   /* ================= PERMISSION ================= */
+
   const requestPermission = async () => {
     if (Platform.OS !== 'android') return true;
 
@@ -89,11 +79,11 @@ useEffect(() => {
   };
 
   /* ================= INIT ================= */
+
   useEffect(() => {
     if (!connected || !socketRef.current || startedRef.current) return;
 
     startedRef.current = true;
-
     const socket = socketRef.current;
 
     const start = async () => {
@@ -126,42 +116,25 @@ useEffect(() => {
       socket.on('audio_offer', onOffer);
       socket.on('audio_answer', onAnswer);
       socket.on('audio_ice_candidate', onIce);
-socket.on('audio_call_ended', () => {
 
-  // Stop call for BOTH users
-  stopCallMedia();
+      socket.on('audio_call_ended', () => {
+        stopCallMedia();
 
-  // Show rating modal for BOTH users
-  setShowEndModal(true);
+        setTimeout(() => {
+          setShowEndModal(true);
+        }, 100);
+      });
 
-});
+      socket.on('audio_connected', async () => {
+        onConnected();
 
+        if (role !== 'caller') return;
 
-      // socket.on('audio_connected', async () => {
-      //   if (role !== 'caller') return;
-      //   if (!pcRef.current || !localStreamRef.current) return;
+        const offer = await pcRef.current.createOffer();
+        await pcRef.current.setLocalDescription(offer);
 
-      //   const offer = await pcRef.current.createOffer();
-      //   await pcRef.current.setLocalDescription(offer);
-
-      //   socket.emit('audio_offer', { session_id, offer });
-      // });
-    
-    socket.on('audio_connected', async () => {
-
-  // ✅ start timer and UI for BOTH users
-  onConnected();
-
-  // only caller creates offer
-  if (role !== 'caller') return;
-  if (!pcRef.current || !localStreamRef.current) return;
-
-  const offer = await pcRef.current.createOffer();
-  await pcRef.current.setLocalDescription(offer);
-
-  socket.emit('audio_offer', { session_id, offer });
-});
-
+        socket.emit('audio_offer', { session_id, offer });
+      });
     };
 
     start();
@@ -176,6 +149,7 @@ socket.on('audio_call_ended', () => {
   }, [connected]);
 
   /* ================= SIGNALING ================= */
+
   const flushIce = async () => {
     if (!pcRef.current || endedRef.current) return;
 
@@ -225,11 +199,11 @@ socket.on('audio_call_ended', () => {
   };
 
   /* ================= CONNECTED ================= */
+
   const onConnected = () => {
     if (timerRef.current) return;
 
     setConnectedUI(true);
-
     dispatch(callDetailsRequest());
 
     timerRef.current = setInterval(() => {
@@ -238,25 +212,13 @@ socket.on('audio_call_ended', () => {
   };
 
   /* ================= CONTROLS ================= */
+
   const toggleMic = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
     if (!track) return;
 
     track.enabled = !track.enabled;
     setMicOn(track.enabled);
-
-    Animated.sequence([
-      Animated.timing(micAnim, {
-        toValue: 0.6,
-        duration: 120,
-        useNativeDriver: true,
-      }),
-      Animated.spring(micAnim, {
-        toValue: 1,
-        friction: 3,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
   const toggleSpeaker = () => {
@@ -266,81 +228,98 @@ socket.on('audio_call_ended', () => {
     });
   };
 
+  /* ================= STOP CALL ================= */
 
-// const cleanup = (emit = true) => {
-//   if (endedRef.current) return;
+  const stopCallMedia = () => {
+    if (endedRef.current) return;
 
-//   endedRef.current = true;
+    endedRef.current = true;
 
-//   dispatch(clearCall());
-//   clearInterval(timerRef.current);
+    clearInterval(timerRef.current);
 
-//   if (emit) {
-//     socketRef.current?.emit('audio_call_hangup', { session_id });
-//   }
+    InCallManager.stop();
 
-//   InCallManager.stop();
+    localStreamRef.current?.getTracks().forEach(t => t.stop());
+    pcRef.current?.close();
+  };
 
-//   localStreamRef.current?.getTracks().forEach(t => t.stop());
-//   pcRef.current?.close();
+  /* ================= LEAVE SCREEN ================= */
 
-//   const myGender = userdata?.user?.gender;
+  const leaveScreen = () => {
+    dispatch(clearCall());
 
-//   const nextScreen =
-//     myGender === "Male"
-//       ? "MaleHomeTabs"
-//       : "ReceiverBottomTabs";
+    const nextScreen =
+      myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs';
 
-//   navigation.dispatch(
-//     CommonActions.reset({
-//       index: 0,
-//       routes: [{ name: nextScreen }],
-//     })
-//   );
-// };
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: nextScreen }],
+      }),
+    );
+  };
 
-/* ================= STOP CALL MEDIA ================= */
+  /* ================= EXIT CONFIRM ================= */
 
-const stopCallMedia = () => {
-  if (endedRef.current) return;
+useEffect(() => {
+  const unsubscribe = navigation.addListener('beforeRemove', (e) => {
 
-  endedRef.current = true;
+    // 🚫 ALWAYS BLOCK navigation
+    e.preventDefault();
 
-  clearInterval(timerRef.current);
+    // If already exiting (after confirm) → allow navigation
+    if (manualExitRef.current) {
+      navigation.dispatch(e.data.action);
+      return;
+    }
 
-  InCallManager.stop();
+    // Show exit popup EVERY time back is pressed
+    Alert.alert(
+      "Exit from Call",
+      "Are you sure you want to exit the call?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+          onPress: () => {
+            // ❌ do nothing → stay in call
+          }
+        },
+        {
+          text: "Exit",
+          style: "destructive",
+          onPress: () => {
 
-  localStreamRef.current?.getTracks().forEach(t => t.stop());
-  pcRef.current?.close();
-};
+            // ❌ DO NOT navigate
+            // ❌ DO NOT end call yet
 
-/* ================= LEAVE SCREEN ================= */
+            setShowEndModal(true); // ✅ show rating modal
+          }
+        }
+      ]
+    );
+  });
 
-const leaveScreen = () => {
+  return unsubscribe;
+}, [navigation]);
+  /* ================= AUTO CLEANUP ================= */
 
-  dispatch(clearCall());
-
-  const nextScreen =
-    myGender === "Male"
-      ? "MaleHomeTabs"
-      : "ReceiverBottomTabs";
-
-  navigation.dispatch(
-    CommonActions.reset({
-      index: 0,
-      routes: [{ name: nextScreen }],
-    })
-  );
-};
-
+  useEffect(() => {
+    return () => {
+      if (!endedRef.current && !manualExitRef.current) {
+        socketRef.current?.emit('audio_call_hangup', { session_id });
+        stopCallMedia();
+      }
+    };
+  }, []);
 
   /* ================= UI ================= */
+
   return (
     <LinearGradient
       colors={['#E9C9FF', '#F4C9F2', '#FFD1E8']}
       style={styles.container}
     >
-      {/* TIME */}
       <View style={styles.timePill}>
         <Text style={styles.timeText}>
           {connectedUI
@@ -352,126 +331,87 @@ const leaveScreen = () => {
         </Text>
       </View>
 
-      {/* USERS */}
-      {/* USERS */}
       {connectedCallDetails?.connected && me && other && (
         <View style={styles.usersRow}>
-          {/* ME */}
           <View style={styles.userCard}>
-            <View style={styles.avatarRing}>
-              <Image source={{ uri: me.avatar }} style={styles.avatar} />
-            </View>
-
+            <Image source={{ uri: me.avatar }} style={styles.avatar} />
             <Text style={styles.userName}>{me.name}</Text>
-            <Text style={styles.subText}>About me</Text>
-            <Text style={styles.desc}>{me.bio || ''}</Text>
           </View>
 
-          {/* OTHER – clickable */}
           <TouchableOpacity
-            activeOpacity={0.8}
             style={styles.userCard}
             onPress={() => {
-              if (!other?.user_id) return;
-              console.log('Pressed other user:', other?.user_id);
-
               dispatch(otherUserFetchRequest(other.user_id));
               navigation.navigate('AboutScreen');
             }}
           >
-            <View style={styles.avatarRing}>
-              <Image source={{ uri: other.avatar }} style={styles.avatar} />
-            </View>
-
+            <Image source={{ uri: other.avatar }} style={styles.avatar} />
             <Text style={styles.userName}>{other.name}</Text>
-            <Text style={styles.subText}>About me</Text>
-            <Text style={styles.desc}>{other.bio || ''}</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* HEARTS */}
-      <View style={styles.topheats} pointerEvents="none">
-        <Image
-          source={require('../assets/leftheart.png')}
-          style={styles.leftheart1}
-        />
-        <Image
-          source={require('../assets/leftheart.png')}
-          style={styles.leftheart}
-        />
-        <Image
-          source={require('../assets/rightheart.png')}
-          style={styles.rightheart}
-        />
-      </View>
-
-      {/* CONTROLS */}
       <View style={styles.controls}>
         <TouchableOpacity style={styles.circleBtn} onPress={toggleSpeaker}>
+          <Ionicons name="volume-high" size={22} color="#9b4dff" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.circleBtn} onPress={toggleMic}>
           <Ionicons
-            name={speakerOn ? 'volume-high' : 'volume-medium'}
+            name={micOn ? 'mic' : 'mic-off'}
             size={22}
             color="#9b4dff"
           />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.circleBtn} onPress={toggleMic}>
-          <Animated.View style={{ transform: [{ scale: micAnim }] }}>
-            <Ionicons
-              name={micOn ? 'mic' : 'mic-off'}
-              size={22}
-              color="#9b4dff"
-            />
-          </Animated.View>
-        </TouchableOpacity>
+        {/* <TouchableOpacity
+          style={styles.endBtn}
+          onPress={() => {
+
+            socketRef.current?.emit('audio_call_hangup', { session_id });
+
+            stopCallMedia();
+            leaveScreen();
+
+          }}
+        > */}
 
         <TouchableOpacity
           style={styles.endBtn}
-onPress={() => {
+          onPress={() => {
+            manualExitRef.current = true;
 
-  if (!connectedUI) {
-    stopCallMedia();
-    leaveScreen();
-    return;
-  }
+            // ❌ DO NOT end call yet
+            // ❌ DO NOT leave screen
 
-  // Tell server to end call
-  socketRef.current?.emit('audio_call_hangup', { session_id });
-
-}}
-
+            setShowEndModal(true); // ✅ show rating modal first
+          }}
         >
-          <Ionicons name="call" size={22} color="#f43939" />
+          <Ionicons name="call" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.debug}>ICE: {iceState}</Text>
-<EndCallConfirmModal
-  visible={showEndModal}
-  otherUser={other}
-  onCancel={() => {
-    setShowEndModal(false);
-    leaveScreen();   // If user cancels rating → still leave
-  }}
-  onConfirm={(rating) => {
+      <EndCallConfirmModal
+        visible={showEndModal}
+        otherUser={other}
+        onCancel={() => setShowEndModal(false)}
+        onConfirm={rating => {
+          dispatch(
+            submitRatingRequest({
+              session_id,
+              rater_id: myId,
+              rated_user_id: other?.user_id,
+              rating,
+            }),
+          );
+          manualExitRef.current = true;
+          socketRef.current?.emit('audio_call_hangup', { session_id });
 
-    setShowEndModal(false);
+          stopCallMedia();
 
-    dispatch(
-      submitRatingRequest({
-      session_id,
-      rater_id: myId,   // ✅ pass directly
-      rated_user_id: other?.user_id,
-      rating
-    })
-    );
-
-    leaveScreen();
-  }}
-/>
-
-
+          leaveScreen();
+        }}
+      />
     </LinearGradient>
   );
 };

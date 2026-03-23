@@ -4,6 +4,7 @@ import { MAIN_BASE_URL } from "../api/baseUrl1";
 let socket = null;
 
 export const createSocket = (token) => {
+
   if (socket) return socket;
 
   if (!token) {
@@ -11,12 +12,9 @@ export const createSocket = (token) => {
     return null;
   }
 
-  console.log("🆕 Creating socket...");
-
   socket = io(MAIN_BASE_URL, {
     transports: ["websocket"],
     auth: { token },
-    forceNew: true,
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 2000,
@@ -37,14 +35,10 @@ export const createSocket = (token) => {
   return socket;
 };
 
-export const getSocket = () => socket;
-
 export const destroySocket = () => {
   if (socket) {
     socket.removeAllListeners();
     socket.disconnect();
     socket = null;
-    console.log("👋 Socket destroyed");
   }
 };
-

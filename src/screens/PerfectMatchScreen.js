@@ -1,11 +1,10 @@
 // PerfectMatchScreen.js
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  Image,
   StatusBar,
   ActivityIndicator,
 } from "react-native";
@@ -17,22 +16,13 @@ import Svg, { Defs, ClipPath, Path, Image as SvgImage } from "react-native-svg";
 
 import { callDetailsRequest } from "../features/calls/callAction";
 
-/* ---------------- HEART IMAGE COMPONENT ---------------- */
+/* ---------------- HEART IMAGE ---------------- */
 
 const HeartImage = ({ source, size = 150 }) => (
   <Svg width={size} height={size} viewBox="0 0 100 100">
     <Defs>
       <ClipPath id="clipHeart">
-        <Path
-          d="
-          M50 82
-          C20 60 10 45 10 30
-          A20 20 0 0 1 50 30
-          A20 20 0 0 1 90 30
-          C90 45 80 60 50 82
-          Z
-        "
-        />
+        <Path d="M50 82 C20 60 10 45 10 30 A20 20 0 0 1 50 30 A20 20 0 0 1 90 30 C90 45 80 60 50 82 Z" />
       </ClipPath>
     </Defs>
 
@@ -43,43 +33,25 @@ const HeartImage = ({ source, size = 150 }) => (
       clipPath="url(#clipHeart)"
       preserveAspectRatio="xMidYMid slice"
     />
-
-    <Path
-      d="
-        M50 82
-        C20 60 10 45 10 30
-        A20 20 0 0 1 50 30
-        A20 20 0 0 1 90 30
-        C90 45 80 60 50 82
-        Z
-      "
-      fill="none"
-      stroke="#c464ff"
-      strokeWidth="1"
-    />
   </Svg>
 );
 
-/* ---------------- MAIN SCREEN ---------------- */
+/* ---------------- MAIN ---------------- */
 
 const PerfectMatchScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const dispatch = useDispatch();
-  const navigatedRef = useRef(false);
 
   const { call_type, session_id } = route.params || {};
 
-  /* ---------------- REDUX ---------------- */
+  const [count, setCount] = useState(3);
 
-  const call = useSelector(state => state.calls?.call);
   const connectedCallDetails = useSelector(
     state => state.calls?.connectedCallDetails
   );
 
-  const myId = useSelector(
-    state => state.auth?.user?.user_id
-  );
+  const myId = useSelector(state => state.auth?.user?.user_id);
 
   /* ---------------- FETCH CALL DETAILS ---------------- */
 
@@ -89,7 +61,7 @@ const PerfectMatchScreen = () => {
     }
   }, [session_id]);
 
-  /* ---------------- SAFELY RESOLVE USERS ---------------- */
+  /* ---------------- USERS ---------------- */
 
   const caller = connectedCallDetails?.caller;
   const connectedUser = connectedCallDetails?.connected_user;
@@ -104,50 +76,35 @@ const PerfectMatchScreen = () => {
       ? connectedUser
       : caller;
 
-  /* ---------------- AUTO NAVIGATION AFTER 2s ---------------- */
+  /* ---------------- COUNTDOWN NAVIGATION ---------------- */
+useEffect(() => {
+  if (!session_id || !call_type) return;
 
-  useEffect(() => {
-    if (!session_id || !call_type) return;
+  const interval = setInterval(() => {
+    setCount(prev => prev - 1);
+  }, 1000);
 
-    const t = setTimeout(() => {
-      navigation.replace(
-        call_type === "VIDEO"
-          ? "VideocallScreen"
-          : "AudiocallScreen",
-        {
-          session_id,
-          role: "caller",
-        }
-      );
-    }, 2000);
+  return () => clearInterval(interval);
+}, []);
 
-    return () => clearTimeout(t);
-  }, [session_id, call_type]);
+useEffect(() => {
+  if (count !== 0) return;
 
-  /* ---------------- STATUS BASED NAVIGATION ---------------- */
+  console.log("➡️ Navigating to Call Screen");
 
-  useEffect(() => {
-    if (!call?.status) return;
-    if (call.session_id !== session_id) return;
+  const screen =
+    call_type === "VIDEO"
+      ? "VideocallScreen"
+      : "AudiocallScreen";
 
-    const status = String(call.status).toUpperCase();
+  navigation.replace(screen, {
+    session_id,
+    role: "receiver",
+  });
 
-    if (status === "ACCEPTED" || status === "CONNECTED") {
-      if (navigatedRef.current) return;
-      navigatedRef.current = true;
+}, [count]);
 
-      navigation.replace(
-        call.call_type === "VIDEO"
-          ? "VideocallScreen"
-          : "AudiocallScreen",
-        {
-          session_id: call.session_id,
-        }
-      );
-    }
-  }, [call?.status]);
-
-  /* ---------------- LOADING GUARD ---------------- */
+  /* ---------------- LOADING ---------------- */
 
   if (!caller || !connectedUser) {
     return (
@@ -161,45 +118,34 @@ const PerfectMatchScreen = () => {
 
   /* ---------------- UI ---------------- */
 
-  /* ---------------- UI ---------------- */
+  return (
+    <WelcomeScreenbackgroungpage>
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" />
 
-return (
-  <WelcomeScreenbackgroungpage>
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+        {/* Profiles */}
+        <View style={styles.profileRow}>
+          <View style={styles.profileBlock}>
+            <HeartImage source={{ uri: me?.avatar }} size={160} />
+            <Text style={styles.name}>{me?.name}</Text>
+          </View>
 
-      {/* Floating Hearts */}
-      <Text style={[styles.floatingHeart, { top: 120, left: 40 }]}>💜</Text>
-      <Text style={[styles.floatingHeart, { top: 100, right: 50 }]}>💜</Text>
-      <Text style={[styles.floatingHeart, { bottom: 200, left: 60 }]}>💜</Text>
-      <Text style={[styles.floatingHeart, { bottom: 180, right: 60 }]}>💜</Text>
-
-      {/* Profiles */}
-      <View style={styles.profileRow}>
-        <View style={styles.profileBlock}>
-          {me?.avatar && (
-            <>
-              <HeartImage source={{ uri: me.avatar }} size={180} />
-              <Text style={styles.name}>{me.name}</Text>
-            </>
-          )}
+          <View style={styles.profileBlock}>
+            <HeartImage source={{ uri: other?.avatar }} size={160} />
+            <Text style={styles.name}>{other?.name}</Text>
+          </View>
         </View>
 
-        <View style={styles.profileBlock}>
-          {other?.avatar && (
-            <>
-              <HeartImage source={{ uri: other.avatar }} size={180} />
-              <Text style={styles.name}>{other.name}</Text>
-            </>
-          )}
-        </View>
+        <Text style={styles.matchText}>💜 Perfect Match</Text>
+        <Text style={styles.congrats}>Congratulations!</Text>
+
+        {/* Countdown */}
+        <Text style={styles.countdown}>
+          Connecting in {count}...
+        </Text>
       </View>
-
-      <Text style={styles.matchText}>Perfect Match</Text>
-      <Text style={styles.congrats}>Congratulations!</Text>
-    </View>
-  </WelcomeScreenbackgroungpage>
-);
+    </WelcomeScreenbackgroungpage>
+  );
 };
 
 export default PerfectMatchScreen;
@@ -224,7 +170,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     gap: 30,
-    marginBottom: 50,
+    marginBottom: 40,
   },
 
   profileBlock: {
@@ -232,29 +178,28 @@ const styles = StyleSheet.create({
   },
 
   name: {
-    marginTop: 12,
-    fontSize: 18,
+    marginTop: 10,
+    fontSize: 16,
     fontWeight: "600",
     color: "#222",
   },
 
   matchText: {
-    color: "#c464ff",
-    fontSize: 18,
-    fontWeight: "700",
     marginTop: 20,
+    fontSize: 20,
+    color: "#c464ff",
+    fontWeight: "700",
   },
 
   congrats: {
+    fontSize: 28,
     color: "#c464ff",
-    fontSize: 32,
-    fontWeight: "700",
-    fontStyle: "italic",
+    fontWeight: "bold",
   },
 
-  floatingHeart: {
-    position: "absolute",
-    fontSize: 22,
-    opacity: 0.7,
+  countdown: {
+    marginTop: 20,
+    fontSize: 18,
+    fontWeight: "600",
   },
 });

@@ -12,7 +12,8 @@ import {
   USER_LOGOUT_REQUEST,
   USER_RESEND_OTP_FETCH_FAILED,
   USER_RESEND_OTP_FETCH_SUCCESS,
-  USER_RESEND_OTP_FETCH_REQUEST
+  USER_RESEND_OTP_FETCH_REQUEST,
+  RESTORE_LOGIN
 } from "./authType";
 
 export const userRegisterRequest = (data) => ({
@@ -55,6 +56,11 @@ export const userOtpFailed = (error) => ({
 });
 
 export const authReset = () => ({ type: AUTH_RESET });
+
+export const restoreLogin = (data) => ({
+  type: RESTORE_LOGIN,
+  payload: data,
+});
 
 export const userlogoutrequest = () => ({
   type: USER_LOGOUT_REQUEST,
