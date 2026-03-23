@@ -16,7 +16,9 @@ import otherusersSaga from "../features/Otherusers/otherUserSaga"
 import chatSaga from "../features/chat/chatSaga"
 import ratingSaga from "../features/rating/ratingSaga"
 import notificationSaga from "../features/notification/notificationSaga"
-
+import statusSaga from "../features/Status/statusSaga"
+import watchCoins from"../features/conis/coinSaga"
+import offersSaga from"../features/Offers/offersSaga"
 export default function* rootSaga() {
   yield all([
     authSaga(),
@@ -35,7 +37,10 @@ export default function* rootSaga() {
     otherusersSaga(),
     chatSaga(),
         ratingSaga(),
-        notificationSaga()
+        notificationSaga(),
+        statusSaga(),
+        watchCoins(),
+        offersSaga()
 
   ]);
 }

@@ -52,6 +52,7 @@ import EndCallConfirmModal from "./src/screens/EndCallConfirmationScreen";
 import NotificationScreen from "./src/screens/NotificationScreen";
 import HelpCenterScreen from"./src/screens/HelpCenterScreen"
 import ReciverWalletScreen from"./src/screens/ReciverWalletScreen"
+import StoryViewer from "./src/screens/StoryViewer"
 /* 
 IMPORTANT
 If you really navigate to IncomingCallScreen,
@@ -169,6 +170,7 @@ function MainNavigator() {
       <Stack.Screen name="IncomingCallScreen" component={IncomingCallScreen}/>
       <Stack.Screen name="HelpCenterScreen" component={HelpCenterScreen}/>
       <Stack.Screen name="ReciverWalletScreen" component={ReciverWalletScreen}/>
+      <Stack.Screen name="StoryViewer" component={StoryViewer} />
       </Stack.Navigator>
   );
 }

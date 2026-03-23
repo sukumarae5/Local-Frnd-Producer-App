@@ -29,6 +29,15 @@ export const lifestycategory=`${MAIN_BASE_URL}/api/lifestylecategory/all`
 export const lifeStyleallapi=`${MAIN_BASE_URL}/api/lifestyle/all`
 export const userlifestyleapi=`${MAIN_BASE_URL}/api/userlifestyle/`
 export const otheruserapi=`${MAIN_BASE_URL}/api/userprofile/profile`
+export const statusapi=`${MAIN_BASE_URL}/api/status/create`
+export const mystatusapi=`${MAIN_BASE_URL}/api/status/my`
+export const deletemystatusapi=`${MAIN_BASE_URL}/api/status/`
+export const friendsstatusviewapi=`${MAIN_BASE_URL}/api/status/view`
+export const mystatusviewersapi=`${MAIN_BASE_URL}/api/status/viewers/`
+
+export const friendstatusapi=`${MAIN_BASE_URL}/api/status/friends`
+
+
 
 
 //calls
@@ -52,3 +61,5 @@ export const notificationMarkReadApi = `${MAIN_BASE_URL}/notifications/read`;
 
 export const RATING_POST_URL  =`${MAIN_BASE_URL}/api/rating/submit`;
 
+export const coinsapi=`${MAIN_BASE_URL}/api/coin-packages`
+export const offersapi=`${MAIN_BASE_URL}/api/offers`

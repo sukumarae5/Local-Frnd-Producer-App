@@ -9,10 +9,10 @@ import {
   Text,
   StyleSheet,
   Image,
-  ScrollView,
   TouchableOpacity,
   Dimensions,
   TextInput,
+  FlatList,
 } from 'react-native';
 
 import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
@@ -45,7 +45,6 @@ const HomeScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
 
-  // ✅ SINGLE CONTEXT CALL
   const { socketRef, connected } = useContext(SocketContext);
   const socket = socketRef?.current;
 
@@ -54,8 +53,6 @@ const HomeScreen = () => {
 
   const [callingRandom, setCallingRandom] = useState(false);
   const [callingRandomVideo, setCallingRandomVideo] = useState(false);
-
-  /* ---------------- RANDOM CALL ---------------- */
 
   const startRandomAudioCall = () => {
     if (!connected || callingRandom || callingRandomVideo) return;
@@ -90,15 +87,11 @@ const HomeScreen = () => {
     }, []),
   );
 
-  /* ---------------- INITIAL LOAD ---------------- */
-
   useEffect(() => {
     dispatch(userDatarequest());
     dispatch(randomUserRequest());
     dispatch(fetchUnreadCount());
   }, [dispatch]);
-
-  /* ---------------- SOCKET LISTENER ---------------- */
 
   useEffect(() => {
     if (!socket) return;
@@ -114,78 +107,103 @@ const HomeScreen = () => {
     };
   }, [socket]);
 
-  /* ---------------- PROFILE IMAGE ---------------- */
-
   const imageUrl = userdata?.images?.profile_image
     ? { uri: userdata.images.profile_image }
     : require('../assets/boy2.jpg');
 
+  const sections = [
+    { id: 'stories' },
+    { id: 'offers' },
+    { id: 'like' },
+    { id: 'active' },
+    { id: 'calls' },
+  ];
+
+  const renderItem = ({ item }) => {
+    switch (item.id) {
+      case 'stories':
+        return <StoriesScreen />;
+      case 'offers':
+        return <OffersSectionScreen />;
+      case 'like':
+        return <LikeMindedSectionScreen />;
+      case 'active':
+        return <ActiveDostSectionScreen />;
+      case 'calls':
+        return (
+          <BottomCallPills
+            callingRandom={callingRandom}
+            callingRandomVideo={callingRandomVideo}
+            onRandomAudio={startRandomAudioCall}
+            onRandomVideo={startRandomVideoCall}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <WelcomeScreenbackgroungpage>
       <View style={styles.root}>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          
-          {/* HEADER */}
-         <View style={styles.headerRow}>
 
-  {/* COIN BOX (LEFT CORNER) */}
-  <TouchableOpacity
-    activeOpacity={0.8}
-    onPress={() => navigation.navigate('PlanScreen')}
-  >
-    <LinearGradient
-      colors={['#FFA726', '#FF7043']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 0 }}
-      style={styles.coinBox}
-    >
-      <Image source={coinImg} style={styles.coinImage} />
-      <Text style={styles.coinText}>
-        {userdata?.user?.coin_balance ?? 0}
-      </Text>
-    </LinearGradient>
-  </TouchableOpacity>
+        {/* HEADER */}
+        <View style={styles.headerContainer}>
 
-  {/* RIGHT SIDE ICONS */}
-  <View style={styles.rightIcons}>
+          <View style={styles.headerRow}>
 
-    <TouchableOpacity
-      style={{ marginHorizontal: wp(2) }}
-      onPress={() => navigation.navigate('MessagesScreen')}
-    >
-      <View style={styles.iconCircle}>
-        <Icon
-          name="message-processing-outline"
-          size={wp(5)}
-          color="#fff"
-        />
-      </View>
-    </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('PlanScreen')}
+            >
+              <LinearGradient
+                colors={['#FFA726', '#FF7043']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.coinBox}
+              >
+                <Image source={coinImg} style={styles.coinImage} />
+                <Text style={styles.coinText}>
+                  {userdata?.user?.coin_balance ?? 0}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
 
-    <TouchableOpacity
-      style={styles.bellWrap}
-      onPress={() => navigation.navigate('NotificationScreen')}
-    >
-      <View style={styles.iconCircle}>
-        <Icon name="bell-outline" size={iconSize(6)} color="#fff" />
-      </View>
+            <View style={styles.rightIcons}>
 
-      {unread > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{unread}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
+              <TouchableOpacity
+                style={{ marginHorizontal: wp(2) }}
+                onPress={() => navigation.navigate('MessagesScreen')}
+              >
+                <View style={styles.iconCircle}>
+                  <Icon name="message-processing-outline" size={wp(5)} color="#fff" />
+                </View>
+              </TouchableOpacity>
 
-    <TouchableOpacity
-      onPress={() => navigation.navigate('UplodePhotoScreen')}
-    >
-      <Image source={imageUrl} style={styles.profilePic} />
-    </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.bellWrap}
+                onPress={() => navigation.navigate('NotificationScreen')}
+              >
+                <View style={styles.iconCircle}>
+                  <Icon name="bell-outline" size={iconSize(6)} color="#fff" />
+                </View>
 
-  </View>
+                {unread > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{unread}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
 
-</View>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('UplodePhotoScreen')}
+              >
+                <Image source={imageUrl} style={styles.profilePic} />
+              </TouchableOpacity>
+
+            </View>
+
+          </View>
 
           {/* SEARCH */}
           <View style={styles.searchContainer}>
@@ -197,20 +215,18 @@ const HomeScreen = () => {
             />
           </View>
 
-          <StoriesScreen />
-          <OffersSectionScreen />
-          <LikeMindedSectionScreen />
-          <ActiveDostSectionScreen />
+        </View>
 
-
-          <BottomCallPills
-            callingRandom={callingRandom}
-            callingRandomVideo={callingRandomVideo}
-            onRandomAudio={startRandomAudioCall}
-            onRandomVideo={startRandomVideoCall}
-          />
-          <View  style={{ height: hp(10) }} />
-        </ScrollView>
+        {/* FLATLIST CONTENT */}
+        <FlatList
+          data={sections}
+          keyExtractor={item => item.id}
+          renderItem={renderItem}
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews
+          scrollEventThrottle={16}
+          contentContainerStyle={{ paddingBottom: hp(10) }}
+        />
 
       </View>
     </WelcomeScreenbackgroungpage>
@@ -219,22 +235,27 @@ const HomeScreen = () => {
 
 export default HomeScreen;
 
-/* ---------------- STYLES ---------------- */
-
 const styles = StyleSheet.create({
   root: { flex: 1 },
-rightIcons: {
-  flexDirection: 'row',
-  alignItems: 'center',
-},
+
+  headerContainer: {
+    paddingHorizontal: wp(3),
+    marginTop: hp(4),
+    zIndex: 10,
+    elevation: 10,
+  },
+
+  rightIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
   headerRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between', // 🔥 change here
-  marginBottom: hp(2),
-  marginTop: hp(4),
-  paddingHorizontal: wp(3),
-},
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: hp(2),
+  },
 
   coinBox: {
     flexDirection: 'row',
@@ -307,8 +328,7 @@ rightIcons: {
     borderRadius: wp(6),
     paddingHorizontal: wp(4),
     height: hp(5.5),
-    marginTop: hp(2),
-    marginHorizontal: wp(3),
+    marginTop: hp(1),
     backgroundColor: '#fff',
   },
 

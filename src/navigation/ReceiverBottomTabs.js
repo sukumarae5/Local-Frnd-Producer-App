@@ -74,7 +74,7 @@ const ReceiverBottomTabs = () => {
         headerShown: false,
         tabBarShowLabel: false,
  tabBarStyle: {
-  position: "absolute",
+  position: "fixed",
   left: 40,
   right: 40,
   bottom: 20,

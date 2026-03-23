@@ -16,7 +16,9 @@ import otherusersSaga from "../features/Otherusers/otherUserReducer"
 import chatReducer from "../features/chat/chatReducer"
 import ratingReducer from "../features/rating/ratingReducer"
 import notificationReducer from "../features/notification/notificationReducer"
-
+import statusReducer from"../features/Status/statusReducer"
+import coinReducer from"../features/conis/coinReducer"
+import offersReducer from"../features/Offers/offersReducer"
 const rootReducer = combineReducers({
   auth:authReducer,
   user: userReducer,
@@ -34,7 +36,11 @@ const rootReducer = combineReducers({
   otherUsers:otherusersSaga,
   chat:chatReducer,
   rating:ratingReducer,
-  notification:notificationReducer
+  notification:notificationReducer,
+  status:statusReducer,
+  coins:coinReducer,
+  offers:offersReducer
+
 });
 
 export default rootReducer;

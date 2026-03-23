@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,19 +6,25 @@ import {
   ScrollView,
   Dimensions,
 } from "react-native";
+import { useDispatch, useSelector } from "react-redux";
+import { getOffersRequest } from "../features/Offers/offersActions";
 
 const { width, height } = Dimensions.get("window");
 const wp = (v) => (width * v) / 100;
 const hp = (v) => (height * v) / 100;
 
-const offers = [
-  { id: 1, text: "Buy 100 Coins, Get 20 Free!" },
-  { id: 2, text: "Buy 200 Coins, Get 50 Free!" },
-  { id: 3, text: "Buy 500 Coins, Get 150 Free!" },
-];
-
 const OffersSectionScreen = () => {
   const [activeIndex, setActiveIndex] = useState(0);
+
+  const dispatch = useDispatch();
+
+  const { offers, loading } = useSelector(
+    (state) => state.offers
+  );
+
+  useEffect(() => {
+    dispatch(getOffersRequest());
+  }, []);
 
   const handleScroll = (event) => {
     const index = Math.round(
@@ -31,32 +37,39 @@ const OffersSectionScreen = () => {
     <View>
       <Text style={styles.sectionLabel}>Offers</Text>
 
-      <ScrollView
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={handleScroll}
-        style={{ marginTop: hp(1) }}
-      >
-        {offers.map((o) => (
-          <View key={o.id} style={styles.offerCard}>
-            <Text style={styles.offerText}>{o.text}</Text>
-          </View>
-        ))}
-      </ScrollView>
+      {loading ? (
+        <Text style={{ textAlign: "center" }}>Loading...</Text>
+      ) : (
+        <>
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={handleScroll}
+            style={{ marginTop: hp(1) }}
+          >
+            {offers?.map((o, index) => (
+              <View key={index} style={styles.offerCard}>
+                <Text style={styles.offerText}>
+                  {o.text || o.title}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
 
-      {/* Dots */}
-      <View style={styles.dotsRow}>
-        {offers.map((_, idx) => (
-          <View
-            key={idx}
-            style={[
-              styles.dot,
-              activeIndex === idx && styles.dotActive,
-            ]}
-          />
-        ))}
-      </View>
+          <View style={styles.dotsRow}>
+            {offers?.map((_, idx) => (
+              <View
+                key={idx}
+                style={[
+                  styles.dot,
+                  activeIndex === idx && styles.dotActive,
+                ]}
+              />
+            ))}
+          </View>
+        </>
+      )}
     </View>
   );
 };
