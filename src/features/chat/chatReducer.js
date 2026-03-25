@@ -12,12 +12,13 @@ import {
   CHAT_SET_ACTIVE,
   CHAT_CLEAR_ACTIVE,
   CHAT_UNREAD_INCREASE,
+  CHAT_MESSAGE_DELIVERED,
 } from './chatType';
 
 const initialState = {
   loading: false,
   error: null,
-  activeChatUserId: null,
+  activeUser: null,
 
   conversations: {
     // otherUserId : [ messages ]
@@ -38,34 +39,60 @@ export default function chatReducer(state = initialState, action) {
         loading: true,
       };
 
+    // case CHAT_HISTORY_SUCCESS: {
+    //   const { otherUserId, messages } = action.payload;
+
+    //   const existing = state.conversations[otherUserId] || [];
+
+    //   const map = new Map();
+
+    //   [...existing, ...messages].forEach(m => {
+    //     const msg = m.message ?? m;
+    //     map.set(msg.message_id, msg);
+    //   });
+
+    //   return {
+    //     ...state,
+    //     loading: false,
+    //     conversations: {
+    //       ...state.conversations,
+    //       [otherUserId]: Array.from(map.values()).sort(
+    //         (a, b) => new Date(a.sent_at) - new Date(b.sent_at),
+    //       ),
+    //     },
+    //     conversationIds: {
+    //       ...state.conversationIds,
+    //       [otherUserId]: action.payload.conversationId,
+    //     },
+    //   };
+    // }
+
     case CHAT_HISTORY_SUCCESS: {
-      const { otherUserId, messages } = action.payload;
+  const { otherUserId, messages } = action.payload;
 
-      const existing = state.conversations[otherUserId] || [];
+  const normalizedMessages = messages.map(m => m.message ?? m);
 
-      const map = new Map();
+  const map = new Map();
 
-      [...existing, ...messages].forEach(m => {
-        const msg = m.message ?? m;
-        map.set(msg.message_id, msg);
-      });
+  normalizedMessages.forEach(msg => {
+    map.set(msg.message_id, msg);
+  });
 
-      return {
-        ...state,
-        loading: false,
-        conversations: {
-          ...state.conversations,
-          [otherUserId]: Array.from(map.values()).sort(
-            (a, b) => new Date(a.sent_at) - new Date(b.sent_at),
-          ),
-        },
-        conversationIds: {
-          ...state.conversationIds,
-          [otherUserId]: action.payload.conversationId,
-        },
-      };
-    }
-
+  return {
+    ...state,
+    loading: false,
+    conversations: {
+      ...state.conversations,
+      [otherUserId]: Array.from(map.values()).sort(
+        (a, b) => new Date(a.sent_at) - new Date(b.sent_at)
+      ),
+    },
+    conversationIds: {
+      ...state.conversationIds,
+      [otherUserId]: action.payload.conversationId,
+    },
+  };
+}
     case CHAT_HISTORY_FAILED:
       return {
         ...state,
@@ -100,28 +127,75 @@ export default function chatReducer(state = initialState, action) {
         loading: false,
         error: action.payload,
       };
+   
 
-    case CHAT_MESSAGE_ADD: {
-      const { otherUserId, message } = action.payload;
+//    case CHAT_MESSAGE_ADD: {
+//   const { otherUserId, message } = action.payload;
 
-      const old = state.conversations[otherUserId] || [];
+//   const old = state.conversations[otherUserId] || [];
+//   const normalized = message.message ?? message;
 
-      // prevent duplicate message
-      const exists = old.find(
-        m => (m.message ?? m).message_id === message.message_id,
-      );
+//   // ✅ STRICT duplicate check
+//   const exists = old.some(
+//     m =>
+//       String((m.message ?? m).message_id) ===
+//       String(normalized.message_id)
+//   );
 
-      if (exists) return state;
+//   if (exists) return state;
 
+//   return {
+//     ...state,
+//     conversations: {
+//       ...state.conversations,
+//       [otherUserId]: [...old, normalized],
+//     },
+//   };
+// }
+
+
+case CHAT_MESSAGE_ADD: {
+  const { otherUserId, message } = action.payload;
+
+  const old = state.conversations[otherUserId] || [];
+  const normalized = message.message ?? message;
+
+  let updated = false;
+
+  const newList = old.map(m => {
+    const msg = m.message ?? m;
+
+    // ✅ if same message → update it
+    if (
+      msg.message_id === normalized.message_id ||
+      (
+        String(msg.message_id).startsWith("temp-") &&
+        msg.content === normalized.content
+      )
+    ) {
+      updated = true;
       return {
-        ...state,
-        conversations: {
-          ...state.conversations,
-          [otherUserId]: [...old, message],
-        },
+        ...msg,
+        ...normalized, // ✅ overwrite delivered + is_read
       };
     }
 
+    return msg;
+  });
+
+  // ✅ if not found → add new
+  if (!updated) {
+    newList.push(normalized);
+  }
+
+  return {
+    ...state,
+    conversations: {
+      ...state.conversations,
+      [otherUserId]: newList,
+    },
+  };
+}
     case CHAT_MARK_READ_SUCCESS: {
       // single message read (socket)
       if (action.payload?.messageId) {
@@ -141,7 +215,7 @@ export default function chatReducer(state = initialState, action) {
               };
             }
 
-            return msg;
+            return { ...msg };
           });
         }
 
@@ -167,7 +241,7 @@ export default function chatReducer(state = initialState, action) {
           };
         }
 
-        return msg;
+        return { ...msg };
       });
 
       return {
@@ -198,20 +272,46 @@ export default function chatReducer(state = initialState, action) {
     case CHAT_SET_ACTIVE:
       return {
         ...state,
-        activeChatUserId: action.payload,
+        activeUser: action.payload,
       };
 
     case CHAT_CLEAR_ACTIVE:
       return {
         ...state,
-        activeChatUserId: null,
+        activeUser: null,
       };
+case CHAT_MESSAGE_DELIVERED: {
+  const { messageId } = action.payload;
+
+  const conversations = {};
+
+  for (const uid in state.conversations) {
+    conversations[uid] = state.conversations[uid].map(m => {
+      const msg = m.message ?? m;
+
+      if (msg.message_id === messageId) {
+        return {
+          ...msg,
+          delivered: 1,
+        };
+      }
+
+      return msg;
+    });
+  }
+
+  return {
+    ...state,
+    conversations,
+  };
+}
+      
 
     case CHAT_UNREAD_INCREASE: {
       const otherUserId = action.payload;
 
       // if that chat is open → do not increase
-      if (Number(state.activeChatUserId) === Number(otherUserId)) {
+      if (Number(state.activeUser) === Number(otherUserId)) {
         return state;
       }
 

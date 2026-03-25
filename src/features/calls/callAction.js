@@ -47,8 +47,9 @@ export const femaleCancelFailed = (error) => ({
 });
 
 /* 👨 FETCH SEARCHING FEMALES */
-export const searchingFemalesRequest = () => ({
+export const searchingFemalesRequest = (filters = {}) => ({
   type: T.SEARCHING_FEMALES_REQUEST,
+  payload: filters,
 });
 
 export const searchingFemalesSuccess = (data) => ({

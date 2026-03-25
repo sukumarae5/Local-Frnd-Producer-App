@@ -30,6 +30,8 @@ const { socketRef, connected } = useContext(SocketContext);
 console.log(call)
   const call_type = route?.params?.call_type || "AUDIO";
   const role = route?.params?.role || "male";
+
+
 useEffect(() => {
   console.log("CALL OBJECT =>", call);
 }, [call]);
@@ -47,57 +49,6 @@ useEffect(() => {
 
     return () => anim.stop();
   }, [rotateAnim]);
-// useEffect(() => {
-
-//   if (role !== "female") return;
-//   if (!connected || !socketRef.current) return;
-
-//   const socket = socketRef.current;
-
-//   const onIncomingCall = (data) => {
-
-//     if (navigatedRef.current) return;
-
-//     navigatedRef.current = true;
-
-//     const screen =
-//       data.call_type === "VIDEO"
-//         ? "VideocallScreen"
-//         : "AudiocallScreen";
-
-//     navigation.replace(screen, {
-//       session_id: data.session_id,
-//       role: "receiver",
-//     });
-//   };
-
-//   socket.on("incoming_call", onIncomingCall);
-
-//   return () => {
-//     socket.off("incoming_call", onIncomingCall);
-//   };
-
-// }, [role, connected, socketRef, navigation]);
-// useEffect(() => {
-//   if (!socketRef.current) return;
-
-//   const onIncomingCall = (data) => {
-
-//     navigation.navigate("IncomingCallScreen", {
-//       session_id: data.session_id,
-//       call_type: data.call_type,
-//       fromUser: data.from_user
-//     });
-//   };
-
-//   socketRef.current.on("incoming_call", onIncomingCall);
-
-//   return () => {
-//     socketRef.current.off("incoming_call", onIncomingCall);
-//   };
-
-// }, []);
-
 
 
 useEffect(() => {
@@ -126,7 +77,7 @@ if (data?.is_friend === true) return;
     });
   };
 
-  socket.on("incoming_call", onIncomingCall);
+  // socket.on("incoming_call", onIncomingCall);
 
   return () => {
     socket.off("incoming_call", onIncomingCall);
@@ -134,99 +85,31 @@ if (data?.is_friend === true) return;
 
 }, [role, connected]);
 
-//   useEffect(() => {
-//   if (!call?.status) return;
-
-//   const status = call.status.toUpperCase();
-
-//   if (status === "RINGING") {
-
-//     // only if you are not already on waiting screen
-//     navigation.replace("PerfectMatchScreen", {
-//       session_id: call.session_id,
-//       call_type: call.call_type,
-//     });
-
-//   }
-
-//   if (status === "ACCEPTED") {
-
-//     const screen =
-//       call.call_type === "VIDEO"
-//         ? "VideocallScreen"
-//         : "AudiocallScreen";
-
-//     navigation.replace(screen, {
-//       session_id: call.session_id,
-//     });
-
-//   }
-
-//   if (status === "FAILED" || status === "CANCELED") {
-//     navigation.goBack();
-//   }
-
-// }, [call?.status]);
 
 useEffect(() => {
 
   if (!call?.status) return;
 
-  const status = String(call.status).toUpperCase();
+  const status = call.status.toUpperCase();
 
-  // -------------------------------
-  // RANDOM CALL FLOW
-  // -------------------------------
-  if (!call?.is_friend) {
+  if (call.is_friend && status === "ACCEPTED") {
 
-    if (status === "RINGING") {
-      navigation.replace("PerfectMatchScreen", {
-        session_id: call.session_id,
-        call_type: call.call_type,
-      });
-      return;
-    }
+    const screen =
+      call.call_type === "VIDEO"
+        ? "VideocallScreen"
+        : "AudiocallScreen";
 
-    if (status === "ACCEPTED") {
-      const screen =
-        call.call_type === "VIDEO"
-          ? "VideocallScreen"
-          : "AudiocallScreen";
-
-      navigation.replace(screen, {
-        session_id: call.session_id,
-      });
-      return;
-    }
-  }
-
-  // -------------------------------
-  // FRIEND CALL FLOW
-  // -------------------------------
-  if (call?.is_friend) {
-
-    // for friend call we DO NOT go to PerfectMatch
-    if (status === "ACCEPTED") {
-
-      const screen =
-        call.call_type === "VIDEO"
-          ? "VideocallScreen"
-          : "AudiocallScreen";
-
-      navigation.replace(screen, {
-        session_id: call.session_id,
-      });
-      return;
-    }
-  }
-
-  if (status === "FAILED" || status === "CANCELED") {
-    navigation.goBack();
+    navigation.replace(screen, {
+      session_id: call.session_id,
+      role: "receiver",
+    });
   }
 
 }, [call?.status]);
+  
 
-  /* ---------------- UI ANIMATIONS ---------------- */
+
+/* ---------------- UI ANIMATIONS ---------------- */
   const ripple1 = useRef(new Animated.Value(0)).current;
   const ripple2 = useRef(new Animated.Value(0)).current;
 
@@ -364,7 +247,7 @@ useEffect(() => {
       </View>
 
       <Text style={styles.searchingText}>
-        {call?.status || "Initializing..."}
+        {call?.status || "Connecting..."}
       </Text>
 
       <View style={{ flex: 1 }} />

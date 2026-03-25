@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Platform,
   PermissionsAndroid,
+  Alert,
 } from 'react-native';
 
 import LinearGradient from 'react-native-linear-gradient';
@@ -14,12 +15,14 @@ import { RTCView, mediaDevices } from 'react-native-webrtc';
 import { CommonActions } from '@react-navigation/native';
 import InCallManager from 'react-native-incall-manager';
 import { useDispatch, useSelector } from 'react-redux';
-import { submitRatingRequest } from "../features/rating/ratingAction";
+
+import EndCallConfirmModal from '../screens/EndCallConfirmationScreen';
 
 import { clearCall, callDetailsRequest } from '../features/calls/callAction';
+import { submitRatingRequest } from '../features/rating/ratingAction';
+
 import { SocketContext } from '../socket/SocketProvider';
 import { createPC } from '../utils/webrtc';
-import EndCallConfirmModal from '../screens/EndCallConfirmationScreen';
 
 const VideocallScreen = ({ route, navigation }) => {
   const { session_id, role } = route.params || {};
@@ -33,42 +36,49 @@ const VideocallScreen = ({ route, navigation }) => {
   const myGender = userdata?.user?.gender;
 
   const connectedCallDetails = useSelector(
-    state => state?.calls?.connectedCallDetails
+    state => state?.calls?.connectedCallDetails,
   );
 
-  const myId = useSelector(
-    state => state.auth?.user?.user_id
-  );
-const ratingState = useSelector(state => state.rating);
-const { loading: ratingLoading, success: ratingSuccess } = ratingState;
+  const myId = useSelector(state => state.auth?.user?.user_id);
 
   const caller = connectedCallDetails?.caller;
   const connectedUser = connectedCallDetails?.connected_user;
 
   const other =
-    String(caller?.user_id) === String(myId)
-      ? connectedUser
-      : caller;
+    String(caller?.user_id) === String(myId) ? connectedUser : caller;
 
   /* ---------------- STATE ---------------- */
 
-  const [showEndModal, setShowEndModal] = useState(false);
+  const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
+
   const [connectedUI, setConnectedUI] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+
   const [micOn, setMicOn] = useState(true);
   const [cameraOn, setCameraOn] = useState(true);
   const [speakerOn, setSpeakerOn] = useState(false);
-  const [seconds, setSeconds] = useState(0);
+
   const [activeBtn, setActiveBtn] = useState(null);
+  const [isRemoteLarge, setIsRemoteLarge] = useState(true);
+
+  const [showEndModal, setShowEndModal] = useState(false);
 
   /* ---------------- REFS ---------------- */
 
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
   const pendingIceRef = useRef([]);
+  const timerRef = useRef(null);
   const startedRef = useRef(false);
   const endedRef = useRef(false);
-  const timerRef = useRef(null);
+  const manualExitRef = useRef(false);
+
+  /* ---------------- SWAP VIDEO ---------------- */
+
+  const swapVideos = () => {
+    setIsRemoteLarge(prev => !prev);
+  };
 
   /* ---------------- PERMISSION ---------------- */
 
@@ -78,6 +88,7 @@ const { loading: ratingLoading, success: ratingSuccess } = ratingState;
     const mic = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
     );
+
     const cam = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.CAMERA,
     );
@@ -92,12 +103,14 @@ const { loading: ratingLoading, success: ratingSuccess } = ratingState;
 
   useEffect(() => {
     if (!connected || !socketRef.current || startedRef.current) return;
+
     startedRef.current = true;
 
     const socket = socketRef.current;
 
     const start = async () => {
       const ok = await requestPermission();
+
       if (!ok) {
         navigation.goBack();
         return;
@@ -110,8 +123,8 @@ const { loading: ratingLoading, success: ratingSuccess } = ratingState;
         onIceCandidate: candidate => {
           socket.emit('video_ice_candidate', { session_id, candidate });
         },
+
         onTrack: stream => {
-          stream.getAudioTracks().forEach(t => (t.enabled = true));
           setRemoteStream(stream);
         },
       });
@@ -122,30 +135,34 @@ const { loading: ratingLoading, success: ratingSuccess } = ratingState;
       });
 
       localStreamRef.current = stream;
-      stream.getTracks().forEach(t =>
-        pcRef.current.addTrack(t, stream)
-      );
+      setLocalStream(stream);
+
+      stream.getTracks().forEach(t => {
+        pcRef.current.addTrack(t, stream);
+      });
 
       socket.emit('video_join', { session_id });
 
       socket.on('video_offer', onOffer);
       socket.on('video_answer', onAnswer);
-      socket.on('video_ice_candidate', onIce); 
-socket.on('video_call_ended', () => {
+      socket.on('video_ice_candidate', onIce);
 
-  // Stop call for BOTH users
+      /* When other user ends call */
+
+      socket.on('video_call_ended', () => {
+
   stopCallMedia();
 
-  // Show rating modal for BOTH users
-  setShowEndModal(true);
+  setTimeout(() => {
+    setShowEndModal(true);
+  }, 100);
 
 });
 
       socket.on('video_connected', async () => {
-        onConnected(); // start UI for both
+        onConnected();
 
         if (role !== 'caller') return;
-        if (!pcRef.current || !localStreamRef.current) return;
 
         const offer = await pcRef.current.createOffer();
         await pcRef.current.setLocalDescription(offer);
@@ -155,20 +172,12 @@ socket.on('video_call_ended', () => {
     };
 
     start();
-
-    return () => {
-      socket.off('video_offer', onOffer);
-      socket.off('video_answer', onAnswer);
-      socket.off('video_ice_candidate', onIce);
-      socket.off('video_call_ended');
-      socket.off('video_connected');
-    };
   }, [connected]);
 
   /* ---------------- SIGNALING ---------------- */
 
   const flushIce = async () => {
-    if (!pcRef.current || endedRef.current) return;
+    if (!pcRef.current) return;
 
     for (const c of pendingIceRef.current) {
       try {
@@ -180,8 +189,6 @@ socket.on('video_call_ended', () => {
   };
 
   const onOffer = async ({ offer }) => {
-    if (!pcRef.current || endedRef.current) return;
-
     await pcRef.current.setRemoteDescription(offer);
     await flushIce();
 
@@ -194,8 +201,6 @@ socket.on('video_call_ended', () => {
   };
 
   const onAnswer = async ({ answer }) => {
-    if (!pcRef.current || endedRef.current) return;
-
     await pcRef.current.setRemoteDescription(answer);
     await flushIce();
 
@@ -203,7 +208,7 @@ socket.on('video_call_ended', () => {
   };
 
   const onIce = async ({ candidate }) => {
-    if (!candidate || !pcRef.current || endedRef.current) return;
+    if (!pcRef.current) return;
 
     if (!pcRef.current.remoteDescription) {
       pendingIceRef.current.push(candidate);
@@ -221,126 +226,189 @@ socket.on('video_call_ended', () => {
     if (timerRef.current) return;
 
     setConnectedUI(true);
+
     dispatch(callDetailsRequest());
 
     timerRef.current = setInterval(() => {
       setSeconds(s => s + 1);
     }, 1000);
   };
-/* ================= STOP CALL MEDIA ================= */
 
-const stopCallMedia = () => {
-  if (endedRef.current) return;
+  /* ---------------- STOP CALL ---------------- */
 
-  endedRef.current = true;
+  const stopCallMedia = () => {
+    if (endedRef.current) return;
 
-  clearInterval(timerRef.current);
+    endedRef.current = true;
 
-  InCallManager.stop();
+    clearInterval(timerRef.current);
 
-  localStreamRef.current?.getTracks().forEach(t => t.stop());
-  pcRef.current?.close();
-};
+    InCallManager.stop();
 
-/* ================= LEAVE SCREEN ================= */
+    localStreamRef.current?.getTracks().forEach(t => t.stop());
 
-const leaveScreen = () => {
-
-  dispatch(clearCall());
-
-  const nextScreen =
-    myGender === 'Male'
-      ? 'MaleHomeTabs'
-      : 'ReceiverBottomTabs';
-
-  navigation.dispatch(
-    CommonActions.reset({
-      index: 0,
-      routes: [{ name: nextScreen }],
-    }),
-  );
-};
-
-
-  /* ---------------- CONTROLS ---------------- */
-
-  const toggleMic = () => {
-    const track = localStreamRef.current?.getAudioTracks()[0];
-    if (!track) return;
-    track.enabled = !track.enabled;
-    setMicOn(track.enabled);
+    pcRef.current?.close();
   };
 
-  const toggleCamera = () => {
-    const track = localStreamRef.current?.getVideoTracks()[0];
-    if (!track) return;
-    track.enabled = !track.enabled;
-    setCameraOn(track.enabled);
+  /* ---------------- LEAVE SCREEN ---------------- */
+
+  const leaveScreen = () => {
+    dispatch(clearCall());
+
+    const nextScreen =
+      myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs';
+
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: nextScreen }],
+      }),
+    );
   };
 
-  const toggleSpeaker = () => {
-    setSpeakerOn(prev => {
-      InCallManager.setSpeakerphoneOn(!prev);
-      return !prev;
-    });
-  };
+  /* ---------------- EXIT CONFIRM ---------------- */
 
-  const switchCamera = () => {
-    const track = localStreamRef.current?.getVideoTracks()[0];
-    if (track && track._switchCamera) {
-      track._switchCamera();
+/* ---------------- EXIT CONFIRM ---------------- */
+
+useEffect(() => {
+
+  const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+
+    // 🚫 ALWAYS BLOCK navigation
+    e.preventDefault();
+
+    // Allow navigation only after confirm
+    if (manualExitRef.current) {
+      navigation.dispatch(e.data.action);
+      return;
     }
+
+    Alert.alert(
+      "Exit from Call",
+      "Are you sure you want to exit the call?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Exit",
+          style: "destructive",
+          onPress: () => {
+            setShowEndModal(true); // ✅ ONLY show modal
+          }
+        }
+      ]
+    );
+
+  });
+
+  return unsubscribe;
+
+}, [navigation]);
+
+/* ---------------- AUTO CLEANUP ---------------- */
+
+useEffect(() => {
+
+  return () => {
+
+    if (!endedRef.current) {
+
+      socketRef.current?.emit('video_call_hangup', { session_id });
+
+      stopCallMedia();
+
+    }
+
   };
 
+}, []);
   /* ---------------- UI ---------------- */
 
   return (
     <View style={styles.container}>
-      {remoteStream && (
-        <RTCView
-          streamURL={remoteStream.toURL()}
-          style={styles.remote}
-          objectFit="cover"
-        />
-      )}
+      {isRemoteLarge
+        ? remoteStream && (
+            <RTCView
+              streamURL={remoteStream.toURL()}
+              style={styles.remote}
+              objectFit="cover"
+              zOrder={0}
+            />
+          )
+        : localStream && (
+            <RTCView
+              streamURL={localStream.toURL()}
+              style={styles.remote}
+              objectFit="cover"
+              mirror
+              zOrder={0}
+            />
+          )}
 
-      {localStreamRef.current && (
-        <RTCView
-          streamURL={localStreamRef.current.toURL()}
-          style={styles.local}
-          objectFit="cover"
-        />
-      )}
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={swapVideos}
+        style={styles.smallContainer}
+      >
+        {isRemoteLarge
+          ? localStream && (
+              <RTCView
+                streamURL={localStream.toURL()}
+                style={styles.local}
+                objectFit="cover"
+                mirror
+                zOrder={1}
+              />
+            )
+          : remoteStream && (
+              <RTCView
+                streamURL={remoteStream.toURL()}
+                style={styles.local}
+                objectFit="cover"
+                zOrder={1}
+              />
+            )}
+      </TouchableOpacity>
 
       <View style={styles.timerPill}>
         <Text style={styles.timerText}>
           {connectedUI
-            ? `${Math.floor(seconds / 60)}:${String(
-                seconds % 60,
-              ).padStart(2, '0')}`
+            ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(
+                2,
+                '0',
+              )}`
             : 'Connecting…'}
         </Text>
       </View>
 
-      <LinearGradient
-        colors={['#1b1b1b', '#101010']}
-        style={styles.bottomBar}
-      >
+      <LinearGradient colors={['#1b1b1b', '#101010']} style={styles.bottomBar}>
         <RoundBtn
           id="speaker"
           activeBtn={activeBtn}
           setActiveBtn={setActiveBtn}
           icon={speakerOn ? 'volume-high' : 'volume-mute'}
-          onPress={toggleSpeaker}
+          onPress={() => {
+            setSpeakerOn(prev => {
+              InCallManager.setSpeakerphoneOn(!prev);
+              return !prev;
+            });
+          }}
         />
-
 
         <RoundBtn
           id="mic"
           activeBtn={activeBtn}
           setActiveBtn={setActiveBtn}
           icon={micOn ? 'mic' : 'mic-off'}
-          onPress={toggleMic}
+          onPress={() => {
+            const track = localStreamRef.current?.getAudioTracks()[0];
+            if (!track) return;
+
+            track.enabled = !track.enabled;
+            setMicOn(track.enabled);
+          }}
         />
 
         <RoundBtn
@@ -348,23 +416,24 @@ const leaveScreen = () => {
           activeBtn={activeBtn}
           setActiveBtn={setActiveBtn}
           icon={cameraOn ? 'videocam' : 'videocam-off'}
-          onPress={toggleCamera}
+          onPress={() => {
+            const track = localStreamRef.current?.getVideoTracks()[0];
+            if (!track) return;
+
+            track.enabled = !track.enabled;
+            setCameraOn(track.enabled);
+          }}
         />
 
-        <RoundBtn
-          id="switch"
-          activeBtn={activeBtn}
-          setActiveBtn={setActiveBtn}
-          icon="camera-reverse"
-          onPress={switchCamera}
-        />
+        {/* END BUTTON */}
 
         <RoundBtn
           id="end"
           activeBtn={activeBtn}
           setActiveBtn={setActiveBtn}
           icon="call"
- onPress={() => {
+          large
+         onPress={() => {
 
   if (!connectedUI) {
     stopCallMedia();
@@ -372,45 +441,52 @@ const leaveScreen = () => {
     return;
   }
 
-  // Tell server to end call
-  socketRef.current?.emit('video_call_hangup', { session_id });
+  manualExitRef.current = true;
+
+  // ❌ DO NOT end call yet
+  setShowEndModal(true); // ✅ show rating modal
 
 }}
-
-          large
         />
       </LinearGradient>
 
-   <EndCallConfirmModal
-  visible={showEndModal}
-  otherUser={other}
-  onCancel={() => {
-    setShowEndModal(false);
-    leaveScreen();
-  }}
-  onConfirm={(rating) => {
+      {/* MODAL */}
 
-    setShowEndModal(false);
+      <EndCallConfirmModal
+        visible={showEndModal}
+        otherUser={other}
+        onCancel={() => {
+          setShowEndModal(false);
+          
+        }}
+        onConfirm={rating => {
 
-    dispatch(
-      submitRatingRequest({
-        session_id,
-        rated_user_id: other?.user_id,
-        rating,
-        duration: seconds
-      })
-    );
+  setShowEndModal(false);
 
-    leaveScreen();
-  }}
-/>
+  dispatch(
+    submitRatingRequest({
+      session_id,
+      rated_user_id: other?.user_id,
+      rating,
+      duration: seconds,
+    }),
+  );
 
+  manualExitRef.current = true;
 
+  socketRef.current?.emit('video_call_hangup', { session_id });
+
+  stopCallMedia();
+
+  leaveScreen();
+
+}}
+      />
     </View>
   );
 };
 
-/* ---------------- ROUND BUTTON ---------------- */
+/* BUTTON */
 
 const RoundBtn = ({ id, icon, onPress, large, activeBtn, setActiveBtn }) => {
   const isActive = activeBtn === id;
@@ -421,19 +497,16 @@ const RoundBtn = ({ id, icon, onPress, large, activeBtn, setActiveBtn }) => {
         setActiveBtn(id);
         onPress && onPress();
       }}
-      activeOpacity={0.9}
       style={[
         styles.roundBtn,
         large && styles.endBtn,
-        {
-          backgroundColor: isActive ? '#9b2a91' : '#ffffff',
-        },
+        { backgroundColor: isActive ? '#ff3b30' : '#fff' },
       ]}
     >
       <Ionicons
         name={icon}
         size={large ? 30 : 22}
-        color={isActive ? '#ffffff' : '#9b2a91'}
+        color={isActive ? '#fff' : '#9b2a91'}
       />
     </TouchableOpacity>
   );
@@ -441,23 +514,26 @@ const RoundBtn = ({ id, icon, onPress, large, activeBtn, setActiveBtn }) => {
 
 export default VideocallScreen;
 
-/* ---------------- STYLES ---------------- */
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
+
   remote: { flex: 1 },
-  local: {
+
+  smallContainer: {
     position: 'absolute',
     top: 70,
     right: 16,
+    zIndex: 10,
+    elevation: 10,
+  },
+
+  local: {
     width: 110,
     height: 160,
-    borderRadius: 18,
+    borderRadius: 16,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#fff',
-    zIndex: 10,
   },
+
   timerPill: {
     position: 'absolute',
     top: 40,
@@ -467,7 +543,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
   },
-  timerText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+
+  timerText: { color: '#fff' },
+
   bottomBar: {
     position: 'absolute',
     bottom: 24,
@@ -479,6 +557,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-evenly',
   },
+
   roundBtn: {
     width: 52,
     height: 52,
@@ -486,6 +565,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   endBtn: {
     width: 64,
     height: 64,

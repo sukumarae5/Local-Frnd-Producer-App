@@ -29,6 +29,8 @@ export const lifestycategory=`${MAIN_BASE_URL}/api/lifestylecategory/all`
 export const lifeStyleallapi=`${MAIN_BASE_URL}/api/lifestyle/all`
 export const userlifestyleapi=`${MAIN_BASE_URL}/api/userlifestyle/`
 export const otheruserapi=`${MAIN_BASE_URL}/api/userprofile/profile`
+
+
 export const statusapi=`${MAIN_BASE_URL}/api/status/create`
 export const mystatusapi=`${MAIN_BASE_URL}/api/status/my`
 export const deletemystatusapi=`${MAIN_BASE_URL}/api/status/`
@@ -55,9 +57,9 @@ export const chatDeleteApi  = `${MAIN_BASE_URL}/api/chat/messages`;
 export const chatListApi = `${MAIN_BASE_URL}/api/chat/list`;
 export const chatReadConversationApi =`${MAIN_BASE_URL}/api/chat/read/conversation`;
 
-export const notificationsApi = `${MAIN_BASE_URL}/notifications`;
-export const notificationUnreadApi = `${MAIN_BASE_URL}/notifications/unread-count`;
-export const notificationMarkReadApi = `${MAIN_BASE_URL}/notifications/read`;
+export const notificationsApi = `${MAIN_BASE_URL}/api/notifications`;
+export const notificationUnreadApi = `${MAIN_BASE_URL}/api/notifications/unread-count`;
+export const notificationMarkReadApi = `${MAIN_BASE_URL}/api/notifications/read`;
 
 export const RATING_POST_URL  =`${MAIN_BASE_URL}/api/rating/submit`;
 

@@ -3,8 +3,8 @@ import React, {
   useRef,
   useState,
   useEffect,
-  useCallback,
-} from 'react';
+} from "react";
+
 import {
   View,
   Text,
@@ -16,58 +16,115 @@ import {
   StatusBar,
   ScrollView,
   SafeAreaView,
-} from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+} from "react-native";
 
-import { useDispatch, useSelector } from 'react-redux';
+import LinearGradient from "react-native-linear-gradient";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+
+import { useDispatch, useSelector } from "react-redux";
 
 import {
   callRequest,
   searchingFemalesRequest,
   directCallRequest,
-} from '../features/calls/callAction';
+} from "../features/calls/callAction";
 
-import { otherUserFetchRequest } from '../features/Otherusers/otherUserActions';
-import { SocketContext } from '../socket/SocketProvider';
-import { useFocusEffect } from '@react-navigation/native';
-import BottomCallPills from '../components/BottomCallPills';
-const { width } = Dimensions.get('window');
+import { otherUserFetchRequest } from "../features/Otherusers/otherUserActions";
+import { SocketContext } from "../socket/SocketProvider";
+import { useFocusEffect } from "@react-navigation/native";
+import BottomCallPills from "../components/BottomCallPills";
+
+const { width } = Dimensions.get("window");
 const CELL_WIDTH = width / 3 - 18;
 const WAVE_DISTANCE = 10;
 
 const TrainersCallPage = ({ navigation }) => {
+
   const dispatch = useDispatch();
   const socketCtx = useContext(SocketContext);
 
-  const callstatus = useSelector(state => state.calls.call);
+  const { userdata } = useSelector(state => state.user);
   const users = useSelector(state => state.calls.searchingFemales || []);
 
-  const hasNavigatedRef = useRef(false);
+  const connected = socketCtx?.connected;
+
   const animRefs = useRef([]);
 
   const [callingRandom, setCallingRandom] = useState(false);
   const [callingRandomVideo, setCallingRandomVideo] = useState(false);
   const [callingDirect, setCallingDirect] = useState(false);
 
-  const connected = socketCtx?.connected;
+  /* ---------------- FILTER STATE ---------------- */
 
-  /* ---------------- EFFECTS ---------------- */
+  const [filters, setFilters] = useState({
+    online: 1,
+    type: null,
+    language: null,
+    interest_id: null
+  });
+
+  /* ---------------- FETCH USERS ---------------- */
 
   useEffect(() => {
-    dispatch(searchingFemalesRequest());
+
+    dispatch(searchingFemalesRequest(filters));
 
     const interval = setInterval(() => {
-      dispatch(searchingFemalesRequest());
+      dispatch(searchingFemalesRequest(filters));
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [dispatch]);
+
+  }, [filters]);
+
+  /* ---------------- FILTER ACTIONS ---------------- */
+
+  const setTypeFilter = (type) => {
+    setFilters(prev => ({
+      ...prev,
+      type
+    }));
+  };
+
+  const setLanguageFilter = () => {
+
+    setFilters(prev => ({
+      ...prev,
+      language: userdata?.language_id
+    }));
+
+  };
+
+  const setInterestFilter = () => {
+
+    const interestId = userdata?.interest_ids?.[0] || null;
+
+    setFilters(prev => ({
+      ...prev,
+      interest_id: interestId
+    }));
+
+  };
+
+  const resetFilters = () => {
+
+    setFilters({
+      online: 1,
+      type: null,
+      language: null,
+      interest_id: null
+    });
+
+  };
+
+  /* ---------------- ANIMATION ---------------- */
 
   useEffect(() => {
+
     animRefs.current = users.map(() => new Animated.Value(0));
 
     users.forEach((_, index) => {
+
       Animated.loop(
         Animated.sequence([
           Animated.timing(animRefs.current[index], {
@@ -80,98 +137,82 @@ const TrainersCallPage = ({ navigation }) => {
             duration: 1200,
             useNativeDriver: true,
           }),
-        ]),
+        ])
       ).start();
+
     });
+
   }, [users]);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      setCallingRandom(false);
-      setCallingRandomVideo(false);
-      setCallingDirect(false);
-      hasNavigatedRef.current = false;
-    }, []),
-  );
-
-  // useEffect(() => {
-  //   if (!callstatus?.session_id) return;
-  //   if (hasNavigatedRef.current) return;
-
-  //   hasNavigatedRef.current = true;
-
-  //   setCallingRandom(false);
-  //   setCallingRandomVideo(false);
-  //   setCallingDirect(false);
-
-  //   navigation.navigate(
-  //     callstatus.call_type === "VIDEO"
-  //       ? "VideocallScreen"
-  //       : "AudiocallScreen",
-  //     {
-  //       session_id: callstatus.session_id,
-  //       role: "caller",
-  //     }
-  //   );
-  // }, [callstatus, navigation]);
-
-  /* ---------------- ACTIONS ---------------- */
+  /* ---------------- CALL ACTIONS ---------------- */
 
   const startRandomAudioCall = () => {
-    if (!connected || callingRandom || callingRandomVideo || callingDirect)
-      return;
 
-    hasNavigatedRef.current = false;
+    if (!connected) return;
+
     setCallingRandom(true);
 
-    dispatch(callRequest({ call_type: 'AUDIO' }));
-    navigation.navigate('CallStatusScreen', {
-      call_type: 'AUDIO',
-      role: 'male',
+    dispatch(callRequest({ call_type: "AUDIO" }));
+
+    navigation.navigate("CallStatusScreen", {
+      call_type: "AUDIO",
+      role: "male"
     });
+
   };
 
   const startRandomVideoCall = () => {
-    if (!connected || callingRandom || callingRandomVideo || callingDirect)
-      return;
 
-    hasNavigatedRef.current = false;
+    if (!connected) return;
+
     setCallingRandomVideo(true);
 
-    dispatch(callRequest({ call_type: 'VIDEO' }));
-    navigation.navigate('CallStatusScreen', {
-      call_type: 'VIDEO',
-      role: 'male',
+    dispatch(callRequest({ call_type: "VIDEO" }));
+
+    navigation.navigate("CallStatusScreen", {
+      call_type: "VIDEO",
+      role: "male"
     });
+
   };
 
-  const startDirectCall = item => {
-    if (!connected || callingRandom || callingRandomVideo || callingDirect)
-      return;
+  const startDirectCall = (item) => {
+console.log("Starting direct call with", item);
+    if (!connected) return;
 
-    hasNavigatedRef.current = false;
     setCallingDirect(true);
 
     dispatch(
       directCallRequest({
         female_id: item.user_id,
-        call_type: item.type,
-      }),
+        call_type: item.type
+      })
     );
 
-    navigation.navigate('CallStatusScreen', {
+    navigation.navigate("CallStatusScreen", {
       call_type: item.type,
+       role: "caller"
     });
-  };
 
-  /* ---------------- RENDER ---------------- */
+  };
+useFocusEffect(
+  React.useCallback(() => {
+    setCallingRandom(false);
+    setCallingRandomVideo(false);
+    setCallingDirect(false); 
+  }, [])
+);
+
 
   return (
+
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
 
-      {/* ---------------- TOP WHITE ---------------- */}
+      {/* HEADER */}
+
       <View style={styles.topWhiteArea}>
+
         <Text style={styles.lookText}>Local frnd</Text>
         <Text style={styles.pageTitle}>Connecting Room</Text>
 
@@ -180,43 +221,73 @@ const TrainersCallPage = ({ navigation }) => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterRow}
         >
+
+          {/* ONLINE */}
+
           <View style={[styles.filterChip, styles.filterChipActive]}>
             <Text style={styles.filterTextActive}>ONLINE</Text>
           </View>
 
-          <View style={styles.filterChip}>
+          {/* AUDIO */}
+
+          <TouchableOpacity
+            style={styles.filterChip}
+            onPress={() => setTypeFilter("AUDIO")}
+          >
             <Text style={styles.filterText}>Audio</Text>
-          </View>
+          </TouchableOpacity>
 
-          <View style={styles.filterChip}>
+          {/* VIDEO */}
+
+          <TouchableOpacity
+            style={styles.filterChip}
+            onPress={() => setTypeFilter("VIDEO")}
+          >
             <Text style={styles.filterText}>Video</Text>
-          </View>
+          </TouchableOpacity>
 
-          <View style={styles.filterChip}>
-            <Text style={styles.filterText}>language</Text>
-          </View>
+          {/* LANGUAGE */}
 
-          <View style={styles.filterChip}>
-            <Text style={styles.filterText}>Location</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.filterChip}
+            onPress={setLanguageFilter}
+          >
+            <Text style={styles.filterText}>My Language</Text>
+          </TouchableOpacity>
 
-          <View style={styles.filterChip}>
-            <Text style={styles.filterText}>ALL</Text>
-          </View>
+          {/* INTEREST */}
 
-          <View style={styles.filterChip}>
-            <Text style={styles.filterText}>ALL</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.filterChip}
+            onPress={setInterestFilter}
+          >
+            <Text style={styles.filterText}>My Interest</Text>
+          </TouchableOpacity>
+
+          {/* RESET */}
+
+          <TouchableOpacity
+            style={styles.filterChip}
+            onPress={resetFilters}
+          >
+            <Text style={styles.filterText}>Reset</Text>
+          </TouchableOpacity>
+
         </ScrollView>
+
       </View>
 
-      {/* ---------------- PURPLE USERS AREA ---------------- */}
+      {/* USERS GRID */}
+
       <LinearGradient
-        colors={['#ee60f3', '#8B2CE2']}
+        colors={["#ee60f3", "#8B2CE2"]}
         style={styles.middlePurple}
       >
+
         <View style={styles.gridWrapper}>
+
           {users.map((item, index) => {
+
             const translateY =
               animRefs.current[index]?.interpolate({
                 inputRange: [0, 1],
@@ -224,62 +295,57 @@ const TrainersCallPage = ({ navigation }) => {
               }) || 0;
 
             return (
+
               <Animated.View
                 key={item.session_id}
                 style={[styles.itemCell, { transform: [{ translateY }] }]}
               >
+
                 <TouchableOpacity
                   style={styles.userCard}
                   onPress={() => startDirectCall(item)}
                   onLongPress={() => {
                     dispatch(otherUserFetchRequest(item.user_id));
-                    navigation.navigate('AboutScreen', {
+                    navigation.navigate("AboutScreen", {
                       userId: item.user_id,
                     });
                   }}
                 >
-                  <Animated.View
-                    style={[
-                      styles.avatarOuter,
-                      {
-                        transform: [
-                          {
-                            scale:
-                              animRefs.current[index]?.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [1, 1.12], // ✅ zoom glow
-                              }) || 1,
-                          },
-                        ],
-                        shadowOpacity:
-                          animRefs.current[index]?.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0.3, 0.9], // ✅ glow strength
-                          }) || 0.3,
-                      },
-                    ]}
-                  >
+
+                  <View style={styles.avatarOuter}>
+
                     <Image
-                      source={require('../assets/boy1.jpg')}
+                      source={require("../assets/boy1.jpg")}
                       style={styles.avatar}
                     />
 
                     <View style={styles.callBadge}>
                       <MaterialIcons
-                        name={item.type === 'VIDEO' ? 'videocam' : 'call'}
+                        name={item.type === "VIDEO" ? "videocam" : "call"}
                         size={12}
                         color="#fff"
                       />
                     </View>
-                  </Animated.View>
 
-                  <Text style={styles.userText}>User #{item.user_id}</Text>
+                  </View>
+
+                  <Text style={styles.userText}>
+                    User #{item.user_id}
+                  </Text>
+
                 </TouchableOpacity>
+
               </Animated.View>
+
             );
+
           })}
+
         </View>
+
       </LinearGradient>
+
+      {/* CALL BUTTONS */}
 
       <BottomCallPills
         callingRandom={callingRandom}
@@ -287,8 +353,11 @@ const TrainersCallPage = ({ navigation }) => {
         onRandomAudio={startRandomAudioCall}
         onRandomVideo={startRandomVideoCall}
       />
+
     </SafeAreaView>
+
   );
+
 };
 
 export default TrainersCallPage;

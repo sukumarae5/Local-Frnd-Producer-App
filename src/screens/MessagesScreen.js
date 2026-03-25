@@ -51,6 +51,15 @@ const MessagesScreen = ({ navigation }) => {
     [navigation],
   );
 
+  const uniqueChats = useMemo(() => {
+  const map = new Map();
+
+  chatList.forEach(item => {
+    map.set(item.user_id, item);
+  });
+
+  return Array.from(map.values());
+}, [chatList]);
   /* Start Friend Call */
   const startFriendCall = useCallback(
     async (item, type = 'AUDIO') => {
@@ -209,7 +218,7 @@ const MessagesScreen = ({ navigation }) => {
 
         {/* LIST */}
         <FlatList
-          data={filteredData}
+         data={uniqueChats}
           keyExtractor={item => String(item.user_id)}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}

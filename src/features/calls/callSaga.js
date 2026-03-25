@@ -90,22 +90,25 @@ function* femaleCancelSaga() {
   }
 }
 
-function* searchingFemalesSaga() {
+function* searchingFemalesSaga(action) {
   try {
     const token = yield call(AsyncStorage.getItem, "twittoke");
 
     const res = yield call(
       axios.get,
       searching_females,
-      { headers: { Authorization: `Bearer ${token}` } }
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        params: action.payload   // 👈 filters sent here
+      }
     );
 
     yield put(searchingFemalesSuccess(res.data.data));
+
   } catch (e) {
     yield put(searchingFemalesFailed(e.message));
   }
-}
-
+} 
 function* callDetailsSaga() {
   try {
     const token = yield call(AsyncStorage.getItem, "twittoke");

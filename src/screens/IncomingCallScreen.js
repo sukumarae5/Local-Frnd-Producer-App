@@ -17,22 +17,17 @@ const IncomingCallScreen = ({ route, navigation }) => {
 
   const accept = () => {
     socketRef.current.emit("call_accept", { session_id });
-
-    navigation.replace(
-      call_type === "VIDEO" ? "VideocallScreen" : "AudiocallScreen",
-      { session_id, role: "receiver" }
-    );
   };
 
   const reject = () => {
     socketRef.current.emit("call_reject", { session_id });
-    navigation.goBack();
+   
   };
 
   return (
     <LinearGradient
       colors={["#E9C9FF", "#F4C9F2", "#FFD1E8"]}
-      style={styles.container}
+      style={styles.container} pointerEvents="auto"  
     >
 
       {/* hearts background */}

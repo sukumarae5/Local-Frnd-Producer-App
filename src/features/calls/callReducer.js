@@ -3,7 +3,7 @@ import * as T from './callType';
 const initialState = {
   loading: false,
   error: null,
-
+incomingCall: null,
   call: null,
   searchingFemales: [],
   connectedCallDetails: null,
@@ -30,10 +30,13 @@ export default function callReducer(state = initialState, action) {
     case T.FEMALE_SEARCH_SUCCESS:
     case T.DIRECT_CALL_SUCCESS:
       return {
-        ...state,
-        loading: false,
-        call: action.payload,
-      };
+    ...state,
+    loading: false,
+    call: {
+      ...action.payload,
+      is_friend: false, // ✅ IMPORTANT
+    },
+  };
 
     case T.FEMALE_CANCEL_SUCCESS:
       return {
@@ -108,21 +111,28 @@ export default function callReducer(state = initialState, action) {
     case T.INCOMING_CALL_RINGING:
       return {
         ...state,
+        incomingCall: action.payload,
         call: {
           ...action.payload,
           status: 'RINGING',
           direction: 'INCOMING',
+          call_mode: action.payload.call_mode,
         },
       };
 
-    case T.INCOMING_CALL_ACCEPT:
-      return {
-        ...state,
-        call: {
-          ...state.call,
-          status: 'ACCEPTED',
-        },
-      };
+ case T.INCOMING_CALL_ACCEPT:
+  return {
+    ...state,
+    call: {
+      session_id: action.payload.session_id,
+      call_type: action.payload.call_type,
+      status: "ACCEPTED",
+      is_friend: action.payload.is_friend || false,
+      direction: action.payload.direction || "INCOMING",
+      call_mode: action.payload.call_mode || (action.payload.is_friend ? "FRIEND" : "RANDOM"),
+    },
+    incomingCall: null,
+  };
 
     case T.INCOMING_CALL_REJECT:
       return {

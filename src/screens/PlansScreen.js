@@ -53,7 +53,7 @@ export default function BuyCoinsScreen() {
 
         {/* COIN IMAGE */}
         <Image
-          source={require("../assets/multicoins.png")}
+          source={require("../assets/multicoin.png")}
           style={styles.newCoin}
         />
 
