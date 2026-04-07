@@ -8,6 +8,8 @@ import {
   StatusBar,
   Dimensions,
   StyleSheet,
+  SafeAreaView,
+  Platform,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { useSelector, useDispatch } from "react-redux";
@@ -16,19 +18,22 @@ import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 import { getCoinsRequest } from "../features/conis/coinActions";
+import OffersSectionScreen from "./OffersSectionScreen";
+import coinImg from "../assets/coin1.png";
 
 const { width, height } = Dimensions.get("window");
-const wp = (val) => (width * val) / 100;
-const hp = (val) => (height * val) / 100;
+const wp = val => (width * val) / 100;
+const hp = val => (height * val) / 100;
+const isSmallDevice = width < 360;
 
-export default function BuyCoinsScreen() {
+export default function PlanScreen() {
   const dispatch = useDispatch();
   const navigation = useNavigation();
 
-  const { userdata } = useSelector((state) => state.user);
-  const coins = useSelector((state) => state.coins.coins);
+  const { userdata } = useSelector(state => state.user);
+  const coins = useSelector(state => state.coins?.coins || []);
+  const unread = useSelector(state => state.notification?.unread || 0);
 
-  const coinBalance = userdata?.user?.coin_balance ?? 0;
   const profilePhotoURL = userdata?.images?.profile_image;
 
   const imageUrl = profilePhotoURL
@@ -37,42 +42,32 @@ export default function BuyCoinsScreen() {
 
   useEffect(() => {
     dispatch(getCoinsRequest());
-  }, []);
+  }, [dispatch]);
 
-  /* 🔥 PERFECT CARD DESIGN */
   const renderItem = ({ item }) => (
     <TouchableOpacity activeOpacity={0.9} style={styles.cardWrapper}>
       <LinearGradient
-        colors={["#7C3AED","#D946EF"]}
+        colors={["#7C3AED", "#D946EF"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.newCard}
       >
-        {/* TITLE */}
         <Text style={styles.newTitle}>
-          Unlock {item?.discount_percent}% Savings
+          Unlock {item?.discount_percent ?? 0}% Savings
         </Text>
 
-        {/* COIN IMAGE */}
         <Image
           source={require("../assets/multicoin.png")}
           style={styles.newCoin}
         />
 
-        {/* PRICE */}
         <Text style={styles.newPrice}>
-          Only {" "} 
-
-  <Text style={styles.rupee}>₹</Text>
-          {item?.price_after_discount}
+          Only <Text style={styles.rupee}>₹</Text>
+          {item?.price_after_discount ?? 0}
         </Text>
 
-        {/* BUTTON */}
-        <TouchableOpacity style={styles.claimBtn}>
-          <Text style={styles.claimText}>
-            Claim {item?.coins}
-          </Text>
-
+        <TouchableOpacity style={styles.claimBtn} activeOpacity={0.8}>
+          <Text style={styles.claimText}>Claim {item?.coins ?? 0}</Text>
           <Image
             source={require("../assets/normalmulticoin.png")}
             style={styles.btnCoin}
@@ -84,97 +79,268 @@ export default function BuyCoinsScreen() {
 
   return (
     <WelcomeScreenbackgroungpage>
-      <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar
+          translucent
+          backgroundColor="transparent"
+          barStyle="dark-content"
+        />
 
-      <FlatList
-        data={coins || []}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
-        numColumns={3}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingHorizontal: wp(2),
-          paddingBottom: hp(6),
-        }}
-        ListHeaderComponent={
-          <>
-            <View style={styles.topRow}>
-              <View style={styles.coinContainer}>
-                <View style={styles.orangeBadge}>
-                  <Text style={styles.badgeNumber}>
-                    <Image
-                      source={require("../assets/coin1.png")}
-                      style={styles.headerCoin}
-                    />
-                    {coinBalance}
-                  </Text>
+        <View style={styles.container}>
+          <View style={styles.fixedHeader}>
+            <View style={styles.headerContainer}>
+              <View style={styles.headerRow}>
+                <View style={styles.leftHeader}>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => navigation.navigate("Plans")}
+                  >
+                    <LinearGradient
+                      colors={["#FFA726", "#FF7043"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.coinBox}
+                    >
+                      <Image source={coinImg} style={styles.coinImage} />
+                      <Text
+                        style={styles.coinText}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                      >
+                        {userdata?.user?.coin_balance ?? 0}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.rightHeader}>
+                  <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={() => navigation.navigate("Messages")}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.iconCircle}>
+                      <Icon
+                        name="shopping-outline"
+                        size={isSmallDevice ? wp(4.2) : wp(4.7)}
+                        color="#fff"
+                      />
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={() => navigation.navigate("RecentsCallHistoryScreen")}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.iconCircle}>
+                      <Icon
+                        name="history"
+                        size={isSmallDevice ? wp(4.2) : wp(4.7)}
+                        color="#fff"
+                      />
+                    </View>
+
+                    {unread > 0 && (
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>
+                          {unread > 99 ? "99+" : unread}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.profileButton}
+                    onPress={() => navigation.navigate("Profile")}
+                    activeOpacity={0.8}
+                  >
+                    <Image source={imageUrl} style={styles.profilePic} />
+                  </TouchableOpacity>
                 </View>
               </View>
 
-              <View style={styles.rightSection}>
-                <View style={styles.purpleCircle}>
-                  <Icon name="camera-outline" size={wp(5)} color="#fff" />
-                </View>
+              <Text style={styles.lokalText}>Lokal frnd</Text>
+              <Text style={styles.buyCoinsText}>Buy Coins</Text>
+            </View>
+          </View>
 
-                <View style={styles.purpleCircle}>
-                  <Icon name="history" size={wp(5)} color="#fff" />
-                </View>
-
-                <Image source={imageUrl} style={styles.profileImage} />
+          <FlatList
+            data={coins}
+            renderItem={renderItem}
+            keyExtractor={(item, index) =>
+              item?.id ? item.id.toString() : index.toString()
+            }
+            numColumns={3}
+            showsVerticalScrollIndicator={false}
+            columnWrapperStyle={styles.columnWrapper}
+            contentContainerStyle={styles.listContainer}
+            ListHeaderComponent={
+              <View>
+                <OffersSectionScreen />
+                <Image
+                  source={require("../assets/blackfriday.png")}
+                  style={styles.blackBanner}
+                  resizeMode="cover"
+                />
               </View>
-            </View>
-
-            <Text style={styles.lokalText}>Lokal frnd</Text>
-            <Text style={styles.buyCoinsText}>Buy Coins</Text>
-
-            <Text style={styles.offerText}>Offers</Text>
-
-            <LinearGradient
-              colors={["#D946EF", "#7E22CE"]}
-              style={styles.sliderBox}
-            />
-
-            <View style={styles.dotContainer}>
-              <View style={styles.activeDot} />
-              <View style={styles.inactiveDot} />
-              <View style={styles.inactiveDot} />
-            </View>
-
-            <Image
-              source={require("../assets/blackfriday.png")}
-              style={styles.blackBanner}
-              resizeMode="cover"
-            />
-          </>
-        }
-      />
-
-      <View style={styles.bottomWrapper}>
-        <View style={styles.bottomContainer}>
-          <TouchableOpacity onPress={() => navigation.navigate("Home")}>
-            <LinearGradient
-              colors={["#C026D3", "#7E22CE"]}
-              style={styles.activeIcon}
-            >
-              <Text style={{ color: "#fff", fontSize: wp(5) }}>🏠</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
-          <Text style={styles.inactiveIcon}>💜</Text>
-
-          <View style={styles.divider} />
-          <Text style={styles.inactiveIcon}>🔔</Text>
-
-          <View style={styles.divider} />
-          <Text style={styles.inactiveIcon}>💬</Text>
+            }
+          />
         </View>
-      </View>
+      </SafeAreaView>
     </WelcomeScreenbackgroungpage>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+
+  container: {
+    flex: 1,
+  },
+
+  fixedHeader: {
+    zIndex: 100,
+    elevation: 20,
+  },
+
+  headerContainer: {
+    paddingHorizontal: wp(4),
+    paddingTop:
+      Platform.OS === "android"
+        ? (StatusBar.currentHeight || 0) + hp(1.2)
+        : hp(1.2),
+    paddingBottom: hp(1.2),
+  },
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  leftHeader: {
+    width: "42%",
+    justifyContent: "center",
+    alignItems: "flex-start",
+  },
+
+  rightHeader: {
+    width: "58%",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+
+  coinBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: isSmallDevice ? wp(3) : wp(3.5),
+    height: isSmallDevice ? hp(4.9) : hp(5.2),
+    borderRadius: wp(8),
+    minWidth: isSmallDevice ? wp(22) : wp(24),
+    maxWidth: isSmallDevice ? wp(30) : wp(32),
+    elevation: 4,
+  },
+
+  coinImage: {
+    width: isSmallDevice ? wp(5.8) : wp(6.5),
+    height: isSmallDevice ? wp(5.8) : wp(6.5),
+    resizeMode: "contain",
+  },
+
+  coinText: {
+    marginLeft: wp(2),
+    fontSize: isSmallDevice ? wp(3.2) : wp(3.6),
+    fontWeight: "800",
+    color: "#fff",
+    maxWidth: wp(14),
+  },
+
+  iconButton: {
+    marginLeft: isSmallDevice ? wp(1.5) : wp(2),
+    position: "relative",
+  },
+
+  profileButton: {
+    marginLeft: isSmallDevice ? wp(1.5) : wp(2),
+  },
+
+  iconCircle: {
+    width: isSmallDevice ? wp(8.3) : wp(9.5),
+    height: isSmallDevice ? wp(8.3) : wp(9.5),
+    borderRadius: isSmallDevice ? wp(4.15) : wp(4.75),
+    backgroundColor: "#ce17fc",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  profilePic: {
+    width: isSmallDevice ? wp(8.3) : wp(9.5),
+    height: isSmallDevice ? wp(8.3) : wp(9.5),
+    borderRadius: isSmallDevice ? wp(4.15) : wp(4.75),
+    borderWidth: 2,
+    borderColor: "#A35DFE",
+  },
+
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: "#ff0044",
+    minWidth: isSmallDevice ? wp(4.6) : wp(5),
+    height: isSmallDevice ? wp(4.6) : wp(5),
+    borderRadius: wp(2.5),
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: wp(0.6),
+  },
+
+  badgeText: {
+    color: "#fff",
+    fontSize: isSmallDevice ? wp(1.9) : wp(2.2),
+    fontWeight: "700",
+  },
+
+  lokalText: {
+    textAlign: "center",
+    color: "#9333EA",
+    fontSize: wp(4),
+    marginTop: hp(1.2),
+  },
+
+  buyCoinsText: {
+    textAlign: "center",
+    color: "#A21CAF",
+    fontSize: wp(6.5),
+    fontWeight: "800",
+    marginTop: hp(0.4),
+    marginBottom: hp(1.2),
+  },
+
+  listContainer: {
+    paddingHorizontal: wp(2),
+    paddingBottom: hp(12),
+  },
+
+  columnWrapper: {
+    justifyContent: "space-between",
+  },
+
+  blackBanner: {
+    width: "100%",
+    height: hp(18),
+    marginTop: hp(2),
+    marginBottom: hp(1.5),
+  },
+
+  cardWrapper: {
+    width: wp(30),
+    marginBottom: hp(1.5),
+  },
+
   newCard: {
     borderRadius: wp(6),
     paddingVertical: hp(2),
@@ -205,7 +371,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: wp(3.5),
     fontWeight: "800",
-    
+  },
+
+  rupee: {
+    color: "#FACC15",
+    fontWeight: "900",
   },
 
   claimBtn: {
@@ -215,13 +385,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(5),
     flexDirection: "row",
     alignItems: "center",
-      gap: wp(1), // spacing between text & coin (🔥 best way)
-
+    gap: wp(1),
   },
-rupee: {
-  color: "#FACC15", // gold/yellow color 🔥
-  fontWeight: "900",
-},
+
   claimText: {
     color: "#fff",
     fontWeight: "600",
@@ -232,144 +398,5 @@ rupee: {
     width: wp(4),
     height: wp(4),
     marginLeft: wp(0.2),
-  },
-
-  cardWrapper: {
-    width: wp(30),
-    margin: wp(1.5),
-  },
-
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: wp(4),
-    marginTop: hp(3),
-  },
-
-  headerCoin: {
-    width: wp(6),
-    height: wp(6),
-  },
-
-  orangeBadge: {
-    backgroundColor: "#FF6B35",
-    paddingHorizontal: wp(3),
-    paddingVertical: hp(0.4),
-    borderRadius: wp(4),
-  },
-
-  badgeNumber: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: wp(3.5),
-  },
-
-  rightSection: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  purpleCircle: {
-    width: wp(9),
-    height: wp(9),
-    borderRadius: wp(4.5),
-    backgroundColor: "#A21CAF",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: wp(2),
-  },
-
-  profileImage: {
-    width: wp(9),
-    height: wp(9),
-    borderRadius: wp(4.5),
-  },
-
-  lokalText: {
-    textAlign: "center",
-    color: "#9333EA",
-    fontSize: wp(4),
-  },
-
-  buyCoinsText: {
-    textAlign: "center",
-    color: "#A21CAF",
-    fontSize: wp(6.5),
-    fontWeight: "800",
-  },
-
-  offerText: {
-    marginLeft: wp(4),
-    marginTop: hp(2),
-  },
-
-  sliderBox: {
-    marginHorizontal: wp(4),
-    marginTop: hp(1),
-    height: hp(7),
-    borderRadius: wp(4),
-  },
-
-  dotContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: hp(1),
-  },
-
-  activeDot: {
-    width: wp(2.5),
-    height: wp(2.5),
-    borderRadius: wp(1.25),
-    backgroundColor: "#C026D3",
-    marginHorizontal: wp(1),
-  },
-
-  inactiveDot: {
-    width: wp(2.5),
-    height: wp(2.5),
-    borderRadius: wp(1.25),
-    backgroundColor: "#E9D5FF",
-    marginHorizontal: wp(1),
-  },
-
-  blackBanner: {
-    width: "100%",
-    height: hp(18),
-    marginTop: hp(2),
-  },
-
-  bottomWrapper: {
-    position: "absolute",
-    bottom: hp(2),
-    width: "100%",
-    alignItems: "center",
-  },
-
-  bottomContainer: {
-    flexDirection: "row",
-    width: "85%",
-    backgroundColor: "#fff",
-    borderRadius: wp(10),
-    paddingVertical: hp(1.5),
-    justifyContent: "space-around",
-  },
-
-  activeIcon: {
-    width: wp(12),
-    height: wp(12),
-    borderRadius: wp(6),
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  inactiveIcon: {
-    fontSize: wp(5),
-    color: "#C026D3",
-  },
-
-  divider: {
-    width: 1,
-    height: hp(3),
-    backgroundColor: "#E5E7EB",
   },
 });
