@@ -2,8 +2,9 @@ import React, { useEffect, useRef,useContext  } from "react";
 import { View, Text, StyleSheet, Image, Animated } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import { useSelector, useDispatch } from "react-redux";
-import { callDetailsRequest } from "../features/calls/callAction";
+import { callDetailsRequest, callRequest, cancelWaitingRequest, femaleCancelRequest } from "../features/calls/callAction";
 import { SocketContext } from "../socket/SocketProvider";
+import { useFocusEffect } from "@react-navigation/native";
 
 const smallAvatars = [
   require("../assets/girl1.jpg"),
@@ -77,7 +78,7 @@ if (data?.is_friend === true) return;
     });
   };
 
-  // socket.on("incoming_call", onIncomingCall);
+  socket.on("incoming_call", onIncomingCall);
 
   return () => {
     socket.off("incoming_call", onIncomingCall);
@@ -107,8 +108,49 @@ useEffect(() => {
 
 }, [call?.status]);
   
+useEffect(() => {
+  if (!call?.status) return;
+
+  if (call?.status === "NO_MATCH" && role === "male") {
+    const retry = setTimeout(() => {
+      dispatch(callRequest({ call_type })); 
+    }, 2000);
+
+    return () => clearTimeout(retry);
+  }
+}, [call?.status]);
+
+useEffect(() => {
+  if (role === "male") {
+    dispatch(callRequest({ call_type }));
+  }
+}, []);
+
+const displayStatus =
+  call?.status === "NO_MATCH"
+    ? "No_match Searching..."
+    : call?.status || "Connecting...";
 
 
+useEffect(() => {
+  const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+
+    if (call?.status === "SEARCHING") {
+
+      if (role === "female") {
+        dispatch(femaleCancelRequest());
+      }
+
+      if (role === "male") {
+        dispatch(cancelWaitingRequest());
+      }
+
+    }
+
+  });
+
+  return unsubscribe;
+}, [navigation, call]);
 /* ---------------- UI ANIMATIONS ---------------- */
   const ripple1 = useRef(new Animated.Value(0)).current;
   const ripple2 = useRef(new Animated.Value(0)).current;
@@ -179,6 +221,8 @@ useEffect(() => {
     }),
   };
 
+
+
   return (
     <LinearGradient
       colors={["#E9C9FF", "#F4C9F2", "#FFD1E8"]}
@@ -247,8 +291,8 @@ useEffect(() => {
       </View>
 
       <Text style={styles.searchingText}>
-        {call?.status || "Connecting..."}
-      </Text>
+  {displayStatus}
+</Text>
 
       <View style={{ flex: 1 }} />
 

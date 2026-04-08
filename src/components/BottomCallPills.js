@@ -40,7 +40,7 @@ const BottomCallPills = ({
 
         <View style={styles.pillTextWrap}>
           <Text style={styles.pillTitle}>Random</Text>
-          <Text style={styles.pillSub}>locked calls</Text>
+          <Text style={styles.pillSub}>local calls</Text>
         </View>
       </View>
     </View>

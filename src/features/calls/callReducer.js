@@ -39,11 +39,13 @@ export default function callReducer(state = initialState, action) {
   };
 
     case T.FEMALE_CANCEL_SUCCESS:
-      return {
-        ...state,
-        loading: false,
-        call: null,
-      };
+  return {
+    ...state,
+    call:
+      state.call?.status === "ACCEPTED"
+        ? state.call
+        : null,
+  };
 
     case T.SEARCHING_FEMALES_SUCCESS:
       return {
@@ -161,6 +163,27 @@ export default function callReducer(state = initialState, action) {
         loading: false,
         error: action.payload,
       };
+
+      case T.CANCEL_WAITING_REQUEST:
+  return {
+    ...state,
+    loading: true,
+    error: null,
+  };
+
+case T.CANCEL_WAITING_SUCCESS:
+  return {
+    ...state,
+    loading: false,
+    call: null, // ✅ clear call state
+  };
+
+case T.CANCEL_WAITING_FAILED:
+  return {
+    ...state,
+    loading: false,
+    error: action.payload,
+  };
 
     default:
       return state;

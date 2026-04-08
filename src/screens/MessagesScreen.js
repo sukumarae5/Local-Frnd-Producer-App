@@ -25,12 +25,12 @@ const MessagesScreen = ({ navigation }) => {
 
   const chatList = useSelector(state => state.chat.chatList) ?? [];
   const unread = useSelector(state => state.chat.unread) ?? {};
+  const userdata = useSelector(state => state.user.userdata);
 
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [callingId, setCallingId] = useState(null);
 
-  /* Fetch chat list when screen focused */
   useFocusEffect(
     useCallback(() => {
       dispatch(chatListRequest());
@@ -43,7 +43,6 @@ const MessagesScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  /* Open Chat */
   const openChat = useCallback(
     item => {
       navigation.navigate('ChatScreen', { user: item });
@@ -52,15 +51,15 @@ const MessagesScreen = ({ navigation }) => {
   );
 
   const uniqueChats = useMemo(() => {
-  const map = new Map();
+    const map = new Map();
+    chatList.forEach(item => {
+      map.set(item.user_id, item);
+    });
+    return Array.from(map.values());
+  }, [chatList]);
 
-  chatList.forEach(item => {
-    map.set(item.user_id, item);
-  });
+  const isEmpty = uniqueChats.length === 0;
 
-  return Array.from(map.values());
-}, [chatList]);
-  /* Start Friend Call */
   const startFriendCall = useCallback(
     async (item, type = 'AUDIO') => {
       if (callingId === item.user_id) return;
@@ -84,16 +83,6 @@ const MessagesScreen = ({ navigation }) => {
     [dispatch, navigation, callingId],
   );
 
-  /* Search Filter */
-  const filteredData = useMemo(() => {
-    if (!search.trim()) return chatList;
-
-    return chatList.filter(item =>
-      item.name?.toLowerCase().includes(search.toLowerCase()),
-    );
-  }, [search, chatList]);
-
-  /* Render Each Row */
   const renderItem = useCallback(
     ({ item }) => {
       const count = unread[item.user_id] || 0;
@@ -113,7 +102,6 @@ const MessagesScreen = ({ navigation }) => {
           activeOpacity={0.85}
           onPress={() => openChat(item)}
         >
-          {/* Avatar */}
           <View style={styles.avatarWrap}>
             {avatar ? (
               <Image source={{ uri: avatar }} style={styles.avatar} />
@@ -130,7 +118,6 @@ const MessagesScreen = ({ navigation }) => {
             )}
           </View>
 
-          {/* Name + Last Message */}
           <View style={styles.centerPart}>
             <Text style={styles.name} numberOfLines={1}>
               {item.name}
@@ -147,18 +134,13 @@ const MessagesScreen = ({ navigation }) => {
             )}
           </View>
 
-          {/* Call Buttons */}
           <View style={styles.callSection}>
             <TouchableOpacity
               style={styles.callBtn}
               onPress={() => startFriendCall(item, 'AUDIO')}
               disabled={callingId === item.user_id}
             >
-              <Ionicons
-                name="call-outline"
-                size={20}
-                color="#C51DAF"
-              />
+              <Ionicons name="call-outline" size={20} color="#C51DAF" />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -166,11 +148,7 @@ const MessagesScreen = ({ navigation }) => {
               onPress={() => startFriendCall(item, 'VIDEO')}
               disabled={callingId === item.user_id}
             >
-              <Ionicons
-                name="videocam-outline"
-                size={20}
-                color="#C51DAF"
-              />
+              <Ionicons name="videocam-outline" size={20} color="#C51DAF" />
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -187,11 +165,7 @@ const MessagesScreen = ({ navigation }) => {
         {/* HEADER */}
         <View style={styles.headerContainer}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons
-              name="chevron-back"
-              size={22}
-              color="#4A4A4A"
-            />
+            <Ionicons name="chevron-back" size={22} color="#4A4A4A" />
           </TouchableOpacity>
 
           <Text style={styles.headerTitle}>Messages</Text>
@@ -207,7 +181,7 @@ const MessagesScreen = ({ navigation }) => {
               <Ionicons name="search" size={18} color="#999" />
               <TextInput
                 placeholder="Search"
-                value={search}
+                value={search}  
                 onChangeText={setSearch}
                 style={styles.searchInput}
                 placeholderTextColor="#999"
@@ -216,23 +190,41 @@ const MessagesScreen = ({ navigation }) => {
           </LinearGradient>
         </View>
 
-        {/* LIST */}
-        <FlatList
-         data={uniqueChats}
-          keyExtractor={item => String(item.user_id)}
-          renderItem={renderItem}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-            />
-          }
-          ItemSeparatorComponent={() => (
-            <View style={styles.separator} />
-          )}
-          contentContainerStyle={styles.listContent}
-        />
+        {/* EMPTY STATE */}
+        {isEmpty ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="chatbubble-outline" size={60} color="#ccc" />
+
+            <Text style={styles.emptyTitle}>No Messages</Text>
+
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={() => {
+                if (userdata?.user?.gender === 'male') {
+                  navigation.navigate('TrainersCallpage');
+                } else {
+                  navigation.navigate('GoOnlineScreen');
+                }
+              }}
+            >
+              <Text style={styles.primaryBtnText}>Find Friends</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            data={uniqueChats}
+            keyExtractor={item => String(item.user_id)}
+            renderItem={renderItem}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            ItemSeparatorComponent={() => (
+              <View style={styles.separator} />
+            )}
+            contentContainerStyle={styles.listContent}
+          />
+        )}
       </View>
     </WelcomeScreenbackgroungpage>
   );
@@ -367,5 +359,32 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: '#f2f2f2',
+  },
+
+  /* CLEAN EMPTY UI */
+
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 10,
+    marginBottom: 20,
+  },
+
+  primaryBtn: {
+    backgroundColor: '#C51DAF',
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+
+  primaryBtnText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });

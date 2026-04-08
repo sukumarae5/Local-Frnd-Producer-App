@@ -1,58 +1,98 @@
-import {
-  RTCPeerConnection,
-  MediaStream,
-} from "react-native-webrtc";
+import { RTCPeerConnection } from 'react-native-webrtc';
+
+// const ICE_SERVERS = {
+//   iceServers: [
+//     { urls: "stun:stun.l.google.com:19302" },
+//     { urls: "stun:stun1.l.google.com:19302" },
+//     { urls: "stun:stun2.l.google.com:19302" },
+//   ],
+// };
 
 const ICE_SERVERS = {
   iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:19302" },
-  ],
-  iceCandidatePoolSize: 10,
-};
+    { urls: 'stun:stun.l.google.com:19302' },
 
+    {
+      urls: 'turn:relay1.expressturn.com:3478',
+      username: 'ef7M9Y7KQKZQ6Z6W',
+      credential: '8c2k7K5z3Jf7nF4d',
+    },
+  ],
+};
+// const ICE_SERVERS = {
+//   iceServers: [
+//     { urls: "stun:stun.l.google.com:19302" },
+
+//     {
+//       urls: "turn:relay1.expressturn.com:3478",
+//       username: "ef7M9Y7KQKZQ6Z6W",
+//       credential: "8c2k7K5z3Jf7nF4d",
+//     },
+//   ],
+// };
+
+// const ICE_SERVERS = {
+//   iceServers: [
+//     { urls: "stun:stun.l.google.com:19302" },
+
+//     {
+//       urls: [
+//         "turn:global.turn.twilio.com:3478?transport=udp",
+//         "turn:global.turn.twilio.com:3478?transport=tcp",
+//       ],
+//       username: "YOUR_TWILIO_USERNAME",
+//       credential: "YOUR_TWILIO_PASSWORD",
+//     },
+//   ],
+// };
 export const createPC = ({ onIceCandidate, onTrack, onIceState }) => {
   try {
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
-    pc.onicecandidate = (event) => {
-      if (event?.candidate) {
+    pc.onicecandidate = event => {
+      if (event.candidate) {
         onIceCandidate?.(event.candidate);
       }
     };
 
-    pc.ontrack = (event) => {
-      if (event.streams?.[0]) {
-        onTrack?.(event.streams[0]);
-      } else if (event.track) {
-        const stream = new MediaStream();
-        stream.addTrack(event.track);
-        onTrack?.(stream);
-      }
+    /* 🔥 IMPORTANT: SEND FULL EVENT */
+    //  pc.ontrack = (event) => {
+    //   console.log("🎥 TRACK RECEIVED:", event.streams);
+
+    //   if (event.streams && event.streams[0]) {
+    //     onTrack?.(event.streams[0]); // ✅ send FULL stream
+    //   }
+    // };
+
+    pc.ontrack = event => {
+      console.log('🎧 TRACK KIND:', event.track.kind);
+
+      // 🔥 Always use streams[0]
+      const stream = event.streams[0];
+
+      if (!stream) return;
+      console.log('🔥 REMOTE STREAM SET');
+      onTrack?.(stream);
     };
-
     pc.oniceconnectionstatechange = () => {
-  console.log("🌐 ICE State:", pc.iceConnectionState);
+      console.log('🌐 ICE STATE:', pc.iceConnectionState);
 
-  onIceState?.(pc.iceConnectionState);
+      onIceState?.(pc.iceConnectionState);
 
-  if (
-    pc.iceConnectionState === "failed" ||
-    pc.iceConnectionState === "disconnected" ||
-    pc.iceConnectionState === "closed"
-  ) {
-    console.log("❌ ICE connection lost");
-  }
-};
+      if (pc.iceConnectionState === 'connected') {
+        console.log('✅ CONNECTED SUCCESS');
+      }
 
-    pc.onsignalingstatechange = () => {
-      console.log("📡 Signaling State:", pc.signalingState);
+      if (pc.iceConnectionState === 'failed') {
+        console.log('❌ ICE FAILED');
+      }
+
+      pc.restartIce();
     };
 
     return pc;
   } catch (e) {
-    console.error("❌ RTCPeerConnection failed:", e);
+    console.error('PC ERROR:', e);
     return null;
   }
 };

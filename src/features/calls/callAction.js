@@ -143,3 +143,16 @@ export const recentCallFailed = (error) => ({
   type: T.RECENT_CALL_FAILED,
   payload: error,
 });
+
+export const cancelWaitingRequest = () => ({
+  type: T.CANCEL_WAITING_REQUEST,
+});
+
+export const cancelWaitingSuccess = () => ({
+  type: T.CANCEL_WAITING_SUCCESS,
+});   
+
+export const cancelWaitingFailed = (error) => ({
+  type: T.CANCEL_WAITING_FAILED,
+  payload: error,
+});

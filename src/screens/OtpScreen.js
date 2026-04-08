@@ -29,7 +29,7 @@ const OtpScreen = ({ route, navigation }) => {
 
   const mobile_number = route?.params?.mobile_number;
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
-  const [timer, setTimer] = useState(15);
+  const [timer, setTimer] = useState(120);
 const [canResend, setCanResend] = useState(false);
 const mode = route?.params?.mode;
   const inputRefs = useRef([]);
@@ -153,7 +153,7 @@ const handleResend = () => {
 
   dispatch(userResendOtpRequest({ mobile_number })); // or resend action
 
-  setTimer(15);
+  setTimer(120);
   setCanResend(false);
 };
 
@@ -223,8 +223,10 @@ const handleResend = () => {
 
           {/* <Text style={styles.resendText}>Resend in 10 Sec.</Text> */}
 {!canResend ? (
-  <Text style={styles.resendText}>Resend in {timer} Sec.</Text>
-) : (
+<Text style={styles.resendText}>
+  Resend in {Math.floor(timer / 60)}:
+  {String(timer % 60).padStart(2, "0")}
+</Text>) : (
   <TouchableOpacity onPress={handleResend}>
     <Text style={styles.resendText}>Resend OTP</Text>
   </TouchableOpacity>

@@ -13,7 +13,7 @@ import {
 
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { mediaDevices } from 'react-native-webrtc';
+import { mediaDevices, MediaStream } from 'react-native-webrtc';
 import { CommonActions } from '@react-navigation/native';
 import InCallManager from 'react-native-incall-manager';
 
@@ -54,7 +54,6 @@ const AudiocallScreen = ({ route, navigation }) => {
   const manualExitRef = useRef(false);
   const startedRef = useRef(false);
   const endedRef = useRef(false);
-
   const timerRef = useRef(null);
   const micAnim = useRef(new Animated.Value(1)).current;
 
@@ -63,7 +62,7 @@ const AudiocallScreen = ({ route, navigation }) => {
   const [speakerOn, setSpeakerOn] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [iceState, setIceState] = useState('new');
-
+const [remoteStream, setRemoteStream] = useState(null);
   const [showEndModal, setShowEndModal] = useState(false);
 
   /* ================= PERMISSION ================= */
@@ -79,7 +78,9 @@ const AudiocallScreen = ({ route, navigation }) => {
   };
 
   /* ================= INIT ================= */
-
+useEffect(() => {
+  console.log("🔥 ICE STATE UI:", iceState);
+}, [iceState]);
   useEffect(() => {
     if (!connected || !socketRef.current || startedRef.current) return;
 
@@ -87,55 +88,88 @@ const AudiocallScreen = ({ route, navigation }) => {
     const socket = socketRef.current;
 
     const start = async () => {
-      const ok = await requestPermission();
-      if (!ok) {
-        navigation.goBack();
-        return;
-      }
+  const ok = await requestPermission();
+  if (!ok) {
+    navigation.goBack();
+    return;
+  }
 
-      InCallManager.start({ media: 'audio' });
-      InCallManager.setSpeakerphoneOn(false);
+  // ✅ START AUDIO ENGINE
+InCallManager.start({ media: 'video' });
 
-      pcRef.current = createPC({
-        onIceCandidate: candidate => {
-          socket.emit('audio_ice_candidate', { session_id, candidate });
-        },
-        onIceState: setIceState,
+  InCallManager.setMicrophoneMute(false);
+  InCallManager.setForceSpeakerphoneOn(true);
+  InCallManager.setSpeakerphoneOn(true);
+
+  // ✅ CREATE PEER CONNECTION
+  pcRef.current = createPC({
+    onIceCandidate: (candidate) => {
+      console.log("📤 Sending ICE:", candidate);
+      socket.emit('audio_ice_candidate', { session_id, candidate });
+    },
+
+    onIceState: setIceState,
+onTrack: (stream) => {
+  console.log("🔥 REMOTE STREAM RECEIVED");
+
+  setRemoteStream(stream);
+}
+  });
+
+  // ✅ GET LOCAL AUDIO
+  const stream = await mediaDevices.getUserMedia({
+     audio: {
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+  },
+    video: false,
+  });
+console.log(
+  "🎤 LOCAL AUDIO:",
+  stream.getAudioTracks().map(t => ({
+    enabled: t.enabled,
+    readyState: t.readyState,
+  }))
+);
+  stream.getAudioTracks().forEach(track => {
+    console.log("🎧 REMOTE AUDIO TRACK:", track.enabled);
+    track.enabled = true;
+  });
+
+  localStreamRef.current = stream;
+
+  // ✅ ADD TRACKS
+  stream.getTracks().forEach(track => {
+    pcRef.current.addTrack(track, stream);
+  });
+
+  // ✅ JOIN ROOM
+  socket.emit('audio_join', { session_id });
+
+  // ✅ SOCKET EVENTS
+  socket.on('audio_offer', onOffer);
+  socket.on('audio_answer', onAnswer);
+  socket.on('audio_ice_candidate', onIce);
+
+  socket.on('audio_connected', async () => {
+    console.log("🚀 audio_connected");
+
+    onConnected();
+
+    if (pcRef.current.signalingState === "stable") {
+      const offer = await pcRef.current.createOffer({
+        offerToReceiveAudio: true,
       });
 
-      const stream = await mediaDevices.getUserMedia({
-        audio: true,
-        video: false,
-      });
+      await pcRef.current.setLocalDescription(offer);
 
-      localStreamRef.current = stream;
-      stream.getTracks().forEach(t => pcRef.current.addTrack(t, stream));
+      console.log("📤 Sending OFFER");
 
-      socket.emit('audio_join', { session_id });
-
-      socket.on('audio_offer', onOffer);
-      socket.on('audio_answer', onAnswer);
-      socket.on('audio_ice_candidate', onIce);
-
-      socket.on('audio_call_ended', () => {
-        stopCallMedia();
-
-        setTimeout(() => {
-          setShowEndModal(true);
-        }, 100);
-      });
-
-      socket.on('audio_connected', async () => {
-        onConnected();
-
-        if (role !== 'caller') return;
-
-        const offer = await pcRef.current.createOffer();
-        await pcRef.current.setLocalDescription(offer);
-
-        socket.emit('audio_offer', { session_id, offer });
-      });
-    };
+      socket.emit('audio_offer', { session_id, offer });
+    }
+  });
+};
 
     start();
 
@@ -149,6 +183,20 @@ const AudiocallScreen = ({ route, navigation }) => {
   }, [connected]);
 
   /* ================= SIGNALING ================= */
+useEffect(() => {
+  if (!remoteStream) return;
+
+  console.log("🔊 PLAYING REMOTE AUDIO");
+
+  // 🔥 THIS LINE FIXES AUDIO
+  const audioTrack = remoteStream.getAudioTracks()[0];
+
+  if (audioTrack) {
+    audioTrack.enabled = true;
+  }
+}, [remoteStream]);
+
+
 
   const flushIce = async () => {
     if (!pcRef.current || endedRef.current) return;
@@ -162,21 +210,26 @@ const AudiocallScreen = ({ route, navigation }) => {
     pendingIceRef.current = [];
   };
 
-  const onOffer = async ({ offer }) => {
-    if (!pcRef.current || endedRef.current) return;
+const onOffer = async ({ offer }) => {
+  console.log("📥 Received OFFER");
 
-    await pcRef.current.setRemoteDescription(offer);
-    await flushIce();
+  await pcRef.current.setRemoteDescription(offer);
 
-    const answer = await pcRef.current.createAnswer();
-    await pcRef.current.setLocalDescription(answer);
+  await flushIce();
 
-    socketRef.current.emit('audio_answer', { session_id, answer });
+  const answer = await pcRef.current.createAnswer();
 
-    onConnected();
-  };
+  await pcRef.current.setLocalDescription(answer);
+
+  console.log("📤 Sending ANSWER");
+
+  socketRef.current.emit('audio_answer', { session_id, answer });
+
+  onConnected();
+};
 
   const onAnswer = async ({ answer }) => {
+    console.log("📥 Received ANSWER");
     if (!pcRef.current || endedRef.current) return;
 
     await pcRef.current.setRemoteDescription(answer);
@@ -185,31 +238,44 @@ const AudiocallScreen = ({ route, navigation }) => {
     onConnected();
   };
 
-  const onIce = async ({ candidate }) => {
-    if (!candidate || !pcRef.current || endedRef.current) return;
+ const onIce = async ({ candidate }) => {
+  console.log("📥 Received ICE:", candidate);
 
-    if (!pcRef.current.remoteDescription) {
-      pendingIceRef.current.push(candidate);
-      return;
-    }
+  if (!candidate || !pcRef.current || endedRef.current) return;
 
-    try {
-      await pcRef.current.addIceCandidate(candidate);
-    } catch {}
-  };
+  if (!pcRef.current.remoteDescription) {
+    pendingIceRef.current.push(candidate);
+    return;
+  }
 
+  try {
+    await pcRef.current.addIceCandidate(candidate);
+  } catch (e) {
+    console.log("ICE ERROR:", e);
+  }
+};
   /* ================= CONNECTED ================= */
 
-  const onConnected = () => {
-    if (timerRef.current) return;
+const onConnected = () => {
+  if (timerRef.current) return;
 
-    setConnectedUI(true);
-    dispatch(callDetailsRequest());
+  setConnectedUI(true);
 
-    timerRef.current = setInterval(() => {
-      setSeconds(s => s + 1);
-    }, 1000);
-  };
+  setTimeout(() => {
+  console.log("🔊 AUDIO FIX AFTER CONNECT");
+
+  InCallManager.setMicrophoneMute(false);
+  InCallManager.setForceSpeakerphoneOn(true);
+  InCallManager.setSpeakerphoneOn(true);
+}, 500);
+setSpeakerOn(true); // 🔥 IMPORTANT
+
+  dispatch(callDetailsRequest());
+
+  timerRef.current = setInterval(() => {
+    setSeconds(s => s + 1);
+  }, 1000);
+};
 
   /* ================= CONTROLS ================= */
 
@@ -221,12 +287,17 @@ const AudiocallScreen = ({ route, navigation }) => {
     setMicOn(track.enabled);
   };
 
-  const toggleSpeaker = () => {
-    setSpeakerOn(prev => {
-      InCallManager.setSpeakerphoneOn(!prev);
-      return !prev;
-    });
-  };
+const toggleSpeaker = () => {
+  const newVal = !speakerOn;
+ console.log("🔊 Speaker:", newVal ? "ON" : "OFF");
+
+  setSpeakerOn(newVal);
+
+
+
+  InCallManager.setForceSpeakerphoneOn(newVal);
+  InCallManager.setSpeakerphoneOn(newVal);
+};
 
   /* ================= STOP CALL ================= */
 
@@ -237,7 +308,7 @@ const AudiocallScreen = ({ route, navigation }) => {
 
     clearInterval(timerRef.current);
 
-    InCallManager.stop();
+    // InCallManager.stop();
 
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     pcRef.current?.close();
@@ -352,8 +423,21 @@ useEffect(() => {
       )}
 
       <View style={styles.controls}>
-        <TouchableOpacity style={styles.circleBtn} onPress={toggleSpeaker}>
-          <Ionicons name="volume-high" size={22} color="#9b4dff" />
+        <TouchableOpacity
+  style={[
+    styles.circleBtn,
+    speakerOn && { backgroundColor: "#E8F5E9" }
+  ]}
+  onPress={toggleSpeaker}
+>
+        {/* <TouchableOpacity style={styles.circleBtn} onPress={toggleSpeaker}> */}
+         {/* // <Ionicons name="volume-high" size={22} color="#9b4dff" /> */}
+       
+       <Ionicons
+  name={speakerOn ? "volume-high" : "volume-mute"}
+  size={24}
+  color={speakerOn ? "#4CAF50" : "#999"} // green when ON
+/>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.circleBtn} onPress={toggleMic}>
@@ -387,7 +471,7 @@ useEffect(() => {
             setShowEndModal(true); // ✅ show rating modal first
           }}
         >
-          <Ionicons name="call" size={22} color="#fff" />
+          <Ionicons name="call" size={22} color="#8f0a0a" />
         </TouchableOpacity>
       </View>
 
@@ -521,7 +605,7 @@ const styles = StyleSheet.create({
   },
 
   endBtn: {
-    backgroundColor: '#9b4dff',
+    backgroundColor: '#f0ebf7',
     width: 60,
     height: 60,
     borderRadius: 30,

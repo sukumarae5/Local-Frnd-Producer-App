@@ -19,7 +19,10 @@ import {
   friendCallSuccess,
   friendCallFailed,
   recentCallSuccess,
-  recentCallFailed
+  recentCallFailed,
+  cancelWaitingSuccess,
+  cancelWaitingFailed
+
 } from "./callAction";
 
 import {
@@ -31,6 +34,7 @@ import {
   direct_call,
   friend_connect ,
   recent_calls ,
+  cancel_waiting ,
 } from "../../api/userApi";
 
 function* maleCallSaga(action) {
@@ -196,11 +200,29 @@ function* recentCallSaga() {
   }
 }
 
+function* cancelWaitingSaga() {
+  try {
+    const token = yield call(AsyncStorage.getItem, "twittoke");
+
+    yield call(
+      axios.post,
+      cancel_waiting,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    yield put(cancelWaitingSuccess());
+
+  } catch (e) {
+    yield put(cancelWaitingFailed(e.message));
+  }
+}
 
 export default function* callSaga() {
   yield takeLatest(T.CALL_REQUEST, maleCallSaga);
   yield takeLatest(T.FEMALE_SEARCH_REQUEST, femaleSearchSaga);
   yield takeLatest(T.FEMALE_CANCEL_REQUEST, femaleCancelSaga);
+  yield takeLatest(T.CANCEL_WAITING_REQUEST, cancelWaitingSaga);
   yield takeLatest(T.SEARCHING_FEMALES_REQUEST, searchingFemalesSaga);
   yield takeLatest(T.CALL_DETAILS_REQUEST, callDetailsSaga);
   yield takeLatest(T.DIRECT_CALL_REQUEST, directCallSaga);
