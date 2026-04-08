@@ -27,7 +27,7 @@ import { USER_DATA_REQUEST } from "../user/userType";
 function* fetchLifestyle() {
   try {
     const response = yield call(axios.get, lifestycategory);
-
+console.log(response)
     yield put({
       type: FETCH_LIFESTYLE_SUCCESS,
       payload: response?.data?.data || [],
@@ -44,7 +44,7 @@ function* fetchLifestyle() {
 function* fetchLifestyleOptionsWorker() {
   try {
     const response = yield call(axios.get, lifeStyleallapi);
-
+console.log(response)
     yield put({
       type: FETCH_LIFESTYLE_OPTIONS_SUCCESS,
       payload: response?.data?.data || [],

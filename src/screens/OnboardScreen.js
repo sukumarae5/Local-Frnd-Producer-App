@@ -63,14 +63,12 @@ const OnboardScreen = ({ navigation }) => {
     animateRipple(ripple2, 800);
   }, []);
 
-  /* ===== AUTO NAVIGATION ===== */
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      navigation.replace("WelcomeScreen02");
-    }, 3000);
+  //   const timer = setTimeout(() => {
+  //     navigation.replace("WelcomeScreen02");
+  //   }, 3000);
 
-    return () => clearTimeout(timer);
-  }, [navigation]);
+  //   return () => clearTimeout(timer);
+  // }, [navigation]);
 
   const rotate = rotateAnim.interpolate({
     inputRange: [0, 1],
