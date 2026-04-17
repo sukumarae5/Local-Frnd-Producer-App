@@ -63,6 +63,7 @@ export default function authReducer(state = initialState, action) {
         loading: false,
         token: action.payload.token, // ✅ store token separately
         user: action.payload.user,
+        isAuthenticated: true,
         Otp: action.payload,
       };
     case USER_OTP_FETCH_FAILED:

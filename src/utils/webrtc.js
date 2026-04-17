@@ -1,4 +1,4 @@
-import { RTCPeerConnection } from 'react-native-webrtc';
+import { RTCPeerConnection,MediaStream  } from 'react-native-webrtc';
 
 // const ICE_SERVERS = {
 //   iceServers: [
@@ -50,6 +50,8 @@ export const createPC = ({ onIceCandidate, onTrack, onIceState }) => {
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
     pc.onicecandidate = event => {
+
+      console.log("📤 ICE CANDIDATE:", event.candidate);
       if (event.candidate) {
         onIceCandidate?.(event.candidate);
       }
@@ -64,16 +66,38 @@ export const createPC = ({ onIceCandidate, onTrack, onIceState }) => {
     //   }
     // };
 
-    pc.ontrack = event => {
-      console.log('🎧 TRACK KIND:', event.track.kind);
+    // pc.ontrack = event => {
+    //   console.log('🎧 TRACK KIND:', event.track.kind);
 
-      // 🔥 Always use streams[0]
-      const stream = event.streams[0];
+    //   // 🔥 Always use streams[0]
+    //   const stream = event.streams[0];
 
-      if (!stream) return;
-      console.log('🔥 REMOTE STREAM SET');
-      onTrack?.(stream);
-    };
+    //   if (!stream) return;
+    //   console.log('🔥 REMOTE STREAM SET');
+    //   onTrack?.(stream);
+    // };
+
+
+    pc.ontrack = (event) => {
+  console.log("🎧 TRACK KIND:", event.track.kind);
+
+  let stream;
+
+  if (event.streams && event.streams[0]) {
+    stream = event.streams[0];
+  } else {
+    // 🔥 CRITICAL FIX FOR REACT NATIVE
+    stream = new MediaStream();
+    stream.addTrack(event.track);
+  }
+
+  console.log("🔥 REMOTE STREAM FIXED");
+
+  onTrack?.(stream);
+};
+pc.onconnectionstatechange = () => {
+  console.log("🔗 CONNECTION STATE:", pc.connectionState);
+};
     pc.oniceconnectionstatechange = () => {
       console.log('🌐 ICE STATE:', pc.iceConnectionState);
 
@@ -85,9 +109,10 @@ export const createPC = ({ onIceCandidate, onTrack, onIceState }) => {
 
       if (pc.iceConnectionState === 'failed') {
         console.log('❌ ICE FAILED');
+         pc.restartIce();
       }
 
-      pc.restartIce();
+     
     };
 
     return pc;

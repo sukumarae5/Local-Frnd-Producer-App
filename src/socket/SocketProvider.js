@@ -5,6 +5,7 @@ import { createSocket, destroySocket } from './globalSocket';
 import { useDispatch, useStore } from 'react-redux';
 import { useSelector } from 'react-redux';
 import {
+  clearCall,
   incomingCallAccept,
   incomingCallReject,
   incomingCallRinging,
@@ -17,6 +18,7 @@ import {
 } from '../features/chat/chatAction';
 
 import { CHAT_MARK_READ_SUCCESS } from '../features/chat/chatType';
+import callManager from '../utils/callManager';
 
 export const SocketContext = createContext(null);
 
@@ -253,6 +255,13 @@ const SocketProvider = ({ children }) => {
           }),
         );
       });
+      socket.on('call_ended', (data) => {
+  console.log("📴 CALL ENDED:", data);
+
+  dispatch(clearCall());
+
+  callManager.reset();
+});
     };
 
     init();

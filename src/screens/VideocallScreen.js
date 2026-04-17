@@ -76,10 +76,12 @@ const VideocallScreen = ({ route, navigation }) => {
   const startedRef = useRef(false);
   const endedRef = useRef(false);
   const manualExitRef = useRef(false);
+  const remoteEndedRef = useRef(false);
+  const disableExitRef = useRef(false);
+const isEndingCallRef = useRef(false);
   /* ---------------- SWAP VIDEO ---------------- */
 
   const swapVideos = () => {
-    // Prevent rapid re-render glitch
     requestAnimationFrame(() => {
       setIsRemoteLarge(prev => !prev);
     });
@@ -111,11 +113,6 @@ const VideocallScreen = ({ route, navigation }) => {
     );
   };
 
-  // if (!connectedCallDetails) {
-  //   console.log('⏳ Waiting for call details...');
-  //   return;
-  // }
-
   /* ---------------- INIT ---------------- */
 
   useEffect(() => {
@@ -137,15 +134,14 @@ const VideocallScreen = ({ route, navigation }) => {
         /* ================= INIT ================= */
         setRemoteStream(null);
 
-      // 🔥 ANDROID AUDIO MODE (ADD FIRST)
+        // 🔥 ANDROID AUDIO MODE (ADD FIRST)
 
+        InCallManager.start({ media: 'video' });
 
-InCallManager.start({ media: 'video' });
-
-// 🔥 FULL AUDIO CONFIG
-InCallManager.setForceSpeakerphoneOn(true);
-InCallManager.setSpeakerphoneOn(true);
-InCallManager.setMicrophoneMute(false);
+        // 🔥 FULL AUDIO CONFIG
+        InCallManager.setForceSpeakerphoneOn(true);
+        InCallManager.setSpeakerphoneOn(true);
+        InCallManager.setMicrophoneMute(false);
         /* ================= CREATE PC ================= */
         pcRef.current = createPC({
           onIceCandidate: candidate => {
@@ -164,12 +160,12 @@ InCallManager.setMicrophoneMute(false);
 
         /* ================= GET LOCAL MEDIA ================= */
         const stream = await mediaDevices.getUserMedia({
-          // 
+          //
           audio: {
-    echoCancellation: true,
-    noiseSuppression: true,
-    autoGainControl: true,
-  },
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
           video: {
             facingMode: 'user',
             width: 640,
@@ -203,9 +199,8 @@ InCallManager.setMicrophoneMute(false);
         socket.on('video_call_ended', () => {
           stopCallMedia();
 
-          setTimeout(() => {
             setShowEndModal(true);
-          }, 100);
+         
         });
 
         socket.on('video_connected', async () => {
@@ -274,7 +269,9 @@ InCallManager.setMicrophoneMute(false);
 
       stopCallMedia();
     };
-  }, [connected]); /* ---------------- SIGNALING ---------------- */
+  }, [connected]); 
+
+
 
   const flushIce = async () => {
     if (!pcRef.current) return;
@@ -372,35 +369,33 @@ InCallManager.setMicrophoneMute(false);
 
   /* ---------------- EXIT CONFIRM ---------------- */
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', e => {
-      // 🚫 ALWAYS BLOCK navigation
-      e.preventDefault();
+useEffect(() => {
+  const unsubscribe = navigation.addListener('beforeRemove', e => {
 
-      // Allow navigation only after confirm
-      if (manualExitRef.current) {
-        navigation.dispatch(e.data.action);
-        return;
-      }
+    // ✅ FINAL HARD EXIT
+    if (isEndingCallRef.current) return;
 
-      Alert.alert('Exit from Call', 'Are you sure you want to exit the call?', [
-        {
-          text: 'Cancel',
-          style: 'cancel',
+    if (disableExitRef.current) {
+      navigation.dispatch(e.data.action);
+      return;
+    }
+
+    e.preventDefault();
+
+    Alert.alert('Exit from Call', 'Are you sure you want to exit the call?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Exit',
+        style: 'destructive',
+        onPress: () => {
+          setShowEndModal(true); // ✅ show rating modal
         },
-        {
-          text: 'Exit',
-          style: 'destructive',
-          onPress: () => {
-            setShowEndModal(true); // ✅ ONLY show modal
-          },
-        },
-      ]);
-    });
+      },
+    ]);
+  });
 
-    return unsubscribe;
-  }, [navigation]);
-
+  return unsubscribe;
+}, [navigation]);
   /* ---------------- AUTO CLEANUP ---------------- */
 
   useEffect(() => {
@@ -416,54 +411,53 @@ InCallManager.setMicrophoneMute(false);
 
   return (
     <View style={styles.container}>
-
-     {!connectedCallDetails ? (
-      <View style={styles.waiting}>
-        <Text style={{ color: "white" }}>Loading call...</Text>
-      </View>
-    ) : !localURL ? (
-      <View style={styles.waiting}>
-        <Text style={{ color: "white" }}>Starting camera...</Text>
-      </View>
-    ) : !remoteURL ? (
-      <>
-        {/* SHOW LOCAL VIDEO WHILE WAITING */}
-        <RTCView
-          key="bigVideo"
-          streamURL={localURL}
-          style={styles.bigVideo}
-          objectFit="cover"
-          mirror
-        />
-        <View style={styles.waitingOverlay}>
-          <Text style={{ color: "white" }}>Waiting for user...</Text>
+      {!connectedCallDetails ? (
+        <View style={styles.waiting}>
+          <Text style={{ color: 'white' }}>Loading call...</Text>
         </View>
-      </>
-    ) : (
-      <>
-        {/* 🔥 BOTH VIDEOS */}
-        <RTCView
-          key="bigVideo"
-          streamURL={isRemoteLarge ? remoteURL : localURL}
-          style={styles.bigVideo}
-          objectFit="cover"
-          mirror={!isRemoteLarge}
-        />
-
-        <TouchableOpacity
-          style={styles.smallVideoContainer}
-          onPress={() => setIsRemoteLarge(prev => !prev)}
-        >
+      ) : !localURL ? (
+        <View style={styles.waiting}>
+          <Text style={{ color: 'white' }}>Starting camera...</Text>
+        </View>
+      ) : !remoteURL ? (
+        <>
+          {/* SHOW LOCAL VIDEO WHILE WAITING */}
           <RTCView
-            key="smallVideo"
-            streamURL={isRemoteLarge ? localURL : remoteURL}
-            style={styles.smallVideo}
+            key="bigVideo"
+            streamURL={localURL}
+            style={styles.bigVideo}
             objectFit="cover"
-            mirror={isRemoteLarge}
+            mirror
           />
-        </TouchableOpacity>
-      </>
-    )}
+          <View style={styles.waitingOverlay}>
+            <Text style={{ color: 'white' }}>Waiting for user...</Text>
+          </View>
+        </>
+      ) : (
+        <>
+          {/* 🔥 BOTH VIDEOS */}
+          <RTCView
+            key="bigVideo"
+            streamURL={isRemoteLarge ? remoteURL : localURL}
+            style={styles.bigVideo}
+            objectFit="cover"
+            mirror={!isRemoteLarge}
+          />
+
+          <TouchableOpacity
+            style={styles.smallVideoContainer}
+            onPress={() => setIsRemoteLarge(prev => !prev)}
+          >
+            <RTCView
+              key="smallVideo"
+              streamURL={isRemoteLarge ? localURL : remoteURL}
+              style={styles.smallVideo}
+              objectFit="cover"
+              mirror={isRemoteLarge}
+            />
+          </TouchableOpacity>
+        </>
+      )}
 
       {/* TIMER */}
       <View style={styles.timerPill}>
@@ -541,7 +535,7 @@ InCallManager.setMicrophoneMute(false);
               return;
             }
 
-            manualExitRef.current = true;
+            
             setShowEndModal(true);
           }}
         />
@@ -552,25 +546,31 @@ InCallManager.setMicrophoneMute(false);
         visible={showEndModal}
         otherUser={other}
         onCancel={() => setShowEndModal(false)}
-        onConfirm={rating => {
-          setShowEndModal(false);
+        onConfirm={(rating) => {
+  if (isEndingCallRef.current) return;
+  isEndingCallRef.current = true;
 
-          dispatch(
-            submitRatingRequest({
-              session_id,
-              rated_user_id: other?.user_id,
-              rating,
-              duration: seconds,
-            }),
-          );
+  disableExitRef.current = true;
 
-          manualExitRef.current = true;
+  setShowEndModal(false);
 
-          socketRef.current?.emit('video_call_hangup', { session_id });
+  dispatch(
+    submitRatingRequest({
+      session_id,
+      rated_user_id: other?.user_id,
+      rating,
+      duration: seconds,
+    }),
+  );
 
-          stopCallMedia();
-          leaveScreen();
-        }}
+  socketRef.current?.emit('video_call_hangup', { session_id });
+
+  stopCallMedia();
+
+  dispatch(clearCall());
+
+  leaveScreen();
+}}
       />
     </View>
   );
@@ -643,15 +643,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   waitingOverlay: {
-  position: "absolute",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundColor: "rgba(0,0,0,0.3)",
-},
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
   local: {
     width: 110,
     height: 160,

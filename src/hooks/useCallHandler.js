@@ -17,12 +17,21 @@ useEffect(() => {
 
   console.log("🔥 CALL HANDLER:", call);
 
+// if (
+//   callManager.currentSession &&
+//   !callManager.isSameSession(call.session_id)
+// ) {
+//   console.log("⚠️ New session detected, resetting...");
+//   callManager.reset(); // you must implement this
+// }
+
 if (
   callManager.currentSession &&
-  !callManager.isSameSession(call.session_id)
+  callManager.currentSession !== call.session_id
 ) {
-  console.log("⚠️ New session detected, resetting...");
-  callManager.reset(); // you must implement this
+  console.log("🔄 New session → reset");
+
+  callManager.reset();
 }
 
   callManager.setSession(call.session_id);
@@ -30,20 +39,38 @@ if (
   // =============================
   // 🎲 RANDOM + DIRECT FLOW
   // =============================
+  // if (!call.is_friend) {
+
+  //   if (status === "ACCEPTED" && call.call_mode !== "FRIEND") {
+
+  //     console.log("➡️ PERFECT MATCH SCREEN");
+
+  //     callManager.safeNavigate(navigationRef, "PerfectMatchScreen", {
+  //       session_id: call.session_id,
+  //       call_type: call.call_type,
+  //     });
+
+  //     return;
+  //   }
+  // }
+
   if (!call.is_friend) {
+  if (status === "ACCEPTED") {
 
-    if (status === "ACCEPTED" && call.call_mode !== "FRIEND") {
-
-      console.log("➡️ PERFECT MATCH SCREEN");
-
-      callManager.safeNavigate(navigationRef, "PerfectMatchScreen", {
-        session_id: call.session_id,
-        call_type: call.call_type,
-      });
-
-      return;
+    if (callManager.lastNavigatedSession === call.session_id) {
+      return; // ✅ PREVENT DUPLICATE NAVIGATION
     }
+
+    callManager.lastNavigatedSession = call.session_id;
+
+    callManager.safeNavigate(navigationRef, "PerfectMatchScreen", {
+      session_id: call.session_id,
+      call_type: call.call_type,
+    });
+
+    return;
   }
+}
 
   // =============================
   // 👥 FRIEND FLOW

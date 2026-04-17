@@ -32,7 +32,9 @@
         android:allowBackup="false"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true"
-        android:supportsRtl="true">
+        android:supportsRtl="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        >
 
 <service 
     android:name="com.asterinet.reactnative.incallmanager.InCallManagerService"
