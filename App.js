@@ -104,7 +104,8 @@ function MainNavigator({ navigationRef, isNavReady  }) {
 
   return (
     <Stack.Navigator
-      initialRouteName={token ? 'ReceiverBottomTabs' : 'Landing'}
+      // initialRouteName={token ? 'ReceiverBottomTabs' : 'Landing'}
+     initialRouteName="Landing"
       screenOptions={{ headerShown: false }}
     >
       <Stack.Screen name="Landing" component={LandingScreen} />

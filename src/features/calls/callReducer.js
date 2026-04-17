@@ -34,7 +34,8 @@ export default function callReducer(state = initialState, action) {
     loading: false,
     call: {
       ...action.payload,
-      is_friend: false, // ✅ IMPORTANT
+      is_friend: false,
+      call_mode: "DIRECT",
     },
   };
 
@@ -94,6 +95,8 @@ export default function callReducer(state = initialState, action) {
         call: {
           ...action.payload,
           direction: 'OUTGOING',
+           is_friend: true,          // ✅ ADD THIS
+      call_mode: "FRIEND",
         },
       };
 
@@ -185,6 +188,12 @@ case T.CANCEL_WAITING_FAILED:
     error: action.payload,
   };
 
+  case "CALL_ENDED":
+  return {
+    ...state,
+    call: null,
+    connectedCallDetails: null,
+  };
     default:
       return state;
   }

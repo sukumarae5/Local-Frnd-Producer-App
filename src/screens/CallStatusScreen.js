@@ -62,7 +62,7 @@ useEffect(() => {
   const onIncomingCall = (data) => {
 
     // ✅ chat calls must NOT auto join
-if (data?.is_friend === true) return;
+// if (data?.is_friend === true) return;
 
     if (navigatedRef.current) return;
     navigatedRef.current = true;
