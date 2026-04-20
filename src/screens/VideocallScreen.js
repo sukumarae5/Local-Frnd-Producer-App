@@ -23,6 +23,7 @@ import { submitRatingRequest } from '../features/rating/ratingAction';
 
 import { SocketContext } from '../socket/SocketProvider';
 import { createPC } from '../utils/webrtc';
+import store from '../reduxStore/store';
 
 const VideocallScreen = ({ route, navigation }) => {
   const { session_id, role } = route.params || {};
@@ -203,52 +204,101 @@ const isEndingCallRef = useRef(false);
          
         });
 
-        socket.on('video_connected', async () => {
-          console.log('🚀 video_connected');
+        // socket.on('video_connected', async () => {
+        //   console.log('🚀 video_connected');
 
-          onConnected();
+        //   onConnected();
 
-          if (!pcRef.current) {
-            console.log('❌ PC not ready');
-            return;
-          }
-          // 🛑 SAFETY CHECK (CRITICAL)
-          if (!caller || !caller.user_id) {
-            console.log('⛔ Caller not ready → skipping');
-            return;
-          }
+        //   if (!pcRef.current) {
+        //     console.log('❌ PC not ready');
+        //     return;
+        //   }
+        //   // 🛑 SAFETY CHECK (CRITICAL)
+        //   if (!caller || !caller.user_id) {
+        //     console.log('⛔ Caller not ready → skipping');
+        //     return;
+        //   }
 
-          if (!myId) {
-            console.log('⛔ My ID not ready → skipping');
-            return;
-          }
+        //   if (!myId) {
+        //     console.log('⛔ My ID not ready → skipping');
+        //     return;
+        //   }
 
-          const isCaller = String(myId) === String(caller.user_id);
+        //   const isCaller = String(myId) === String(caller.user_id);
 
-          console.log('👤 My ID:', myId);
-          console.log('📞 Caller ID:', caller.user_id);
-          console.log('🎯 Am I caller?', isCaller);
+        //   console.log('👤 My ID:', myId);
+        //   console.log('📞 Caller ID:', caller.user_id);
+        //   console.log('🎯 Am I caller?', isCaller);
 
-          if (!isCaller) {
-            console.log('🙋 I am receiver');
-            return;
-          }
+        //   if (!isCaller) {
+        //     console.log('🙋 I am receiver');
+        //     return;
+        //   }
 
-          console.log('📞 I am caller → creating offer');
+        //   console.log('📞 I am caller → creating offer');
 
-          setTimeout(async () => {
-            try {
-              const offer = await pcRef.current.createOffer();
-              await pcRef.current.setLocalDescription(offer);
+        //   setTimeout(async () => {
+        //     try {
+        //       const offer = await pcRef.current.createOffer();
+        //       await pcRef.current.setLocalDescription(offer);
 
-              console.log('📤 SENDING OFFER');
+        //       console.log('📤 SENDING OFFER');
 
-              socket.emit('video_offer', { session_id, offer });
-            } catch (err) {
-              console.log('❌ OFFER ERROR:', err);
-            }
-          }, 500);
-        });
+        //       socket.emit('video_offer', { session_id, offer });
+        //     } catch (err) {
+        //       console.log('❌ OFFER ERROR:', err);
+        //     }
+        //   }, 500);
+        // });
+
+
+socket.on('video_connected', async () => {
+  console.log('🚀 video_connected');
+
+  onConnected();
+
+  if (!pcRef.current) {
+    console.log('❌ PC not ready');
+    return;
+  }
+
+  let callerId = caller?.user_id;
+
+  if (!callerId) {
+    const state = store.getState();
+    callerId = state.calls.connectedCallDetails?.caller?.user_id;
+  }
+
+  if (!callerId) {
+    console.log('❌ Caller still not ready → abort');
+    return;
+  }
+
+  const isCaller = String(myId) === String(callerId);
+
+  console.log('👤 My ID:', myId);
+  console.log('📞 Caller ID:', callerId);
+  console.log('🎯 Am I caller?', isCaller);
+
+  if (!isCaller) {
+    console.log('🙋 Receiver');
+    return;
+  }
+
+  try {
+    console.log('📞 Caller → creating offer');
+
+    await new Promise(r => setTimeout(r, 300));
+
+    const offer = await pcRef.current.createOffer();
+    await pcRef.current.setLocalDescription(offer);
+
+    socket.emit('video_offer', { session_id, offer });
+
+  } catch (err) {
+    console.log('❌ OFFER ERROR:', err);
+  }
+});
 
         socket.emit('video_join', { session_id });
       } catch (err) {

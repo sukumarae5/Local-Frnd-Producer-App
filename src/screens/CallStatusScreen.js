@@ -151,6 +151,33 @@ useEffect(() => {
 
   return unsubscribe;
 }, [navigation, call]);
+
+// useEffect(() => {
+//   if (!socketRef.current) return;
+
+//   const socket = socketRef.current;
+
+//   const onConnected = ({ session_id }) => {
+//     console.log("🚀 FORCE NAVIGATION FROM audio_connected");
+
+//     const screen =
+//       call_type === "VIDEO"
+//         ? "VideocallScreen"
+//         : "AudiocallScreen";
+
+//     navigation.replace(screen, {
+//       session_id,
+//       role: "caller",
+//     });
+//   };
+
+//   socket.on("audio_connected", onConnected);
+
+//   return () => {
+//     socket.off("audio_connected", onConnected);
+//   };
+// }, []);
+
 /* ---------------- UI ANIMATIONS ---------------- */
   const ripple1 = useRef(new Animated.Value(0)).current;
   const ripple2 = useRef(new Animated.Value(0)).current;

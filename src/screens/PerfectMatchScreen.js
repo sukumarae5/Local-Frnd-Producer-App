@@ -97,10 +97,18 @@ useEffect(() => {
       ? "VideocallScreen"
       : "AudiocallScreen";
 
-  navigation.replace(screen, {
-    session_id,
-    role: "receiver",
-  });
+  // navigation.replace(screen, {
+  //   session_id,
+  //   role: "receiver",
+  // });
+
+  const isCaller =
+  String(caller?.user_id) === String(myId);
+
+navigation.replace(screen, {
+  session_id,
+  role: isCaller ? "caller" : "receiver",
+});
 
 }, [count]);
 
