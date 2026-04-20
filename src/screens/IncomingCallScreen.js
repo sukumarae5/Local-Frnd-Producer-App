@@ -9,6 +9,7 @@ import {
 import LinearGradient from "react-native-linear-gradient";
 import { SocketContext } from "../socket/SocketProvider";
 import Ionicons from "react-native-vector-icons/Ionicons";
+import { CommonActions } from "@react-navigation/native";
 
 const IncomingCallScreen = ({ route, navigation }) => {
 
@@ -18,6 +19,20 @@ const IncomingCallScreen = ({ route, navigation }) => {
   const accept = () => {
     socketRef.current.emit("call_accept", { session_id });
   };
+// const accept = () => {
+//   socketRef.current.emit("call_accept", { session_id });
+
+//   navigation.dispatch(
+//     CommonActions.navigate({
+//       name: "CallStatusScreen",
+//       params: {
+//         session_id,
+//         call_type,
+//         role: "receiver",
+//       },
+//     })
+//   );
+// };
 
   const reject = () => {
     socketRef.current.emit("call_reject", { session_id });

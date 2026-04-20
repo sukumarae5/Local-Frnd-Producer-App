@@ -71,56 +71,6 @@ const SocketProvider = ({ children }) => {
         dispatch(fetchUnreadCount());
       });
 
-      // socket.on('chat_receive', msg => {
-
-      //   const state = store.getState();
-      //   const myId = state.user.userdata?.user?.user_id;
-
-      //   if (!myId) return;
-
-      //   const senderId = msg.sender_id ?? msg.senderId;
-      //   const receiverId = msg.receiver_id ?? msg.receiverId;
-      // const isSender = Number(senderId) === Number(myId);
-
-      //   if (senderId !== myId && receiverId !== myId) return;
-
-      //   const otherUserId =
-      //     Number(senderId) === Number(myId)
-      //       ? receiverId
-      //       : senderId;
-
-      // const normalizedMsg = {
-      //   ...(msg.message ?? msg),
-      //   is_read: msg.is_read ?? 0,
-      //   delivered: msg.delivered ?? 0, // ✅ ADD THIS
-      // };
-
-      //   dispatch(chatMessageAdd({
-      //     otherUserId,
-      //     message: normalizedMsg,
-      //   }));
-
-      //   const activeUser = state.chat.activeUser;
-      // console.log("📨 Received message from", otherUserId, "active chat is", activeUser) ;
-      // console.log("Message details:", normalizedMsg) ;
-      // console.log("My ID:", myId) ;
-      // console.log("Sender ID:", senderId) ;
-      // console.log("Receiver ID:", receiverId) ;
-      // console.log("Is sender:", isSender) ;
-      //   if (
-      //   Number(activeUser) === Number(otherUserId) &&
-      //   Number(senderId) !== Number(myId)
-      // ) {
-      //   socket.emit('chat_read', {
-      //     messageId: normalizedMsg.message_id,
-      //   });
-      // }
-      //   // ✅ STEP 3: IF NOT OPEN → INCREASE UNREAD
-      //   if (Number(receiverId) === Number(myId)) {
-      //     dispatch(chatUnreadIncrease(senderId));
-      //   }
-      // });
-
       socket.on('chat_receive', msg => {
         const state = store.getState();
         const myId = state.user.userdata?.user?.user_id;
@@ -234,6 +184,21 @@ const SocketProvider = ({ children }) => {
       //   console.log("CALL ACCEPTED EVENT:", data);
       //   dispatch(incomingCallAccept(data));
       // });
+      socket.on("call_accepted", (data) => {
+  console.log("✅ CALL ACCEPTED SOCKET:", data);
+
+
+  dispatch(
+    incomingCallAccept({
+      session_id: data.session_id,
+      call_type: data.call_type,
+      is_friend: data.is_friend,
+       caller_id: data.caller_id,
+      // direction: isCaller ? "OUTGOING" : "INCOMING",
+      call_mode: data.is_friend ? "FRIEND" : "RANDOM",
+    })
+  );
+});
 
       socket.on('call_accepted', data => {
         dispatch(
@@ -255,13 +220,14 @@ const SocketProvider = ({ children }) => {
           }),
         );
       });
-      socket.on('call_ended', (data) => {
-  console.log("📴 CALL ENDED:", data);
+      socket.on('call_ended', data => {
+        console.log('📴 CALL ENDED:', data);
 
-  dispatch(clearCall());
+        dispatch(clearCall());
 
-  callManager.reset();
-});
+        callManager.reset();
+      });
+    
     };
 
     init();

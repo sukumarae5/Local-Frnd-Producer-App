@@ -21,7 +21,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { clearCall, callDetailsRequest } from '../features/calls/callAction';
 import { otherUserFetchRequest } from '../features/Otherusers/otherUserActions';
 import { submitRatingRequest } from '../features/rating/ratingAction';
-
+import store from "../reduxStore/store"; // adjust path
 import EndCallConfirmModal from '../screens/EndCallConfirmationScreen';
 import { SocketContext } from '../socket/SocketProvider';
 import { createPC } from '../utils/webrtc';
@@ -40,7 +40,7 @@ const AudiocallScreen = ({ route, navigation }) => {
 
   const myGender = userdata?.user?.gender;
   const myId = userdata?.user?.user_id;
-
+const call = useSelector(state => state.calls.call);
   const caller = connectedCallDetails?.caller;
   const connectedUser = connectedCallDetails?.connected_user;
 
@@ -80,6 +80,14 @@ const remoteEndedRef = useRef(false);
 
     return res === PermissionsAndroid.RESULTS.GRANTED;
   };
+
+
+  useEffect(() => {
+  if (session_id) {
+    console.log("📡 Fetching call details early");
+    dispatch(callDetailsRequest());
+  }
+}, [session_id]);
 
   /* ================= INIT ================= */
   useEffect(() => {
@@ -175,55 +183,75 @@ remoteEndedRef.current = true;
 
       //   leaveScreen(); // ✅ DIRECT EXIT (NO MODAL)
       // });
-      socket.on('audio_connected', async () => {
-        // onConnected();
-        console.log('🚀 audio_connected');
-        if (hasStartedRef.current) return;
-        hasStartedRef.current = true;
-        if (!pcRef.current) {
-          console.log('❌ PC not ready');
-          return;
-        }
 
-        if (!caller || !caller.user_id) {
-          console.log('⛔ Caller not ready → skipping');
-          return;
-        }
 
-        if (!myId) {
-          console.log('⛔ My ID not ready → skipping');
-          return;
-        }
 
-        const isCaller = String(myId) === String(caller.user_id);
+socket.on('audio_connected', async () => {
+  console.log('🚀 audio_connected');
 
-        console.log('👤 My ID:', myId);
-        console.log('📞 Caller ID:', caller.user_id);
-        console.log('🎯 Am I caller?', isCaller);
+  if (hasStartedRef.current) return;
+  hasStartedRef.current = true;
 
-        if (!isCaller) {
-          console.log('🙋 I am receiver');
-          return;
-        }
-        console.log('📞 I am caller → creating offer');
-        console.log('✅ CALLER: STARTING OFFER');
+  if (!pcRef.current) {
+    console.log('❌ PC not ready');
+    return;
+  }
 
-        setTimeout(async () => {
-          try {
-            const offer = await pcRef.current.createOffer({
-              offerToReceiveAudio: true,
-            });
+  let callerId = null;
+  let retries = 0;
 
-            await pcRef.current.setLocalDescription(offer);
+  while (retries < 10) {
+    // ✅ 1. Try selector first (works for random/direct)
+    if (connectedCallDetails?.caller?.user_id) {
+      callerId = connectedCallDetails.caller.user_id;
+      break;
+    }
 
-            console.log('📤 SENDING AUDIO OFFER');
+    // ✅ 2. Fallback to store (works for friend)
+    const state = store.getState();
+    const details = state.calls.connectedCallDetails;
 
-            socket.emit('audio_offer', { session_id, offer });
-          } catch (err) {
-            console.log('❌ OFFER ERROR:', err);
-          }
-        }, 300);
-      });
+    if (details?.caller?.user_id) {
+      callerId = details.caller.user_id;
+      break;
+    }
+
+    console.log('⏳ Waiting for caller...');
+    await new Promise(r => setTimeout(r, 200));
+    retries++;
+  }
+
+  if (!callerId) {
+    console.log('❌ Caller not found → abort');
+    return;
+  }
+
+  const isCaller = String(myId) === String(callerId);
+
+  console.log('👤 My ID:', myId);
+  console.log('📞 Caller ID:', callerId);
+  console.log('🎯 Am I caller?', isCaller);
+
+  if (!isCaller) {
+    console.log('🙋 Receiver ready');
+    return;
+  }
+
+  try {
+    console.log('📞 Caller → creating offer');
+
+    const offer = await pcRef.current.createOffer({
+      offerToReceiveAudio: true,
+    });
+
+    await pcRef.current.setLocalDescription(offer);
+
+    socket.emit('audio_offer', { session_id, offer });
+
+  } catch (err) {
+    console.log('❌ OFFER ERROR:', err);
+  }
+});
     };
 
     start();

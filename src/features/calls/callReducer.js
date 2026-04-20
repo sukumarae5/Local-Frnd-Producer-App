@@ -134,6 +134,8 @@ export default function callReducer(state = initialState, action) {
       status: "ACCEPTED",
       is_friend: action.payload.is_friend || false,
       direction: action.payload.direction || "INCOMING",
+            caller_id: action.payload.caller_id, // ✅ ADD THIS
+
       call_mode: action.payload.call_mode || (action.payload.is_friend ? "FRIEND" : "RANDOM"),
     },
     incomingCall: null,

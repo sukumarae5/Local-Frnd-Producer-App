@@ -3,12 +3,13 @@
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
 import callManager from "../utils/callManager";
+import store from "../reduxStore/store";
 
 export default function useCallHandler(navigationRef, isNavReady) {
 
   const call = useSelector(state => state.calls.call);
 console.log("📞 useCallHandler - Current Call State:", call);
-
+const myId = store.getState().auth?.user?.user_id;
 useEffect(() => {
 
   if (!call?.status || !isNavReady) return;
@@ -88,10 +89,15 @@ if (
 
       callManager.safeNavigate(navigationRef, screen, {
         session_id: call.session_id,
+        // role:
+        //   call.direction === "OUTGOING"
+        //     ? "caller"
+        //     : "receiver",
+
         role:
-          call.direction === "OUTGOING"
-            ? "caller"
-            : "receiver",
+  String(call.caller_id) === String(call.my_id)
+    ? "caller"
+    : "receiver",
       });
 
       return;
