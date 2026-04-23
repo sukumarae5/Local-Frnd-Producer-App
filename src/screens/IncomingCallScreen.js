@@ -36,7 +36,6 @@ const IncomingCallScreen = ({ route, navigation }) => {
 
   const reject = () => {
     socketRef.current.emit("call_reject", { session_id });
-   
   };
 
   return (

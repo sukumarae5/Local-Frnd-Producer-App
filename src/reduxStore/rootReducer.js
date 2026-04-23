@@ -19,6 +19,8 @@ import notificationReducer from "../features/notification/notificationReducer"
 import statusReducer from"../features/Status/statusReducer"
 import coinReducer from"../features/conis/coinReducer"
 import offersReducer from"../features/Offers/offersReducer"
+import purchaseReducer from "../features/purchase/purchaseReducer"
+
 const rootReducer = combineReducers({
   auth:authReducer,
   user: userReducer,
@@ -39,7 +41,8 @@ const rootReducer = combineReducers({
   notification:notificationReducer,
   status:statusReducer,
   coins:coinReducer,
-  offers:offersReducer
+  offers:offersReducer,
+  purchase:purchaseReducer
 
 });
 

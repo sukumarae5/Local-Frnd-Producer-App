@@ -20,6 +20,7 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { getCoinsRequest } from "../features/conis/coinActions";
 import OffersSectionScreen from "./OffersSectionScreen";
 import coinImg from "../assets/coin1.png";
+import { createOrderRequest } from "../features/purchase/purchaseActions";
 
 const { width, height } = Dimensions.get("window");
 const wp = val => (width * val) / 100;
@@ -44,6 +45,16 @@ export default function PlanScreen() {
     dispatch(getCoinsRequest());
   }, [dispatch]);
 
+  const handleClaim = (item) => {
+  // 🔥 1. Call create order
+  dispatch(createOrderRequest(item.id));
+
+  // 🔥 2. Navigate to processing screen
+  navigation.navigate("ProcessingScreen", {
+    package: item
+  });
+};
+
   const renderItem = ({ item }) => (
     <TouchableOpacity activeOpacity={0.9} style={styles.cardWrapper}>
       <LinearGradient
@@ -66,7 +77,7 @@ export default function PlanScreen() {
           {item?.price_after_discount ?? 0}
         </Text>
 
-        <TouchableOpacity style={styles.claimBtn} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.claimBtn} activeOpacity={0.8} onPress={() => handleClaim(item)}>
           <Text style={styles.claimText}>Claim {item?.coins ?? 0}</Text>
           <Image
             source={require("../assets/normalmulticoin.png")}

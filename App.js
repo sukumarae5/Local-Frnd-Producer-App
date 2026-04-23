@@ -54,7 +54,11 @@ import NotificationScreen from './src/screens/NotificationScreen';
 import HelpCenterScreen from './src/screens/HelpCenterScreen';
 import ReciverWalletScreen from './src/screens/ReciverWalletScreen';
 import StoryViewer from "./src/screens/StoryViewer"
-/* 
+import PaymentScreen from "./src/screens/PaymentScreen"
+import ProcessingScreen from "./src/screens/ProcessingScreen"
+
+
+/*
 IMPORTANT
 If you really navigate to IncomingCallScreen,
 import it here also.
@@ -174,7 +178,12 @@ function MainNavigator({ navigationRef, isNavReady  }) {
       <Stack.Screen name="IncomingCallScreen" component={IncomingCallScreen}/>
       <Stack.Screen name="HelpCenterScreen" component={HelpCenterScreen}/>
       <Stack.Screen name="ReciverWalletScreen" component={ReciverWalletScreen}/>
-      <Stack.Screen name="StoryViewer" component={StoryViewer} />
+      <Stack.Screen name="ProcessingScreen" component={ProcessingScreen} />      
+      <Stack.Screen name="StoryViewer" component={StoryViewer} />      
+      <Stack.Screen name="PaymentScreen" component={PaymentScreen} />      
+
+      
+      
       </Stack.Navigator>
   );
 }

@@ -19,6 +19,9 @@ import notificationSaga from "../features/notification/notificationSaga"
 import statusSaga from "../features/Status/statusSaga"
 import watchCoins from"../features/conis/coinSaga"
 import offersSaga from"../features/Offers/offersSaga"
+import  watchPurchase  from "../features/purchase/purchaseSaga";
+
+
 export default function* rootSaga() {
   yield all([
     authSaga(),
@@ -40,7 +43,8 @@ export default function* rootSaga() {
         notificationSaga(),
         statusSaga(),
         watchCoins(),
-        offersSaga()
+        offersSaga(),
+        watchPurchase()
 
   ]);
 }
