@@ -1,10 +1,15 @@
-// PaymentScreen.js
-
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import React, { useEffect } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator
+} from "react-native";
 import LinearGradient from "react-native-linear-gradient";
 import RazorpayCheckout from "react-native-razorpay";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { verifyPaymentRequest } from "../features/purchase/purchaseActions";
 
 const PaymentScreen = ({ route, navigation }) => {
@@ -12,34 +17,61 @@ const PaymentScreen = ({ route, navigation }) => {
 
   const { order, package: pkg } = route.params;
 
+  const { loading, paymentSuccess, error } = useSelector(
+    (state) => state.purchase
+  );
+
+  /* =============================
+     HANDLE SUCCESS / FAILURE
+  ============================= */
+  useEffect(() => {
+    if (paymentSuccess) {
+      navigation.replace("PaymentSuccessScreen");
+    }
+
+    if (error) {
+      Alert.alert("Payment Failed", error);
+    }
+  }, [paymentSuccess, error]);
+
+  /* =============================
+     RAZORPAY
+  ============================= */
   const handlePayment = () => {
     const options = {
-      key: "YOUR_RAZORPAY_KEY",
+      key: "rzp_test_GRRNoJBdPElkDv", // 🔥 replace with real key
       amount: order.amount,
       currency: "INR",
-      name: "Your App",
+      name: "Lokal Frnd",
       description: "Coin Purchase",
       order_id: order.order_id,
-      theme: { color: "#9333EA" },
+      prefill: {
+        contact: "9999999999",
+        email: "test@gmail.com"
+      },
+      theme: { color: "#9333EA" }
     };
 
     RazorpayCheckout.open(options)
       .then((data) => {
-        // ✅ VERIFY
+        console.log("✅ PAYMENT SUCCESS:", data);
+
         dispatch(
           verifyPaymentRequest({
             razorpay_order_id: data.razorpay_order_id,
             razorpay_payment_id: data.razorpay_payment_id,
             razorpay_signature: data.razorpay_signature,
-            package_id: pkg.id,
+            package_id: pkg.id
           })
         );
-
-        navigation.replace("SuccessScreen");
       })
       .catch((err) => {
-        alert("Payment Failed");
-        navigation.goBack();
+        console.log("❌ PAYMENT FAILED:", err);
+
+        Alert.alert(
+          "Payment Failed",
+          err?.description || "Something went wrong"
+        );
       });
   };
 
@@ -52,26 +84,28 @@ const PaymentScreen = ({ route, navigation }) => {
         <Text style={styles.amount}>₹ {order.amount / 100}</Text>
       </View>
 
-      <Text style={styles.sub}>Select Payment Method</Text>
+      {/* 🔥 LOADING STATE */}
+      {loading ? (
+        <ActivityIndicator size="large" color="#9333EA" />
+      ) : (
+        <LinearGradient
+          colors={["#7C3AED", "#D946EF"]}
+          style={styles.payBtn}
+        >
+          <TouchableOpacity onPress={handlePayment}>
+            <Text style={styles.payText}>
+              PAY ₹ {order.amount / 100}
+            </Text>
+          </TouchableOpacity>
+        </LinearGradient>
+      )}
 
-      <View style={styles.option}>
-        <Text>Credit / Debit Card</Text>
-      </View>
-
-      <View style={styles.option}>
-        <Text>UPI</Text>
-      </View>
-
-      <LinearGradient
-        colors={["#7C3AED", "#D946EF"]}
-        style={styles.payBtn}
-      >
-        <TouchableOpacity onPress={handlePayment}>
-          <Text style={styles.payText}>
-            PAY ₹ {order.amount / 100}
-          </Text>
-        </TouchableOpacity>
-      </LinearGradient>
+      {/* 🔥 FAILED UI */}
+      {error && (
+        <Text style={styles.errorText}>
+          Payment Failed: {error}
+        </Text>
+      )}
     </View>
   );
 };
@@ -79,40 +113,49 @@ const PaymentScreen = ({ route, navigation }) => {
 export default PaymentScreen;
 
 const styles = StyleSheet.create({
-  container: { flex:1, padding:20, backgroundColor:"#fff" },
-
-  title: { fontSize:20, fontWeight:"700", marginBottom:20 },
-
-  card: {
-    backgroundColor:"#f3f3f3",
-    padding:15,
-    borderRadius:10,
-    marginBottom:20
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: "#fff"
   },
 
-  plan: { fontSize:16 },
+  title: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 20
+  },
 
-  amount: { fontSize:22, fontWeight:"bold", marginTop:5 },
+  card: {
+    backgroundColor: "#f3f3f3",
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20
+  },
 
-  sub: { marginBottom:10, fontWeight:"600" },
+  plan: { fontSize: 16 },
 
-  option: {
-    padding:15,
-    borderWidth:1,
-    borderRadius:10,
-    marginBottom:10
+  amount: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginTop: 5
   },
 
   payBtn: {
-    marginTop:20,
-    padding:15,
-    borderRadius:10,
-    alignItems:"center"
+    marginTop: 20,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center"
   },
 
   payText: {
-    color:"#fff",
-    fontSize:16,
-    fontWeight:"700"
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700"
+  },
+
+  errorText: {
+    marginTop: 20,
+    color: "red",
+    textAlign: "center"
   }
 });

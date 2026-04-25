@@ -181,13 +181,14 @@ export default StoriesScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 20,
+    paddingTop: 0,
     paddingHorizontal: 16
   },
 
   sectionLabel: {
     fontSize: 20,
-    fontWeight: "700"
+    fontWeight: "700",
+    marginBottom: 10,
   },
 
   storyContainer: {
@@ -196,24 +197,24 @@ const styles = StyleSheet.create({
   },
 
   addCircle: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: "#8B5CF6",
     justifyContent: "center",
     alignItems: "center"
   },
 
   storyAvatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35
+    width: 60,
+    height: 60,
+    borderRadius: 30
   },
 
   storyRing: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+    width: 66,
+    height: 66,
+    borderRadius: 33,
     borderWidth: 3,
     borderColor: "#25D366",
     justifyContent: "center",

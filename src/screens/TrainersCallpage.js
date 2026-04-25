@@ -1,9 +1,4 @@
-import React, {
-  useContext,
-  useRef,
-  useState,
-  useEffect,
-} from "react";
+import React, { useContext, useRef, useState, useEffect } from 'react';
 
 import {
   View,
@@ -16,25 +11,25 @@ import {
   StatusBar,
   ScrollView,
   SafeAreaView,
-} from "react-native";
-
-import LinearGradient from "react-native-linear-gradient";
-import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-
-import { useDispatch, useSelector } from "react-redux";
+} from 'react-native';
+import { Platform } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import MaskedView from '@react-native-masked-view/masked-view';
+import { useDispatch, useSelector } from 'react-redux';
 
 import {
   callRequest,
   searchingFemalesRequest,
   directCallRequest,
-} from "../features/calls/callAction";
+} from '../features/calls/callAction';
+import HomeHeader from '../components/HomeHeader';
+import { otherUserFetchRequest } from '../features/Otherusers/otherUserActions';
+import { SocketContext } from '../socket/SocketProvider';
+import { useFocusEffect } from '@react-navigation/native';
+import BottomCallPills from '../components/BottomCallPills';
 
-import { otherUserFetchRequest } from "../features/Otherusers/otherUserActions";
-import { SocketContext } from "../socket/SocketProvider";
-import { useFocusEffect } from "@react-navigation/native";
-import BottomCallPills from "../components/BottomCallPills";
-
-const { width } = Dimensions.get("window");
+const { width } = Dimensions.get('window');
 const CELL_WIDTH = width / 3 - 18;
 const WAVE_DISTANCE = 10;
 
@@ -44,6 +39,10 @@ const TrainersCallPage = ({ navigation }) => {
 
   const { userdata } = useSelector(state => state.user);
   const users = useSelector(state => state.calls.searchingFemales || []);
+
+  const imageUrl = userdata?.images?.profile_image
+    ? { uri: userdata.images.profile_image }
+    : require('../assets/boy1.jpg');
 
   const connected = socketCtx?.connected;
 
@@ -60,7 +59,7 @@ const TrainersCallPage = ({ navigation }) => {
     interest_id: null,
   });
 
-  const [activeFilter, setActiveFilter] = useState("ONLINE");
+  const [activeFilter, setActiveFilter] = useState('ONLINE');
 
   useEffect(() => {
     dispatch(searchingFemalesRequest(filters));
@@ -79,7 +78,7 @@ const TrainersCallPage = ({ navigation }) => {
       language: null,
       interest_id: null,
     });
-    setActiveFilter("ONLINE");
+    setActiveFilter('ONLINE');
   };
 
   const setTypeFilter = type => {
@@ -99,7 +98,7 @@ const TrainersCallPage = ({ navigation }) => {
       language: userdata?.language_id || null,
       interest_id: null,
     }));
-    setActiveFilter("LANGUAGE");
+    setActiveFilter('LANGUAGE');
   };
 
   const setInterestFilter = () => {
@@ -111,7 +110,7 @@ const TrainersCallPage = ({ navigation }) => {
       language: null,
       interest_id: interestId,
     }));
-    setActiveFilter("INTEREST");
+    setActiveFilter('INTEREST');
   };
 
   const resetFilters = () => {
@@ -121,7 +120,7 @@ const TrainersCallPage = ({ navigation }) => {
       language: null,
       interest_id: null,
     });
-    setActiveFilter("ONLINE");
+    setActiveFilter('ONLINE');
   };
 
   useEffect(() => {
@@ -140,7 +139,7 @@ const TrainersCallPage = ({ navigation }) => {
             duration: 1200,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       ).start();
     });
   }, [users]);
@@ -150,11 +149,11 @@ const TrainersCallPage = ({ navigation }) => {
 
     setCallingRandom(true);
 
-    dispatch(callRequest({ call_type: "AUDIO" }));
+    dispatch(callRequest({ call_type: 'AUDIO' }));
 
-    navigation.navigate("CallStatusScreen", {
-      call_type: "AUDIO",
-      role: "male",
+    navigation.navigate('CallStatusScreen', {
+      call_type: 'AUDIO',
+      role: 'male',
     });
   };
 
@@ -163,16 +162,16 @@ const TrainersCallPage = ({ navigation }) => {
 
     setCallingRandomVideo(true);
 
-    dispatch(callRequest({ call_type: "VIDEO" }));
+    dispatch(callRequest({ call_type: 'VIDEO' }));
 
-    navigation.navigate("CallStatusScreen", {
-      call_type: "VIDEO",
-      role: "male",
+    navigation.navigate('CallStatusScreen', {
+      call_type: 'VIDEO',
+      role: 'male',
     });
   };
 
   const startDirectCall = item => {
-    console.log("Starting direct call with", item);
+    console.log('Starting direct call with', item);
 
     if (!connected) return;
 
@@ -182,12 +181,12 @@ const TrainersCallPage = ({ navigation }) => {
       directCallRequest({
         female_id: item.user_id,
         call_type: item.type,
-      })
+      }),
     );
 
-    navigation.navigate("CallStatusScreen", {
+    navigation.navigate('CallStatusScreen', {
       call_type: item.type,
-      role: "caller",
+      role: 'caller',
     });
   };
 
@@ -196,7 +195,7 @@ const TrainersCallPage = ({ navigation }) => {
       setCallingRandom(false);
       setCallingRandomVideo(false);
       setCallingDirect(false);
-    }, [])
+    }, []),
   );
 
   return (
@@ -205,8 +204,38 @@ const TrainersCallPage = ({ navigation }) => {
 
       {/* HEADER */}
       <View style={styles.topWhiteArea}>
-        <Text style={styles.lookText}>Local frnd</Text>
-        <Text style={styles.pageTitle}>Connecting Room</Text>
+        <HomeHeader
+          navigation={navigation}
+          userdata={userdata}
+          unread={0} // or from redux if you have
+          imageUrl={imageUrl}
+          withSpacing={true}
+        />
+        <MaskedView
+          maskElement={<Text style={styles.lookText}>Local frnd</Text>}
+        >
+          <LinearGradient
+            colors={['#D51BF9', '#8C37F8']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <Text style={[styles.lookText, { opacity: 0 }]}>Local frnd</Text>
+          </LinearGradient>
+        </MaskedView>
+
+        <MaskedView
+          maskElement={<Text style={styles.pageTitle}>Connecting Room</Text>}
+        >
+          <LinearGradient
+            colors={['#D51BF9', '#8C37F8']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <Text style={[styles.pageTitle, { opacity: 0 }]}>
+              Connecting Room
+            </Text>
+          </LinearGradient>
+        </MaskedView>
 
         <ScrollView
           horizontal
@@ -216,35 +245,40 @@ const TrainersCallPage = ({ navigation }) => {
           {/* ONLINE */}
           <TouchableOpacity
             style={[
-              styles.filterChip,
-              activeFilter === "ONLINE" && styles.filterChipActive,
+              styles.chip,
+              activeFilter === 'ONLINE' && styles.chipActive,
             ]}
             onPress={setOnlineFilter}
-            activeOpacity={0.8}
           >
+            <MaterialIcons
+              name="wifi"
+              size={16}
+              color={activeFilter === 'ONLINE' ? '#fff' : '#111111'}
+            />
             <Text
               style={[
-                styles.filterText,
-                activeFilter === "ONLINE" && styles.filterTextActive,
+                styles.chipText,
+                activeFilter === 'ONLINE' && styles.chipTextActive,
               ]}
             >
-              ONLINE
+              Online
             </Text>
           </TouchableOpacity>
 
           {/* AUDIO */}
           <TouchableOpacity
-            style={[
-              styles.filterChip,
-              activeFilter === "AUDIO" && styles.filterChipActive,
-            ]}
-            onPress={() => setTypeFilter("AUDIO")}
-            activeOpacity={0.8}
+            style={[styles.chip, activeFilter === 'AUDIO' && styles.chipActive]}
+            onPress={() => setTypeFilter('AUDIO')}
           >
+            <MaterialIcons
+              name="call"
+              size={16}
+              color={activeFilter === 'AUDIO' ? '#fff' : '#111111'}
+            />
             <Text
               style={[
-                styles.filterText,
-                activeFilter === "AUDIO" && styles.filterTextActive,
+                styles.chipText,
+                activeFilter === 'AUDIO' && styles.chipTextActive,
               ]}
             >
               Audio
@@ -253,17 +287,18 @@ const TrainersCallPage = ({ navigation }) => {
 
           {/* VIDEO */}
           <TouchableOpacity
-            style={[
-              styles.filterChip,
-              activeFilter === "VIDEO" && styles.filterChipActive,
-            ]}
-            onPress={() => setTypeFilter("VIDEO")}
-            activeOpacity={0.8}
+            style={[styles.chip, activeFilter === 'VIDEO' && styles.chipActive]}
+            onPress={() => setTypeFilter('VIDEO')}
           >
+            <MaterialIcons
+              name="videocam"
+              size={16}
+              color={activeFilter === 'VIDEO' ? '#fff' : '#111111'}
+            />
             <Text
               style={[
-                styles.filterText,
-                activeFilter === "VIDEO" && styles.filterTextActive,
+                styles.chipText,
+                activeFilter === 'VIDEO' && styles.chipTextActive,
               ]}
             >
               Video
@@ -273,55 +308,69 @@ const TrainersCallPage = ({ navigation }) => {
           {/* LANGUAGE */}
           <TouchableOpacity
             style={[
-              styles.filterChip,
-              activeFilter === "LANGUAGE" && styles.filterChipActive,
+              styles.chip,
+              activeFilter === 'LANGUAGE' && styles.chipActive,
             ]}
             onPress={setLanguageFilter}
-            activeOpacity={0.8}
           >
+            <MaterialIcons
+              name="translate"
+              size={16}
+              color={activeFilter === 'LANGUAGE' ? '#fff' : '#111111'}
+            />
             <Text
               style={[
-                styles.filterText,
-                activeFilter === "LANGUAGE" && styles.filterTextActive,
+                styles.chipText,
+                activeFilter === 'LANGUAGE' && styles.chipTextActive,
               ]}
             >
-              My Language
+              Telugu
             </Text>
           </TouchableOpacity>
 
           {/* INTEREST */}
           <TouchableOpacity
             style={[
-              styles.filterChip,
-              activeFilter === "INTEREST" && styles.filterChipActive,
+              styles.chip,
+              activeFilter === 'INTEREST' && styles.chipActive,
             ]}
             onPress={setInterestFilter}
-            activeOpacity={0.8}
           >
+            <MaterialIcons
+              name="favorite"
+              size={16}
+              color={activeFilter === 'INTEREST' ? '#fff' : '#111111'}
+            />
             <Text
               style={[
-                styles.filterText,
-                activeFilter === "INTEREST" && styles.filterTextActive,
+                styles.chipText,
+                activeFilter === 'INTEREST' && styles.chipTextActive,
               ]}
             >
-              My Interest
+              Party
             </Text>
           </TouchableOpacity>
 
           {/* RESET */}
-          <TouchableOpacity
-            style={styles.filterChip}
-            onPress={resetFilters}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.filterText}>Reset</Text>
+          <TouchableOpacity style={styles.chip} onPress={resetFilters}>
+            <MaterialIcons name="refresh" size={16} color="#111111" />
+            <Text style={styles.chipText}>Reset</Text>
           </TouchableOpacity>
         </ScrollView>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionText}>
+            {activeFilter === 'ONLINE' && 'ONLINE'}
+            {activeFilter === 'AUDIO' && 'AUDIO '}
+            {activeFilter === 'VIDEO' && 'VIDEO '}
+            {activeFilter === 'LANGUAGE' && 'LANGUAGE '}
+            {activeFilter === 'INTEREST' && 'INTEREST'}
+          </Text>
+        </View>
       </View>
 
       {/* USERS GRID */}
       <LinearGradient
-        colors={["#ee60f3", "#8B2CE2"]}
+        colors={['#ee60f3', '#8B2CE2']}
         style={styles.middlePurple}
       >
         <View style={styles.gridWrapper}>
@@ -342,7 +391,7 @@ const TrainersCallPage = ({ navigation }) => {
                   onPress={() => startDirectCall(item)}
                   onLongPress={() => {
                     dispatch(otherUserFetchRequest(item.user_id));
-                    navigation.navigate("AboutScreen", {
+                    navigation.navigate('AboutScreen', {
                       userId: item.user_id,
                     });
                   }}
@@ -350,13 +399,13 @@ const TrainersCallPage = ({ navigation }) => {
                 >
                   <View style={styles.avatarOuter}>
                     <Image
-                      source={require("../assets/boy1.jpg")}
+                      source={require('../assets/boy1.jpg')}
                       style={styles.avatar}
                     />
 
                     <View style={styles.callBadge}>
                       <MaterialIcons
-                        name={item.type === "VIDEO" ? "videocam" : "call"}
+                        name={item.type === 'VIDEO' ? 'videocam' : 'call'}
                         size={12}
                         color="#fff"
                       />
@@ -389,43 +438,69 @@ export default TrainersCallPage;
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
   },
 
   topWhiteArea: {
-    backgroundColor: "#fff",
-    paddingTop: 12,
-    paddingBottom: 12,
+    backgroundColor: '#fff',
+    paddingTop:
+      Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 10 : 10,
+    paddingBottom: 16, // ✅ more breathing space
     paddingHorizontal: 16,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
 
   lookText: {
-    textAlign: "center",
-    fontSize: 12,
-    color: "#C35BFF",
-    fontWeight: "600",
-    marginTop: 30,
+    textAlign: 'center',
+    fontSize: 20,
+    lineHeight: 30,
+    fontFamily: 'Lexend-SemiBold',
   },
-
   pageTitle: {
-    textAlign: "center",
-    fontSize: 22,
-    color: "#8B2CE2",
-    fontWeight: "800",
+    textAlign: 'center',
+    fontSize: 30,
+    lineHeight: 30,
+    fontFamily: 'Merienda-Bold',
     marginTop: 4,
+    marginBottom: 10,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    height: 34.56,
+    paddingHorizontal: 12,
+
+    backgroundColor: '#FFE9F3',
+    borderRadius: 30,
+    marginHorizontal: 6,
   },
 
+  chipActive: {
+    backgroundColor: '#C2185B',
+  },
+
+  chipText: {
+    fontSize: 12,
+    color: '#111111',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+
+  chipTextActive: {
+    color: '#fff',
+  },
   filterRow: {
-    flexDirection: "row",
-    paddingHorizontal: 12,
-    marginTop: 12,
-    paddingBottom: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 0,
+    marginTop: 0, // small gap only
   },
 
   filterChip: {
-    backgroundColor: "#EFE6FF",
+    backgroundColor: '#EFE6FF',
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
@@ -433,19 +508,19 @@ const styles = StyleSheet.create({
   },
 
   filterChipActive: {
-    backgroundColor: "#f5a1ea",
+    backgroundColor: '#f5a1ea',
   },
 
   filterText: {
     fontSize: 12,
-    color: "#8B2CE2",
-    fontWeight: "700",
+    color: '#8B2CE2',
+    fontWeight: '700',
   },
 
   filterTextActive: {
     fontSize: 12,
-    color: "#fff",
-    fontWeight: "700",
+    color: '#fff',
+    fontWeight: '700',
   },
 
   middlePurple: {
@@ -455,9 +530,9 @@ const styles = StyleSheet.create({
   },
 
   gridWrapper: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     paddingHorizontal: 12,
   },
 
@@ -465,21 +540,30 @@ const styles = StyleSheet.create({
     width: CELL_WIDTH,
     marginBottom: 14,
   },
+  sectionHeader: {
+    marginTop: 14, // ✅ more space
+    paddingHorizontal: 10,
+  },
 
+  sectionText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111',
+  },
   userCard: {
     paddingVertical: 20,
-    alignItems: "center",
+    alignItems: 'center',
   },
 
   avatarOuter: {
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: "#bb6acf",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#bb6acf',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 6,
-    shadowColor: "#ee6adc",
+    shadowColor: '#ee6adc',
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 10,
     elevation: 10,
@@ -489,24 +573,24 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
   },
 
   callBadge: {
-    position: "absolute",
+    position: 'absolute',
     right: -2,
     bottom: -2,
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: "#44b62d",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#44b62d',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   userText: {
     fontSize: 11,
-    color: "#fff",
-    fontWeight: "700", 
+    color: '#fff',
+    fontWeight: '700',
   },
 });

@@ -56,6 +56,7 @@ import ReciverWalletScreen from './src/screens/ReciverWalletScreen';
 import StoryViewer from "./src/screens/StoryViewer"
 import PaymentScreen from "./src/screens/PaymentScreen"
 import ProcessingScreen from "./src/screens/ProcessingScreen"
+import PaymentSuccessScreen from "./src/screens/PaymentSuccessScreen"
 
 
 /*
@@ -181,7 +182,7 @@ function MainNavigator({ navigationRef, isNavReady  }) {
       <Stack.Screen name="ProcessingScreen" component={ProcessingScreen} />      
       <Stack.Screen name="StoryViewer" component={StoryViewer} />      
       <Stack.Screen name="PaymentScreen" component={PaymentScreen} />      
-
+      <Stack.Screen name="PaymentSuccessScreen" component={PaymentSuccessScreen} />      
       
       
       </Stack.Navigator>

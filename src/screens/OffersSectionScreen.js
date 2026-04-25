@@ -8,7 +8,8 @@ import {
 } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { getOffersRequest } from "../features/Offers/offersActions";
-
+import LinearGradient from "react-native-linear-gradient";
+import Ionicons from "react-native-vector-icons/Ionicons";
 const { width, height } = Dimensions.get("window");
 const wp = (v) => (width * v) / 100;
 const hp = (v) => (height * v) / 100;
@@ -46,18 +47,42 @@ const OffersSectionScreen = () => {
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={handleScroll}
-            style={{ marginTop: hp(1) }}
+            style={{ marginTop: hp(1),marginBottom: hp(1), }}
           >
-            {offers?.map((o, index) => (
+            {/* {offers?.map((o, index) => (
               <View key={index} style={styles.offerCard}>
                 <Text style={styles.offerText}>
                   {o.text || o.title}
                 </Text>
               </View>
-            ))}
+            ))} */}
+
+            {offers?.map((o, index) => (
+  <View
+  key={index}
+  style={{
+    width: width, // 👈 full page width (important)
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: wp(6),
+    paddingVertical: hp(1.2),
+  }}
+>
+  <LinearGradient
+    colors={["#8C37F8", "#D51BF9"]}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 0 }}
+    style={styles.offerCard}
+  >
+    <Text style={styles.offerText}>
+      {o.text || o.title}
+    </Text>
+  </LinearGradient>
+</View>
+))}
           </ScrollView>
 
-          <View style={styles.dotsRow}>
+          {/* <View style={styles.dotsRow}>
             {offers?.map((_, idx) => (
               <View
                 key={idx}
@@ -67,7 +92,30 @@ const OffersSectionScreen = () => {
                 ]}
               />
             ))}
-          </View>
+          </View> */}
+         <View style={styles.dotsRow}>
+  {offers?.map((_, idx) => {
+    const isActive = activeIndex === idx;
+
+    return (
+      <View
+        key={idx}
+        style={[
+          styles.heartCircle,
+          {
+            backgroundColor: isActive ? "#8C37F8" : "#E5E5E5",
+          },
+        ]}
+      >
+        <Ionicons
+          name="heart"
+          size={wp(2.2)}
+          color="#fff"
+        />
+      </View>
+    );
+  })}
+</View>
         </>
       )}
     </View>
@@ -85,17 +133,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(4),
   },
 
-  offerCard: {
-    width: width, // FULL WIDTH
-    height: hp(15),
-    backgroundColor: "#F0EAFF",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: wp(4),
-    borderWidth: 1,
-    borderColor: "#E0D6FF",
-    borderRadius: wp(3),
-  },
+ offerCard: {
+  width: "100%", // 👈 actual card size
+  height: hp(13.5),
+  justifyContent: "center",
+  alignItems: "center",
+  paddingHorizontal: wp(4),
+  borderRadius: wp(3),
+},
 
   offerText: {
     color: "#4C1D95",
@@ -107,7 +152,6 @@ const styles = StyleSheet.create({
   dotsRow: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: hp(1.5),
   },
 
   dot: {
@@ -122,4 +166,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#8B5CF6",
     width: wp(5),
   },
+  heartCircle: {
+  width: wp(4),
+  height: wp(4),
+  borderRadius: wp(2), // 👈 perfect circle
+  justifyContent: "center",
+  alignItems: "center",
+  marginHorizontal: wp(1.5), // 👈 more spacing between dots
+},
+
 });

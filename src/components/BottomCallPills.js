@@ -51,7 +51,7 @@ export default BottomCallPills;
 
 const styles = StyleSheet.create({
   bottomWhiteArea: {
-    backgroundColor: "#fff",
+     backgroundColor: "transparent",
     padding: 14,
     flexDirection: "row",
     borderTopLeftRadius: 26,

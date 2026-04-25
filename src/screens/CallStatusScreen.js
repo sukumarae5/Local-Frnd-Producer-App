@@ -128,7 +128,7 @@ useEffect(() => {
 
 const displayStatus =
   call?.status === "NO_MATCH"
-    ? "No_match Searching..."
+    ? "connecting..."
     : call?.status || "Connecting...";
 
 

@@ -70,27 +70,78 @@ const TabIcon = ({ focused, name }) => {
 const ReceiverBottomTabs = () => {
   return (
     <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarShowLabel: false,
- tabBarStyle: {
-  position: "fixed",
-  left: 40,
-  right: 40,
-  bottom: 20,
-  height: 60,
-  borderRadius: 30,
-  backgroundColor: "#ffffff",
-  borderTopWidth: 0,
-  elevation: 8,
-},
+//       screenOptions={{
+//         headerShown: false,
+//         tabBarShowLabel: false,
+//  tabBarStyle: {
+//   position: "fixed",
+//   left: 40,
+//   right: 40,
+//   bottom: 20,
+//   height: 60,
+//   borderRadius: 30,
+//   backgroundColor: "#ffffff",
+//   borderTopWidth: 0,
+//   elevation: 8,
+// },
 
-tabBarItemStyle: {
-  justifyContent: "center",
-  alignItems: "center",
-  paddingTop: 10,
-},
-      }}
+// tabBarItemStyle: {
+//   justifyContent: "center",
+//   alignItems: "center",
+//   paddingTop: 10,
+// },
+//       }}
+
+screenOptions={{
+  headerShown: false,
+  tabBarShowLabel: false,
+
+  tabBarStyle: {
+    position: "fixed",
+    left: 40,
+    right: 40,
+    bottom: 20,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#ffffff",
+    borderTopWidth: 0,
+    elevation: 8,
+  },
+
+  tabBarItemStyle: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 10,
+  },
+
+  // ✅ ONLY ADDED THIS
+  tabBarBackground: () => (
+    <View style={{ flex: 1, justifyContent: "center" }}>
+      <View
+        style={{
+          position: "absolute",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          width: "100%",
+          height: "100%",
+          paddingHorizontal: 60,
+        }}
+      >
+        {[1, 2, 3].map((_, index) => (
+          <View
+            key={index}
+            style={{
+              width: 1,
+              height: 25,
+              backgroundColor: "#E5E5E5",
+            }}
+          />
+        ))}
+      </View>
+    </View>
+  ),
+}}
     >
       {/* <Tab.Screen
         name="Home"

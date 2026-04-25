@@ -1,9 +1,4 @@
-import React, {
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-} from 'react';
+import React, { useContext, useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -30,14 +25,12 @@ import { userDatarequest } from '../features/user/userAction';
 import { randomUserRequest } from '../features/RandomUsers/randomuserAction';
 import { fetchUnreadCount } from '../features/notification/notificationAction';
 import { callRequest } from '../features/calls/callAction';
-
 import StoriesScreen from './StoriesScreen';
 import LikeMindedSectionScreen from './LikeMindedSectionScreen';
 import OffersSectionScreen from './OffersSectionScreen';
 import ActiveDostSectionScreen from './ActiveDostSectionScreen';
 import BottomCallPills from '../components/BottomCallPills';
-
-import coinImg from '../assets/coin1.png';
+import HomeHeader from '../components/HomeHeader';
 
 const { width, height } = Dimensions.get('window');
 
@@ -159,68 +152,15 @@ const HomeScreen = () => {
 
         <View style={styles.container}>
           <View style={styles.headerContainer}>
-            <View style={styles.headerRow}>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => navigation.navigate('PlanScreen')}
-                style={styles.coinWrapper}
-              >
-                <LinearGradient
-                  colors={['#FFA726', '#FF7043']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.coinBox}
-                >
-                  <Image source={coinImg} style={styles.coinImage} />
-                  <Text style={styles.coinText}>
-                    {userdata?.user?.coin_balance ?? 0}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <View style={styles.rightIcons}>
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  onPress={() => navigation.navigate('MessagesScreen')}
-                >
-                  <View style={styles.iconCircle}>
-                    <Icon
-                      name="message-processing-outline"
-                      size={isSmallDevice ? wp(4.8) : wp(5)}
-                      color="#fff"
-                    />
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.iconButton}
-                  onPress={() => navigation.navigate('NotificationScreen')}
-                >
-                  <View style={styles.iconCircle}>
-                    <Icon
-                      name="bell-outline"
-                      size={isSmallDevice ? wp(4.8) : wp(5)}
-                      color="#fff"
-                    />
-                  </View>
-
-                  {unread > 0 && (
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>
-                        {unread > 99 ? '99+' : unread}
-                      </Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.profileButton}
-                  onPress={() => navigation.navigate('UplodePhotoScreen')}
-                >
-                  <Image source={imageUrl} style={styles.profilePic} />
-                </TouchableOpacity>
-              </View>
-            </View>
+            <HomeHeader
+              withSpacing
+              navigation={navigation}
+              userdata={userdata}
+              unread={unread}
+              imageUrl={imageUrl}
+              wp={wp}
+              hp={hp}
+            />
 
             <View style={styles.searchContainer}>
               <Icon name="magnify" size={wp(5.5)} color="#999" />
