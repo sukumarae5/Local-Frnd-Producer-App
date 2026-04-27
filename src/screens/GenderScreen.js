@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,17 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
-} from "react-native";
-import { useDispatch, useSelector } from "react-redux";
-import { newUserDataRequest } from "../features/user/userAction";
-import { useravatarapifetchrequest } from "../features/Avatars/avatarsAction";
-import WelcomeScreenbackgroungpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
+} from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
+import { newUserDataRequest } from '../features/user/userAction';
+import { useravatarapifetchrequest } from '../features/Avatars/avatarsAction';
+import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
+import ContinueButton from '../components/Common/ContinueButton';
+import LinearGradient from 'react-native-linear-gradient';
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get('window');
+
+const CARD_SIZE = width * 0.32;
 
 const GenderScreen = ({ navigation }) => {
   const dispatch = useDispatch();
@@ -24,7 +28,7 @@ const GenderScreen = ({ navigation }) => {
   const [isResponseHandled, setIsResponseHandled] = useState(false);
 
   // ✅ BACKEND RESPONSE FROM USER REDUCER
-  const { success, message } = useSelector((state) => state.user);
+  const { success, message } = useSelector(state => state.user);
 
   /* ---------- HANDLE CONTINUE ---------- */
   const handleContinue = () => {
@@ -45,33 +49,29 @@ const GenderScreen = ({ navigation }) => {
 
     // ✅ FIX: normalize message (string only)
     const alertMessage =
-      typeof message === "string"
+      typeof message === 'string'
         ? message
-        : message?.message || "Something went wrong";
+        : message?.message || 'Something went wrong';
 
-    Alert.alert(
-      success ? "Success ✅" : "Error ❌",
-      alertMessage,
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            if (success) {
-              if (selectedGender === "Male") {
-                navigation.navigate("BoysavatarScreen");
-              } else if (selectedGender === "Female") {
-                navigation.navigate("GirlsavatarScreen");
-              }
+    Alert.alert(success ? 'Success ✅' : 'Error ❌', alertMessage, [
+      {
+        text: 'OK',
+        onPress: () => {
+          if (success) {
+            if (selectedGender === 'Male') {
+              navigation.navigate('BoysavatarScreen');
+            } else if (selectedGender === 'Female') {
+              navigation.navigate('GirlsavatarScreen');
             }
-          },
+          }
         },
-      ]
-    );
+      },
+    ]);
   }, [message, success, isResponseHandled, selectedGender, navigation]);
 
   /* ---------- RESET ALERT WHEN SCREEN OPENS AGAIN ---------- */
   useEffect(() => {
-    const unsubscribe = navigation.addListener("focus", () => {
+    const unsubscribe = navigation.addListener('focus', () => {
       setIsResponseHandled(false);
     });
     return unsubscribe;
@@ -81,10 +81,12 @@ const GenderScreen = ({ navigation }) => {
     <WelcomeScreenbackgroungpage>
       <View style={styles.container}>
         {/* Logo */}
-        <Image
-          source={require("../components/BackgroundPages/main_log1.png")}
-          style={styles.logo}
-        />
+        <View style={styles.logoWrapper}>
+          <Image
+            source={require('../components/BackgroundPages/main_log1.png')}
+            style={styles.logo}
+          />
+        </View>
 
         {/* Title */}
         <Text style={styles.title}>Select your gender</Text>
@@ -92,15 +94,15 @@ const GenderScreen = ({ navigation }) => {
         {/* Gender Cards */}
         <View style={styles.cardRow}>
           {/* MALE */}
-          <Pressable onPress={() => setSelectedGender("Male")}>
+          <Pressable onPress={() => setSelectedGender('Male')}>
             <View
               style={[
                 styles.card,
-                selectedGender === "Male" && styles.selectedCard,
+                selectedGender === 'Male' && styles.selectedCard,
               ]}
             >
               <Image
-                source={require("../assets/boy1.jpg")}
+                source={require('../assets/boy1.jpg')}
                 style={styles.avatar}
               />
             </View>
@@ -108,15 +110,15 @@ const GenderScreen = ({ navigation }) => {
           </Pressable>
 
           {/* FEMALE */}
-          <Pressable onPress={() => setSelectedGender("Female")}>
+          <Pressable onPress={() => setSelectedGender('Female')}>
             <View
               style={[
                 styles.card,
-                selectedGender === "Female" && styles.selectedCard,
+                selectedGender === 'Female' && styles.selectedCard,
               ]}
             >
               <Image
-                source={require("../assets/girl1.jpg")}
+                source={require('../assets/girl1.jpg')}
                 style={styles.avatar}
               />
             </View>
@@ -125,20 +127,13 @@ const GenderScreen = ({ navigation }) => {
         </View>
 
         {/* Continue Button */}
-        <Pressable
-          style={[
-            styles.button,
-            selectedGender ? styles.buttonActive : styles.buttonDisabled,
-          ]}
-          disabled={!selectedGender || isSubmitting}
-          onPress={handleContinue}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Continue</Text>
-          )}
-        </Pressable>
+        <View style={styles.bottomFixed}>
+          <ContinueButton
+            disabled={!selectedGender}
+            loading={isSubmitting}
+            onPress={handleContinue}
+          />
+        </View>
       </View>
     </WelcomeScreenbackgroungpage>
   );
@@ -146,80 +141,75 @@ const GenderScreen = ({ navigation }) => {
 
 export default GenderScreen;
 
-/* ================= STYLES ================= */
-
-const CARD_SIZE = width / 2.8;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: width * 0.06,
+    
   },
+
+  logoWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   logo: {
-    width: 100,
-    height: 120,
-    resizeMode: "contain",
-    margin: 100,
-    marginLeft:140
+    width: width * 0.3,
+    height: width * 0.3,
+    resizeMode: 'contain',
+    marginBottom: height * 0.02,
   },
+
   title: {
-    color: "#080808",
-    fontSize: 31,
-    fontWeight: "600",
-    textAlign: "center",
-    marginTop: -55,
-    marginBottom: 50,
+    color: '#080808',
+    fontSize: width * 0.07,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: height * 0.05,
   },
+
   cardRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: height * 0.01,
   },
+
   card: {
     width: CARD_SIZE,
     height: CARD_SIZE,
-    backgroundColor: "#fff",
-    borderRadius: 19,
-    justifyContent: "center",
-    alignItems: "center",
+    borderRadius: width * 0.08,
+    justifyContent: 'center',
+    alignItems: 'center',
     elevation: 6,
   },
+
   selectedCard: {
     borderWidth: 3,
-    borderColor: "#db0afc",
+    borderColor: '#db0afc',
+    borderRadius: width * 0.08,
     transform: [{ scale: 1.05 }],
   },
+
   avatar: {
-    width: "95%",
-    height: "95%",
-    resizeMode: "contain",
+    width: '95%',
+    height: '95%',
+    resizeMode: 'contain',
+    borderRadius: width * 0.04,
   },
+
   label: {
-    color: "#121111",
-    textAlign: "center",
-    marginTop: 20,
-    fontSize: 20,
-    fontWeight: "500",
+    color: '#121111',
+    textAlign: 'center',
+    marginTop: height * 0.02,
+    fontSize: width * 0.045,
+    fontWeight: '500',
   },
-  button: {
-    marginTop: "auto",
-    marginLeft: 20,
-    paddingVertical: 15,
-    borderRadius: 14,
-    marginBottom: 60,
-    width: "90%",
-    height: "7%",
-  },
-  buttonActive: {
-    backgroundColor: "#db0afc",
-  },
-  buttonDisabled: {
-    backgroundColor: "#444",
-  },
-  buttonText: {
-    color: "#fff",
-    textAlign: "center",
-    fontSize: 20,
-    fontWeight: "600",
+
+  bottomFixed: {
+    position: 'absolute',
+    bottom: height * 0.03, // 🔥 responsive
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
 });

@@ -9,6 +9,8 @@ import LinearGradient from "react-native-linear-gradient";
 import ReciverHomeScreen from "../screens/ReciverHomeScreen";
 import RecentsCallHistoryScreen from "../screens/RecentsCallHistoryScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import { Dimensions } from "react-native";
+const { width } = Dimensions.get("window");
 
 const Tab = createBottomTabNavigator();
 

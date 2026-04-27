@@ -1,20 +1,20 @@
 // PerfectMatchScreen.js
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   StatusBar,
   ActivityIndicator,
-} from "react-native";
+} from 'react-native';
 
-import { useSelector, useDispatch } from "react-redux";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import WelcomeScreenbackgroungpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
-import Svg, { Defs, ClipPath, Path, Image as SvgImage } from "react-native-svg";
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
+import Svg, { Defs, ClipPath, Path, Image as SvgImage } from 'react-native-svg';
 
-import { callDetailsRequest } from "../features/calls/callAction";
+import { callDetailsRequest } from '../features/calls/callAction';
 
 /* ---------------- HEART IMAGE ---------------- */
 
@@ -48,7 +48,7 @@ const PerfectMatchScreen = () => {
   const [count, setCount] = useState(3);
 
   const connectedCallDetails = useSelector(
-    state => state.calls?.connectedCallDetails
+    state => state.calls?.connectedCallDetails,
   );
 
   const myId = useSelector(state => state.auth?.user?.user_id);
@@ -66,51 +66,42 @@ const PerfectMatchScreen = () => {
   const caller = connectedCallDetails?.caller;
   const connectedUser = connectedCallDetails?.connected_user;
 
-  const me =
-    String(caller?.user_id) === String(myId)
-      ? caller
-      : connectedUser;
+  const me = String(caller?.user_id) === String(myId) ? caller : connectedUser;
 
   const other =
-    String(caller?.user_id) === String(myId)
-      ? connectedUser
-      : caller;
+    String(caller?.user_id) === String(myId) ? connectedUser : caller;
 
   /* ---------------- COUNTDOWN NAVIGATION ---------------- */
-useEffect(() => {
-  if (!session_id || !call_type) return;
+  useEffect(() => {
+    if (!session_id || !call_type) return;
 
-  const interval = setInterval(() => {
-    setCount(prev => prev - 1);
-  }, 1000);
+    const interval = setInterval(() => {
+      setCount(prev => prev - 1);
+    }, 1000);
 
-  return () => clearInterval(interval);
-}, []);
+    return () => clearInterval(interval);
+  }, []);
 
-useEffect(() => {
-  if (count !== 0) return;
+  useEffect(() => {
+    if (count !== 0) return;
 
-  console.log("➡️ Navigating to Call Screen");
+    console.log('➡️ Navigating to Call Screen');
 
-  const screen =
-    call_type === "VIDEO"
-      ? "VideocallScreen"
-      : "AudiocallScreen";
+    const screen =
+      call_type === 'VIDEO' ? 'VideocallScreen' : 'AudiocallScreen';
 
-  // navigation.replace(screen, {
-  //   session_id,
-  //   role: "receiver",
-  // });
+    // navigation.replace(screen, {
+    //   session_id,
+    //   role: "receiver",
+    // });
 
-  const isCaller =
-  String(caller?.user_id) === String(myId);
+    const isCaller = String(caller?.user_id) === String(myId);
 
-navigation.replace(screen, {
-  session_id,
-  role: isCaller ? "caller" : "receiver",
-});
-
-}, [count]);
+    navigation.replace(screen, {
+      session_id,
+      role: isCaller ? 'caller' : 'receiver',
+    });
+  }, [count]);
 
   /* ---------------- LOADING ---------------- */
 
@@ -148,9 +139,7 @@ navigation.replace(screen, {
         <Text style={styles.congrats}>Congratulations!</Text>
 
         {/* Countdown */}
-        <Text style={styles.countdown}>
-          Connecting in {count}...
-        </Text>
+        <Text style={styles.countdown}>Connecting in {count}...</Text>
       </View>
     </WelcomeScreenbackgroungpage>
   );
@@ -163,51 +152,51 @@ export default PerfectMatchScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   loaderContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   profileRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     gap: 30,
     marginBottom: 40,
   },
 
   profileBlock: {
-    alignItems: "center",
+    alignItems: 'center',
   },
 
   name: {
     marginTop: 10,
     fontSize: 16,
-    fontWeight: "600",
-    color: "#222",
+    fontWeight: '600',
+    color: '#222',
   },
 
   matchText: {
     marginTop: 20,
     fontSize: 20,
-    color: "#c464ff",
-    fontWeight: "700",
+    color: '#c464ff',
+    fontWeight: '700',
   },
 
   congrats: {
     fontSize: 28,
-    color: "#c464ff",
-    fontWeight: "bold",
+    color: '#c464ff',
+    fontWeight: 'bold',
   },
 
   countdown: {
     marginTop: 20,
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: '600',
   },
 });

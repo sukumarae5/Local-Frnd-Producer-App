@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,22 +10,23 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
-} from "react-native";
+} from 'react-native';
 
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useDispatch, useSelector } from "react-redux";
-import { newUserDataRequest } from "../features/user/userAction";
-import WelcomeScreenbackgroundgpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
-import Icon from "react-native-vector-icons/Ionicons";
-const { width } = Dimensions.get("window");
-const ITEM_SIZE = (width - 40) / 3;
+import { useDispatch, useSelector } from 'react-redux';
+import { newUserDataRequest } from '../features/user/userAction';
+import WelcomeScreenbackgroundgpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
+import Icon from 'react-native-vector-icons/Ionicons';
+import ContinueButton from '../components/Common/ContinueButton';
+
+const { width, height } = Dimensions.get('window');
+const ITEM_SIZE = (width - width * 0.1) / 3;
 
 const BoysavatarScreen = ({ navigation }) => {
   const dispatch = useDispatch();
 
   /* ================= REDUX ================= */
-  const avatars = useSelector((state) => state.avatars.avatars);
-  const userState = useSelector((state) => state.user);
+  const avatars = useSelector(state => state.avatars.avatars);
+  const userState = useSelector(state => state.user);
 
   const success = userState?.success;
   const message = userState?.message;
@@ -44,7 +45,7 @@ const BoysavatarScreen = ({ navigation }) => {
     dispatch(
       newUserDataRequest({
         avatar_id: selectedAvatar.avatar_id,
-      })
+      }),
     );
   };
 
@@ -56,29 +57,25 @@ const BoysavatarScreen = ({ navigation }) => {
     setIsResponseHandled(true);
 
     const alertMessage =
-      typeof message === "string"
+      typeof message === 'string'
         ? message
-        : message?.message || "Profile updated successfully";
+        : message?.message || 'Profile updated successfully';
 
-    Alert.alert(
-      success ? "Success ✅" : "Error ❌",
-      alertMessage,
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            if (success) {
-              navigation.navigate("AddYourPhotosScreen");
-            }
-          },
+    Alert.alert(success ? 'Success ✅' : 'Error ❌', alertMessage, [
+      {
+        text: 'OK',
+        onPress: () => {
+          if (success) {
+            navigation.navigate('AddYourPhotosScreen');
+          }
         },
-      ]
-    );
+      },
+    ]);
   }, [message, success, isResponseHandled, navigation]);
 
   /* ================= RESET GUARD ================= */
   useEffect(() => {
-    const unsubscribe = navigation.addListener("focus", () => {
+    const unsubscribe = navigation.addListener('focus', () => {
       setIsResponseHandled(false);
     });
     return unsubscribe;
@@ -92,10 +89,7 @@ const BoysavatarScreen = ({ navigation }) => {
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={() => setSelectedAvatar(item)}
-        style={[
-          styles.avatarWrapper,
-          isSelected && styles.avatarSelected,
-        ]}
+        style={[styles.avatarWrapper, isSelected && styles.avatarSelected]}
       >
         <Image source={{ uri: item.image_url }} style={styles.avatarImage} />
       </TouchableOpacity>
@@ -106,7 +100,7 @@ const BoysavatarScreen = ({ navigation }) => {
     <WelcomeScreenbackgroundgpage>
       <StatusBar barStyle="light-content" />
 
-      <SafeAreaView style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
@@ -121,28 +115,23 @@ const BoysavatarScreen = ({ navigation }) => {
         <FlatList
           data={avatars}
           renderItem={renderAvatar}
-          keyExtractor={(item) => item.avatar_id.toString()}
+          keyExtractor={item => item.avatar_id.toString()}
           numColumns={3}
           extraData={selectedAvatar}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.grid}
+          contentContainerStyle={{
+            paddingHorizontal: width * 0.03,
+            paddingBottom: height * 0.12, // 🔥 instead of 120
+          }}
         />
-
-        <TouchableOpacity
-          style={[
-            styles.continueButton,
-            (!selectedAvatar || isSubmitting) && { opacity: 0.4 },
-          ]}
-          disabled={!selectedAvatar || isSubmitting}
-          onPress={handleContinue}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.continueText}>Continue</Text>
-          )}
-        </TouchableOpacity>
-      </SafeAreaView>
+        <View style={styles.bottomFixed}>
+          <ContinueButton
+            disabled={!selectedAvatar}
+            loading={isSubmitting} // only needed in Boys screen
+            onPress={handleContinue}
+          />
+        </View>
+      </View>
     </WelcomeScreenbackgroundgpage>
   );
 };
@@ -153,58 +142,53 @@ export default BoysavatarScreen;
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 20,
-    marginBottom: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: height * 0.012,
+    marginBottom: height * 0.03,
+    paddingHorizontal: width * 0.05,
   },
+
   backButton: {
-    width: 36,
-    height: 36,
-    // borderRadius: 18,
-    // borderWidth: 1,
-    borderColor: "#0c0c0c",
-    justifyContent: "center",
-    alignItems: "center",
+    width: width * 0.09,
+    height: width * 0.09,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  backIcon: { color: "#fff", fontSize: 24 },
+
   title: {
-    color: "#090909",
-    fontSize: 20,
-    fontWeight: "600",
-    marginLeft: 15,
+    color: '#090909',
+    fontSize: width * 0.045,
+    fontWeight: '600',
+    marginLeft: width * 0.03,
   },
-  grid: { paddingBottom: 120 },
+
   avatarWrapper: {
     width: ITEM_SIZE,
     height: ITEM_SIZE,
-    margin: 6,
-    borderRadius: 14,
-    backgroundColor: "#000",
+    margin: width * 0.015, // 🔥 responsive spacing
+    borderRadius: width * 0.03,
+    backgroundColor: '#000',
   },
+
   avatarSelected: {
     borderWidth: 3,
-    borderColor: "#d62edc",
+    borderColor: '#d62edc',
+    borderRadius: width * 0.03, // 🔥 match wrapper
   },
+
   avatarImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+    borderRadius: width * 0.03,
   },
-  continueButton: {
-    position: "absolute",
-    bottom: 25,
-    left: 20,
-    right: 20,
-    height: 55,
-    borderRadius: 28,
-    backgroundColor: "#df09e7ff",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  continueText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
+
+  bottomFixed: {
+    position: 'absolute',
+    bottom: height * 0.025, // 🔥 responsive
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
 });

@@ -9,40 +9,39 @@ import {
   StatusBar,
   Dimensions,
 } from "react-native";
-import LinearGradient from "react-native-linear-gradient";
-import { SafeAreaView } from "react-native-safe-area-context";
+
 import { useNavigation } from "@react-navigation/native";
 import { useDispatch, useSelector } from "react-redux";
 import { newUserDataRequest } from "../features/user/userAction";
-import WelcomeScreenbackgroundgpage from"../components/BackgroundPages/WelcomeScreenbackgroungpage.js"
+import WelcomeScreenbackgroundgpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
 import Icon from "react-native-vector-icons/Ionicons";
+import ContinueButton from "../components/Common/ContinueButton";
 
-const { width } = Dimensions.get("window");
-const ITEM_SIZE = (width - 40) / 3;
+const { width, height } = Dimensions.get("window");
+const ITEM_SIZE = (width - width * 0.1) / 3;
 
-const ChooseAvatarScreen = () => {
+const GirlsavatarScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
 
   const { avatars } = useSelector((state) => state.avatars);
+
   const [selectedAvatar, setSelectedAvatar] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const renderAvatar = ({ item }) => {
     const isSelected = selectedAvatar?.avatar_id === item.avatar_id;
 
     return (
       <TouchableOpacity
-        activeOpacity={1} // ✅ no dim / no disable
+        activeOpacity={0.9}
         onPress={() => setSelectedAvatar(item)}
         style={[
           styles.avatarWrapper,
           isSelected && styles.avatarSelected,
         ]}
       >
-        <Image
-          source={{ uri: item.image_url }}
-          style={styles.avatarImage}
-        />
+        <Image source={{ uri: item.image_url }} style={styles.avatarImage} />
       </TouchableOpacity>
     );
   };
@@ -50,40 +49,33 @@ const ChooseAvatarScreen = () => {
   const handleContinue = () => {
     if (!selectedAvatar) return;
 
-    // ✅ DISPATCH SELECTED AVATAR ID
+    setIsSubmitting(true);
+
     dispatch(
       newUserDataRequest({
         avatar_id: selectedAvatar.avatar_id,
       })
     );
 
-    // ✅ NAVIGATE AFTER DISPATCH
     navigation.navigate("AddYourPhotosScreen");
   };
 
   return (
     <WelcomeScreenbackgroundgpage>
-
-    {/* <LinearGradient
-      colors={["#000000", "#1a001f", "#2d0033"]}
-      style={styles.container}
-      > */}
       <StatusBar barStyle="light-content" />
 
-      <SafeAreaView style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
+
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            >
+          <TouchableOpacity onPress={() => navigation.goBack()}>
             <Icon name="chevron-back" size={26} color="#000" />
           </TouchableOpacity>
 
           <Text style={styles.title}>Choose your Avatar</Text>
         </View>
 
-        {/* AVATAR GRID */}
+        {/* GRID */}
         <FlatList
           data={avatars}
           renderItem={renderAvatar}
@@ -91,107 +83,70 @@ const ChooseAvatarScreen = () => {
           numColumns={3}
           extraData={selectedAvatar}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.grid}
-          />
+          contentContainerStyle={{
+            paddingHorizontal: width * 0.03,
+            paddingBottom: height * 0.12,
+          }}
+        />
 
-        {/* CONTINUE BUTTON */}
-        <TouchableOpacity
-          style={[
-            styles.continueButton,
-            !selectedAvatar && styles.continueDisabled,
-          ]}
-          disabled={!selectedAvatar}
-          onPress={handleContinue}
-          >
-          <Text style={styles.continueText}>Continue</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    {/* </LinearGradient> */}
-          </WelcomeScreenbackgroundgpage>
+        {/* BUTTON */}
+        <View style={styles.bottomFixed}>
+          <ContinueButton
+            disabled={!selectedAvatar}
+            loading={isSubmitting}
+            onPress={handleContinue}
+          />
+        </View>
+
+      </View>
+    </WelcomeScreenbackgroundgpage>
   );
 };
 
-export default ChooseAvatarScreen;
-
-/* ================= STYLES ================= */
+export default GirlsavatarScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 20,
-    marginBottom: 30,
-  },
-
-  backButton: {
-    width: 36,
-    height: 36,
-    // borderRadius: 18,
-    // borderWidth: 1,
-    // borderColor: "#555",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  backIcon: {
-    color: "#fff",
-    fontSize: 24,
+    marginTop: height * 0.015,
+    marginBottom: height * 0.03,
+    paddingHorizontal: width * 0.05,
   },
 
   title: {
-    color: "#fff",
-    fontSize: 20,
+    color: "#090909",
+    fontSize: width * 0.045,
     fontWeight: "600",
-    marginLeft: 15,
-  },
-
-  grid: {
-    paddingBottom: 120,
+    marginLeft: width * 0.03,
   },
 
   avatarWrapper: {
     width: ITEM_SIZE,
     height: ITEM_SIZE,
-    margin: 6,
-    borderRadius: 14,
+    margin: width * 0.015,
+    borderRadius: width * 0.03,
     backgroundColor: "#000",
   },
 
   avatarSelected: {
     borderWidth: 3,
     borderColor: "#d62edc",
+    borderRadius: width * 0.03,
   },
 
   avatarImage: {
     width: "100%",
     height: "100%",
+    borderRadius: width * 0.03,
     resizeMode: "cover",
   },
 
-  continueButton: {
+  bottomFixed: {
     position: "absolute",
-    bottom: 25,
-    left: 20,
-    right: 20,
-    height: 55,
-    borderRadius: 28,
-    backgroundColor: "#d62edc",
-    justifyContent: "center",
+    bottom: height * 0.025,
+    left: 0,
+    right: 0,
     alignItems: "center",
-  },
-
-  continueDisabled: {
-    opacity: 0.4,
-  },
-
-  continueText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
   },
 });

@@ -8,6 +8,10 @@ import {
   Dimensions,
 } from "react-native";
 import WelcomeScreenbackgroundgpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import LinearGradient from 'react-native-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
+import ContinueButton from "../components/Common/ContinueButton"; // adjust path if needed
 
 const { width } = Dimensions.get("window");
 
@@ -31,23 +35,53 @@ const WelcomeScreen03 = ({ navigation }) => {
         </View>
 
         {/* FLOATING SMALL HEARTS */}
-        <Image
-          source={require("../assets/smallheart.png")}
-          style={[styles.smallHeart, { top: 190, left: 40,width:17,height:17 }]}
-        />
-        <Image
-          source={require("../assets/smallheart.png")}
-          style={[styles.smallHeart, { top: 230 ,right: 30 }]}
-        />
-        <Image
-          source={require("../assets/smallheart.png")}
-          style={[styles.smallHeart, { bottom: 400, width: 40, height:40,left: -20 }]}
-        />
-<Image
-          source={require("../assets/smallheart.png")}
-          style={[styles.smallHeart, { bottom: 380,width: 20, height:20, left: 350 }]}
-        />
+       
+{/* ❤️ HEART 1 */}
+<MaskedView
+  style={[styles.smallHeart, { top: 240, left: 60, width: 18, height: 18,transform: [{ rotate: '-40deg' }], }]}
+  maskElement={<Ionicons name="heart" size={18} color="black" />}
+>
+  <LinearGradient
+    colors={['#D51BF9', '#8C37F8']}
+    style={{ flex: 1 }}
+  />
+</MaskedView>
 
+{/* ❤️ HEART 2 */}
+<MaskedView
+  style={[
+    styles.smallHeart,
+    { top: 260, right: 40, width: 28, height: 28 ,transform: [{ rotate: '20deg' }],}, // 🔥 ADD THIS
+  ]}
+  maskElement={<Ionicons name="heart" size={28} color="black" />}
+>
+  <LinearGradient
+    colors={['#D51BF9', '#8C37F8']}
+    style={{ flex: 1 }}
+  />
+</MaskedView>
+
+{/* ❤️ HEART 3 */}
+<MaskedView
+  style={[styles.smallHeart, { bottom: 280, left: -20, width: 40, height: 40 }]}
+  maskElement={<Ionicons name="heart" size={40} color="black" />}
+>
+  <LinearGradient
+    colors={['#D51BF9', '#8C37F8']}
+    style={{ flex: 1 }}
+  />
+</MaskedView>
+
+{/* ❤️ HEART 4 */}
+<MaskedView
+  style={[styles.smallHeart, { bottom: 280, left: 300, width: 20, height: 20,transform: [{ rotate: '20deg' }], }]}
+  maskElement={<Ionicons name="heart" size={20} color="black" />}
+>
+  <LinearGradient
+    colors={['#D51BF9', '#8C37F8']}
+    style={{ flex: 1 }}
+  />
+</MaskedView>
         {/* TEXT */}
         <View style={styles.textWrapper}>
           <Text style={styles.title}>Don’t wait anymore, find</Text>
@@ -55,17 +89,16 @@ const WelcomeScreen03 = ({ navigation }) => {
         </View>
 
         {/* CALL TO ACTION BUTTON */}
-       <TouchableOpacity
-  style={styles.startButton}
-  onPress={() => {
-    console.log("Pressed");
-    navigation.navigate("Phone");
-  }}
-  
->
-
-          <Text style={styles.startButtonText}>GET STARTED</Text>
-        </TouchableOpacity>
+      {/* FIXED BUTTON */}
+<View style={styles.bottomFixed}>
+  <ContinueButton
+    title="GET STARTED"
+    onPress={() => {
+      console.log("Pressed");
+      navigation.navigate("Phone");
+    }}
+  />
+</View>
       </View>
     </WelcomeScreenbackgroundgpage>
   );
@@ -78,15 +111,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
-    paddingTop: 60,
+    paddingTop: 10,
     width: "100%",
   },
 
   logo: {
-    width: 100,
+   
+    width: 120,
     height: 120,
     resizeMode: "contain",
-    marginBottom: 50,
+    marginBottom: 40,
   },
 
   heartWrapper: {
@@ -104,15 +138,13 @@ const styles = StyleSheet.create({
   },
 
   smallHeart: {
-    width: 28,
-    height: 28,
-    tintColor: "#C657FF",
+   
     position: "absolute",
-    resizeMode: "contain",
+    
   },
 
   textWrapper: {
-    marginTop: 170,
+    marginTop: 120,
     alignItems: "center",
   },
 
@@ -123,19 +155,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  startButton: {
-    width: width * 0.8,
-    backgroundColor: "#9747FF",
-    paddingVertical: 14,
-    borderRadius: 12,
-    position: "absolute",
-    bottom: 70,
-  },
-
-  startButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-    textAlign: "center",
+  bottomFixed: {
+    position: 'absolute',
+    bottom: 30,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
 });

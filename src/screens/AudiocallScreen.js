@@ -21,7 +21,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { clearCall, callDetailsRequest } from '../features/calls/callAction';
 import { otherUserFetchRequest } from '../features/Otherusers/otherUserActions';
 import { submitRatingRequest } from '../features/rating/ratingAction';
-import store from "../reduxStore/store"; // adjust path
+import store from '../reduxStore/store'; // adjust path
 import EndCallConfirmModal from '../screens/EndCallConfirmationScreen';
 import { SocketContext } from '../socket/SocketProvider';
 import { createPC } from '../utils/webrtc';
@@ -40,7 +40,7 @@ const AudiocallScreen = ({ route, navigation }) => {
 
   const myGender = userdata?.user?.gender;
   const myId = userdata?.user?.user_id;
-const call = useSelector(state => state.calls.call);
+  const call = useSelector(state => state.calls.call);
   const caller = connectedCallDetails?.caller;
   const connectedUser = connectedCallDetails?.connected_user;
 
@@ -59,8 +59,7 @@ const call = useSelector(state => state.calls.call);
   const isExitingRef = useRef(false);
   const hasStartedRef = useRef(false);
   const disableExitRef = useRef(false);
-const remoteEndedRef = useRef(false);
-
+  const remoteEndedRef = useRef(false);
 
   const [connectedUI, setConnectedUI] = useState(false);
   const [micOn, setMicOn] = useState(true);
@@ -81,13 +80,12 @@ const remoteEndedRef = useRef(false);
     return res === PermissionsAndroid.RESULTS.GRANTED;
   };
 
-
   useEffect(() => {
-  if (session_id) {
-    console.log("📡 Fetching call details early");
-    dispatch(callDetailsRequest());
-  }
-}, [session_id]);
+    if (session_id) {
+      console.log('📡 Fetching call details early');
+      dispatch(callDetailsRequest());
+    }
+  }, [session_id]);
 
   /* ================= INIT ================= */
   useEffect(() => {
@@ -160,14 +158,12 @@ const remoteEndedRef = useRef(false);
       socket.on('audio_offer', onOffer);
       socket.on('audio_answer', onAnswer);
       socket.on('audio_ice_candidate', onIce);
-            socket.on('audio_call_ended', () => {
+      socket.on('audio_call_ended', () => {
         console.log('📴 CALL ENDED RECEIVED');
-remoteEndedRef.current = true;
+        remoteEndedRef.current = true;
         stopCallMedia();
 
-       
-          setShowEndModal(true);
-        
+        setShowEndModal(true);
       });
 
       // socket.on('audio_call_ended', () => {
@@ -184,74 +180,71 @@ remoteEndedRef.current = true;
       //   leaveScreen(); // ✅ DIRECT EXIT (NO MODAL)
       // });
 
+      socket.on('audio_connected', async () => {
+        console.log('🚀 audio_connected');
 
+        if (hasStartedRef.current) return;
+        hasStartedRef.current = true;
 
-socket.on('audio_connected', async () => {
-  console.log('🚀 audio_connected');
+        if (!pcRef.current) {
+          console.log('❌ PC not ready');
+          return;
+        }
 
-  if (hasStartedRef.current) return;
-  hasStartedRef.current = true;
+        let callerId = null;
+        let retries = 0;
 
-  if (!pcRef.current) {
-    console.log('❌ PC not ready');
-    return;
-  }
+        while (retries < 10) {
+          // ✅ 1. Try selector first (works for random/direct)
+          if (connectedCallDetails?.caller?.user_id) {
+            callerId = connectedCallDetails.caller.user_id;
+            break;
+          }
 
-  let callerId = null;
-  let retries = 0;
+          // ✅ 2. Fallback to store (works for friend)
+          const state = store.getState();
+          const details = state.calls.connectedCallDetails;
 
-  while (retries < 10) {
-    // ✅ 1. Try selector first (works for random/direct)
-    if (connectedCallDetails?.caller?.user_id) {
-      callerId = connectedCallDetails.caller.user_id;
-      break;
-    }
+          if (details?.caller?.user_id) {
+            callerId = details.caller.user_id;
+            break;
+          }
 
-    // ✅ 2. Fallback to store (works for friend)
-    const state = store.getState();
-    const details = state.calls.connectedCallDetails;
+          console.log('⏳ Waiting for caller...');
+          await new Promise(r => setTimeout(r, 200));
+          retries++;
+        }
 
-    if (details?.caller?.user_id) {
-      callerId = details.caller.user_id;
-      break;
-    }
+        if (!callerId) {
+          console.log('❌ Caller not found → abort');
+          return;
+        }
 
-    console.log('⏳ Waiting for caller...');
-    await new Promise(r => setTimeout(r, 200));
-    retries++;
-  }
+        const isCaller = String(myId) === String(callerId);
 
-  if (!callerId) {
-    console.log('❌ Caller not found → abort');
-    return;
-  }
+        console.log('👤 My ID:', myId);
+        console.log('📞 Caller ID:', callerId);
+        console.log('🎯 Am I caller?', isCaller);
 
-  const isCaller = String(myId) === String(callerId);
+        if (!isCaller) {
+          console.log('🙋 Receiver ready');
+          return;
+        }
 
-  console.log('👤 My ID:', myId);
-  console.log('📞 Caller ID:', callerId);
-  console.log('🎯 Am I caller?', isCaller);
+        try {
+          console.log('📞 Caller → creating offer');
 
-  if (!isCaller) {
-    console.log('🙋 Receiver ready');
-    return;
-  }
+          const offer = await pcRef.current.createOffer({
+            offerToReceiveAudio: true,
+          });
 
-  try {
-    console.log('📞 Caller → creating offer');
+          await pcRef.current.setLocalDescription(offer);
 
-    const offer = await pcRef.current.createOffer({
-      offerToReceiveAudio: true,
-    });
-
-    await pcRef.current.setLocalDescription(offer);
-
-    socket.emit('audio_offer', { session_id, offer });
-
-  } catch (err) {
-    console.log('❌ OFFER ERROR:', err);
-  }
-});
+          socket.emit('audio_offer', { session_id, offer });
+        } catch (err) {
+          console.log('❌ OFFER ERROR:', err);
+        }
+      });
     };
 
     start();
@@ -519,7 +512,7 @@ socket.on('audio_connected', async () => {
         </View>
       )}
 
-      <View style={styles.controls}>
+      {/* <View style={styles.controls}>
         <TouchableOpacity
           style={[
             styles.circleBtn,
@@ -527,9 +520,6 @@ socket.on('audio_connected', async () => {
           ]}
           onPress={toggleSpeaker}
         >
-          {/* <TouchableOpacity style={styles.circleBtn} onPress={toggleSpeaker}> */}
-          {/* // <Ionicons name="volume-high" size={22} color="#9b4dff" /> */}
-
           <Ionicons
             name={speakerOn ? 'volume-high' : 'volume-mute'}
             size={24}
@@ -545,30 +535,41 @@ socket.on('audio_connected', async () => {
           />
         </TouchableOpacity>
 
-        {/* <TouchableOpacity
-          style={styles.endBtn}
-          onPress={() => {
-
-            socketRef.current?.emit('audio_call_hangup', { session_id });
-
-            stopCallMedia();
-            leaveScreen();
-
-          }}
-        > */}
-
         <TouchableOpacity
           style={styles.endBtn}
           onPress={() => {
-            // manualExitRef.current = true;
-
-            // ❌ DO NOT end call yet
-            // ❌ DO NOT leave screen
-
             setShowEndModal(true); // ✅ show rating modal first
           }}
         >
           <Ionicons name="call" size={22} color="#8f0a0a" />
+        </TouchableOpacity>
+      </View> */}
+
+      <View style={styles.controls}>
+        {/* 🔊 SPEAKER */}
+        <TouchableOpacity style={styles.circleBtn} onPress={toggleSpeaker}>
+          <Ionicons
+            name={speakerOn ? 'volume-high' : 'volume-mute'}
+            size={24}
+            color={speakerOn ? '#A020F0' : '#B8B8B8'} // purple active, gray inactive
+          />
+        </TouchableOpacity>
+
+        {/* 🎤 MIC */}
+        <TouchableOpacity style={styles.circleBtn} onPress={toggleMic}>
+          <Ionicons
+            name={micOn ? 'mic' : 'mic-off'}
+            size={24}
+            color={micOn ? '#A020F0' : '#B8B8B8'}
+          />
+        </TouchableOpacity>
+
+        {/* ❌ END CALL */}
+        <TouchableOpacity
+          style={styles.endBtn}
+          onPress={() => setShowEndModal(true)}
+        >
+          <Ionicons name="call" size={26} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -587,11 +588,10 @@ socket.on('audio_connected', async () => {
         onConfirm={rating => {
           if (isExitingRef.current) return;
           isExitingRef.current = true;
-  disableExitRef.current = true;
-  manualExitRef.current = true;
+          disableExitRef.current = true;
+          manualExitRef.current = true;
 
           setShowEndModal(false);
-
 
           // remove listener also (extra safe)
           dispatch(
@@ -605,9 +605,9 @@ socket.on('audio_connected', async () => {
 
           // socketRef.current?.emit('audio_call_hangup', { session_id });
 
-           if (!remoteEndedRef.current) {
-    socketRef.current?.emit('audio_call_hangup', { session_id });
-  }
+          if (!remoteEndedRef.current) {
+            socketRef.current?.emit('audio_call_hangup', { session_id });
+          }
           stopCallMedia();
 
           callManager.reset();
@@ -715,25 +715,30 @@ const styles = StyleSheet.create({
   },
 
   circleBtn: {
-    backgroundColor: '#fff',
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 4,
-  },
-
-  endBtn: {
-    backgroundColor: '#f0ebf7',
+    backgroundColor: '#FFFFFF',
     width: 60,
     height: 60,
     borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
   },
 
+  endBtn: {
+    backgroundColor: '#FF4D4F', // 🔥 RED
+    width: 65,
+    height: 65,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
+    shadowColor: '#FF4D4F',
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+  },
   debug: {
     position: 'absolute',
     bottom: 10,

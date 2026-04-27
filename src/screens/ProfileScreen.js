@@ -34,23 +34,24 @@ const ProfileScreen = () => {
   );
 
   return (
-    <WelcomeScreenbackgroungpage>
+  <WelcomeScreenbackgroungpage>
+    <View style={styles.container}>
 
-    <SafeAreaView style={styles.safe}>
       {/* ================= TOP PURPLE SECTION ================= */}
       <View style={styles.topBg}>
+
         {/* HEART BACKGROUND */}
         <Image
           pointerEvents="none"
           source={require("../assets/leftheart.png")}
           style={styles.leftHeart}
-          />
+        />
 
         <Image
           pointerEvents="none"
           source={require("../assets/rightheart.png")}
           style={styles.rightHeart}
-          />
+        />
 
         {/* HEADER */}
         <View style={styles.header}>
@@ -62,28 +63,28 @@ const ProfileScreen = () => {
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
 
-        {/* ================= AVATAR ================= */}
+        {/* AVATAR */}
         <View style={styles.avatarWrap}>
           <View style={styles.avatarRing}>
             <Image
+             pointerEvents="none"
               source={{
                 uri:
-                userdata?.images?.avatar ||
-                userdata?.images?.profile_image ||
-                "https://i.pravatar.cc/150?img=12",
+                  userdata?.images?.avatar ||
+                  userdata?.images?.profile_image ||
+                  "https://i.pravatar.cc/150?img=12",
               }}
               style={styles.avatar}
             />
           </View>
         </View>
 
-        {/* NAME + EDIT */}
+        {/* NAME */}
         <View style={styles.nameRow}>
           <TouchableOpacity
             style={styles.editCircle}
-            activeOpacity={0.7}
             onPress={() => navigation.navigate("EditProfileScreen")}
-            >
+          >
             <Icon name="pencil" size={14} color="#fff" />
           </TouchableOpacity>
 
@@ -92,13 +93,13 @@ const ProfileScreen = () => {
           </Text>
         </View>
 
-        {/* WHITE CURVE */}
+        {/* CURVE */}
         <Svg
-          pointerEvents="none"
+        pointerEvents="none"
           width={width}
           height={140}
           style={{ position: "absolute", bottom: -1 }}
-          >
+        >
           <Path
             d={`
               M0 80
@@ -106,15 +107,17 @@ const ProfileScreen = () => {
               L ${width} 140
               L 0 140
               Z
-              `}
-              fill="#FFFFFF"
-              />
+            `}
+            fill="#FFFFFF"
+          />
         </Svg>
+
       </View>
 
-      {/* ================= WHITE CONTENT ================= */}
+      {/* ================= CONTENT ================= */}
       <View style={styles.content}>
         <View style={styles.listBox}>
+
           <Item
             icon="star-outline"
             color="#F6A623"
@@ -127,7 +130,7 @@ const ProfileScreen = () => {
             color="#FF5A5A"
             title="Invite Friends"
             sub="Invite your friends and earn Flashnotes!"
-            />
+          />
 
           <Item
             icon="settings-outline"
@@ -135,7 +138,7 @@ const ProfileScreen = () => {
             title="App Settings"
             sub="Manage your notifications, connected accounts.."
             onPress={() => navigation.navigate("SettingScreen")}
-            />
+          />
 
           <Item
             icon="help-circle-outline"
@@ -143,12 +146,14 @@ const ProfileScreen = () => {
             title="Need Help?"
             sub="FAQ, tutorial and contact"
             onPress={() => navigation.navigate("HelpCenterScreen")}
-            />
+          />
+
         </View>
       </View>
-    </SafeAreaView>
-            </WelcomeScreenbackgroungpage>
-  );
+
+    </View>
+  </WelcomeScreenbackgroungpage>
+);
 };
 
 /* ================= LIST ITEM ================= */
@@ -171,14 +176,14 @@ export default ProfileScreen;
 /* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-  },
-
+  container: {
+  flex: 1,
+},
   topBg: {
-    height: 300,
-    backgroundColor: "#F5E1FF",
-  },
+  height: 300,
+  backgroundColor: "#F5E1FF",
+  paddingTop: 10, // 🔥 replaces SafeArea
+},
 
   leftHeart: {
     position: "absolute",
@@ -199,10 +204,10 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: 16,
+},
 
   headerTitle: {
     fontSize: 20,

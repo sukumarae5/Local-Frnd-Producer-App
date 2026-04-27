@@ -9,14 +9,18 @@ import {
   PermissionsAndroid,
   ScrollView,
   InteractionManager,
+  Dimensions
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { launchCamera, launchImageLibrary } from "react-native-image-picker";
-
+import ContinueButton from "../components/Common/ContinueButton";
 import { useDispatch } from "react-redux";
 import { userpostphotorequest } from "../features/photo/photoAction";
+const { width, height } = Dimensions.get("window");
+import WelcomeScreenbackgroundgpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
+
+
 
 const AddYourPhotosScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
@@ -123,49 +127,42 @@ const AddYourPhotosScreen = ({ navigation, route }) => {
   };
 
   /* ================= UI ================= */
+return (
+  <WelcomeScreenbackgroundgpage>
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+    <View style={{ flex: 1 }}>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: height * 0.18 }}>
 
         {/* HEADER */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={22} />
+            <Ionicons name="chevron-back" size={width * 0.06} />
           </TouchableOpacity>
           <Text style={styles.header}>Add Your Photos</Text>
         </View>
 
-        {/* PHOTO GRID */}
+        {/* GRID */}
         <View style={styles.grid}>
           {Array.from({ length: 4 }).map((_, index) => {
             const photo = totalPhotos[index];
 
-            // EXISTING PHOTO
             if (photo?.photo_url) {
               return (
                 <View key={`existing-${photo.photo_id}`} style={styles.gridItem}>
-                  <Image
-                    source={{ uri: photo.photo_url }}
-                    style={styles.image}
-                  />
+                  <Image source={{ uri: photo.photo_url }} style={styles.image} />
                 </View>
               );
             }
 
-            // NEW PHOTO
             if (photo?.uri) {
               return (
                 <View key={`new-${index}`} style={styles.gridItem}>
-                  <Image
-                    source={{ uri: photo.uri }}
-                    style={styles.image}
-                  />
+                  <Image source={{ uri: photo.uri }} style={styles.image} />
                 </View>
               );
             }
 
-            // ADD BUTTON
             if (index === totalPhotos.length) {
               return (
                 <TouchableOpacity
@@ -173,12 +170,11 @@ const AddYourPhotosScreen = ({ navigation, route }) => {
                   style={styles.addBox}
                   onPress={openSelectOption}
                 >
-                  <Ionicons name="add" size={36} color="#C56CF0" />
+                  <Ionicons name="add" size={width * 0.1} color="#C56CF0" />
                 </TouchableOpacity>
               );
             }
 
-            // PLACEHOLDER
             return (
               <View key={`empty-${index}`} style={styles.placeholderBox}>
                 <Text style={styles.placeholderText}>160 x 210</Text>
@@ -187,70 +183,76 @@ const AddYourPhotosScreen = ({ navigation, route }) => {
           })}
         </View>
 
-        {/* CONTINUE BUTTON */}
-        <View style={styles.btnWrap}>
-          <TouchableOpacity onPress={handleUploadPhotos}>
-            <LinearGradient
-              colors={["#9D4CF1", "#D800F4"]}
-              style={styles.button}
-            >
-              <Text style={styles.buttonText}>CONTINUE</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-
-        {/* SKIP */}
-       <TouchableOpacity
-  onPress={() => navigation.navigate("SelectYourIdealMatchScreen")}
-  style={{ marginTop: 10, alignSelf: "center" }}
->
-  <Text style={styles.skipText}>NOT NOW</Text>
-</TouchableOpacity>
-
       </ScrollView>
-    </SafeAreaView>
-  );
+
+      {/* BUTTON */}
+      <View style={styles.bottomFixed}>
+        <ContinueButton
+          title="CONTINUE"
+          onPress={handleUploadPhotos}
+          disabled={newPhotos.length === 0}
+        />
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate("SelectYourIdealMatchScreen")}
+          style={{ marginTop: height * 0.015 }}
+        >
+          <Text style={styles.skipText}>NOT NOW</Text>
+        </TouchableOpacity>
+      </View>
+
+    </View>
+
+  </WelcomeScreenbackgroundgpage>
+);
 };
 
 export default AddYourPhotosScreen;
 
 /* ==================== STYLES ==================== */
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8F2FF" },
+const ITEM_HEIGHT = height * 0.26; // 🔥 replaces 210
 
+const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 20,
-    gap: 10,
+    paddingHorizontal: width * 0.05,
+    marginTop: height * 0.02,
   },
 
-  header: { fontSize: 18, fontWeight: "600" },
+  header: {
+    fontSize: width * 0.045,
+    fontWeight: "600",
+  },
 
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    marginTop: 10,
+    paddingHorizontal: width * 0.05,
+    marginTop: height * 0.02,
   },
 
   gridItem: {
     width: "48%",
-    height: 210,
-    marginBottom: 15,
-    borderRadius: 12,
+    height: ITEM_HEIGHT,
+    marginBottom: height * 0.02,
+    borderRadius: width * 0.04,
     overflow: "hidden",
     backgroundColor: "#D9D9D9",
   },
 
-  image: { width: "100%", height: "100%", resizeMode: "cover" },
+  image: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
 
   addBox: {
     width: "48%",
-    height: 210,
-    borderRadius: 12,
+    height: ITEM_HEIGHT,
+    borderRadius: width * 0.04,
     borderWidth: 2,
     borderColor: "#C56CF0",
     borderStyle: "dashed",
@@ -261,22 +263,27 @@ const styles = StyleSheet.create({
 
   placeholderBox: {
     width: "48%",
-    height: 210,
+    height: ITEM_HEIGHT,
     justifyContent: "center",
     alignItems: "center",
   },
 
-  placeholderText: { fontSize: 14, color: "#777" },
+  placeholderText: {
+    fontSize: width * 0.035,
+    color: "#777",
+  },
 
-  btnWrap: { paddingHorizontal: 20, marginTop: 20 },
-
-  button: {
-    paddingVertical: 14,
-    borderRadius: 10,
+  bottomFixed: {
+    position: "absolute",
+    bottom: height * 0.025,
+    left: 0,
+    right: 0,
     alignItems: "center",
   },
 
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-
-  skipText: { color: "#666", fontSize: 15, fontWeight: "600" },
+  skipText: {
+    color: "#666",
+    fontSize: width * 0.04,
+    fontWeight: "600",
+  },
 });

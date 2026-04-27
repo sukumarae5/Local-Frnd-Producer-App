@@ -33,6 +33,35 @@ const { width } = Dimensions.get('window');
 const CELL_WIDTH = width / 3 - 18;
 const WAVE_DISTANCE = 10;
 
+const FilterChip = ({ active, onPress, icon, label }) => {
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+      <LinearGradient
+        colors={
+          active
+            ? ['#D51BF9', '#8C37F8'] // strong
+            : ['#EED4FF', '#F6ECFF'] // light gradient
+        }
+        style={styles.chip}
+      >
+        <MaterialIcons
+          name={icon}
+          size={16}
+          color={active ? '#fff' : '#8C37F8'}
+        />
+        <Text
+          style={[
+            styles.chipTextActive,
+            { color: active ? '#fff' : '#8C37F8' },
+          ]}
+        >
+          {label}
+        </Text>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+};
+
 const TrainersCallPage = ({ navigation }) => {
   const dispatch = useDispatch();
   const socketCtx = useContext(SocketContext);
