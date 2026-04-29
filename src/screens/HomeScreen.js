@@ -30,7 +30,6 @@ import OffersSectionScreen from './OffersSectionScreen';
 import ActiveDostSectionScreen from './ActiveDostSectionScreen';
 import BottomCallPills from '../components/BottomCallPills';
 import HomeHeader from '../components/HomeHeader';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get('window');
 
@@ -150,16 +149,34 @@ const HomeScreen = () => {
           barStyle="dark-content"
         />
 
-        {/* HEADER */}
-        <View style={styles.headerContainer}>
-          <HomeHeader
-            withSpacing
-            navigation={navigation}
-            userdata={userdata}
-            unread={unread}
-            imageUrl={imageUrl}
-            wp={wp}
-            hp={hp}
+        <View style={styles.container}>
+          <View style={styles.headerContainer}>
+            <HomeHeader
+              withSpacing
+              navigation={navigation}
+              userdata={userdata}
+              unread={unread}
+              imageUrl={imageUrl}
+              wp={wp}
+              hp={hp}
+            />
+
+            <View style={styles.searchContainer}>
+              <Icon name="magnify" size={wp(5.5)} color="#999" />
+              <TextInput
+                placeholder="Search"
+                placeholderTextColor="#8E8E93"
+                style={styles.searchInput}
+              />
+            </View>
+          </View>
+
+          <FlatList
+            data={sections}
+            keyExtractor={item => item.id}
+            renderItem={renderItem}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
           />
 
           {/* SEARCH */}

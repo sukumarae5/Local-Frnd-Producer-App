@@ -30,7 +30,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import BottomCallPills from '../components/BottomCallPills';
 
 const { width } = Dimensions.get('window');
-const CELL_WIDTH = width / 3 - 16;
+const CELL_WIDTH = width / 3 - 18;
 const WAVE_DISTANCE = 10;
 
 const FilterChip = ({ active, onPress, icon, label }) => {
@@ -240,71 +240,151 @@ const TrainersCallPage = ({ navigation }) => {
           imageUrl={imageUrl}
           withSpacing={true}
         />
-<View style={{ alignItems: 'center', marginTop: 20, marginBottom: 15 }}>          <MaskedView
-            maskElement={<Text style={styles.lookText}>Local frnd</Text>}
+        <MaskedView
+          maskElement={<Text style={styles.lookText}>Local frnd</Text>}
+        >
+          <LinearGradient
+            colors={['#D51BF9', '#8C37F8']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
           >
-            <LinearGradient colors={['#D51BF9', '#8C37F8']}>
-              <Text style={[styles.lookText, { opacity: 0 }]}>Local frnd</Text>
-            </LinearGradient>
-          </MaskedView>
+            <Text style={[styles.lookText, { opacity: 0 }]}>Local frnd</Text>
+          </LinearGradient>
+        </MaskedView>
 
-          <MaskedView
-            maskElement={<Text style={styles.pageTitle}>Connecting Room</Text>}
+        <MaskedView
+          maskElement={<Text style={styles.pageTitle}>Connecting Room</Text>}
+        >
+          <LinearGradient
+            colors={['#D51BF9', '#8C37F8']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
           >
-            <LinearGradient colors={['#D51BF9', '#8C37F8']}>
-              <Text style={[styles.pageTitle, { opacity: 0 }]}>
-                Connecting Room
-              </Text>
-            </LinearGradient>
-          </MaskedView>
-        </View>
+            <Text style={[styles.pageTitle, { opacity: 0 }]}>
+              Connecting Room
+            </Text>
+          </LinearGradient>
+        </MaskedView>
 
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterRow}
         >
-          <FilterChip
-            active={activeFilter === 'ONLINE'}
+          {/* ONLINE */}
+          <TouchableOpacity
+            style={[
+              styles.chip,
+              activeFilter === 'ONLINE' && styles.chipActive,
+            ]}
             onPress={setOnlineFilter}
-            icon="wifi"
-            label="Online"
-          />
+          >
+            <MaterialIcons
+              name="wifi"
+              size={16}
+              color={activeFilter === 'ONLINE' ? '#fff' : '#111111'}
+            />
+            <Text
+              style={[
+                styles.chipText,
+                activeFilter === 'ONLINE' && styles.chipTextActive,
+              ]}
+            >
+              Online
+            </Text>
+          </TouchableOpacity>
 
-          <FilterChip
-            active={activeFilter === 'AUDIO'}
+          {/* AUDIO */}
+          <TouchableOpacity
+            style={[styles.chip, activeFilter === 'AUDIO' && styles.chipActive]}
             onPress={() => setTypeFilter('AUDIO')}
-            icon="call"
-            label="Audio"
-          />
+          >
+            <MaterialIcons
+              name="call"
+              size={16}
+              color={activeFilter === 'AUDIO' ? '#fff' : '#111111'}
+            />
+            <Text
+              style={[
+                styles.chipText,
+                activeFilter === 'AUDIO' && styles.chipTextActive,
+              ]}
+            >
+              Audio
+            </Text>
+          </TouchableOpacity>
 
-          <FilterChip
-            active={activeFilter === 'VIDEO'}
+          {/* VIDEO */}
+          <TouchableOpacity
+            style={[styles.chip, activeFilter === 'VIDEO' && styles.chipActive]}
             onPress={() => setTypeFilter('VIDEO')}
-            icon="videocam"
-            label="Video"
-          />
+          >
+            <MaterialIcons
+              name="videocam"
+              size={16}
+              color={activeFilter === 'VIDEO' ? '#fff' : '#111111'}
+            />
+            <Text
+              style={[
+                styles.chipText,
+                activeFilter === 'VIDEO' && styles.chipTextActive,
+              ]}
+            >
+              Video
+            </Text>
+          </TouchableOpacity>
 
-          <FilterChip
-            active={activeFilter === 'LANGUAGE'}
+          {/* LANGUAGE */}
+          <TouchableOpacity
+            style={[
+              styles.chip,
+              activeFilter === 'LANGUAGE' && styles.chipActive,
+            ]}
             onPress={setLanguageFilter}
-            icon="translate"
-            label="Telugu"
-          />
+          >
+            <MaterialIcons
+              name="translate"
+              size={16}
+              color={activeFilter === 'LANGUAGE' ? '#fff' : '#111111'}
+            />
+            <Text
+              style={[
+                styles.chipText,
+                activeFilter === 'LANGUAGE' && styles.chipTextActive,
+              ]}
+            >
+              Telugu
+            </Text>
+          </TouchableOpacity>
 
-          <FilterChip
-            active={activeFilter === 'INTEREST'}
+          {/* INTEREST */}
+          <TouchableOpacity
+            style={[
+              styles.chip,
+              activeFilter === 'INTEREST' && styles.chipActive,
+            ]}
             onPress={setInterestFilter}
-            icon="favorite"
-            label="Party"
-          />
+          >
+            <MaterialIcons
+              name="favorite"
+              size={16}
+              color={activeFilter === 'INTEREST' ? '#fff' : '#111111'}
+            />
+            <Text
+              style={[
+                styles.chipText,
+                activeFilter === 'INTEREST' && styles.chipTextActive,
+              ]}
+            >
+              Party
+            </Text>
+          </TouchableOpacity>
 
-          <FilterChip
-            active={false}
-            onPress={resetFilters}
-            icon="refresh"
-            label="Reset"
-          />
+          {/* RESET */}
+          <TouchableOpacity style={styles.chip} onPress={resetFilters}>
+            <MaterialIcons name="refresh" size={16} color="#111111" />
+            <Text style={styles.chipText}>Reset</Text>
+          </TouchableOpacity>
         </ScrollView>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionText}>
@@ -393,8 +473,8 @@ const styles = StyleSheet.create({
   topWhiteArea: {
     backgroundColor: '#fff',
     paddingTop:
-      Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 10 : 20,
-    paddingBottom: 16,
+      Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 10 : 10,
+    paddingBottom: 16, // ✅ more breathing space
     paddingHorizontal: 16,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
@@ -418,10 +498,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: width * 0.09,
-    paddingHorizontal: width * 0.035,
+
+    height: 34.56,
+    paddingHorizontal: 12,
+
+    backgroundColor: '#FFE9F3',
     borderRadius: 30,
     marginHorizontal: 6,
+  },
+
+  chipActive: {
+    backgroundColor: '#C2185B',
   },
 
   chipText: {
@@ -432,10 +519,7 @@ const styles = StyleSheet.create({
   },
 
   chipTextActive: {
-    fontSize: 12,
     color: '#fff',
-    fontWeight: '600',
-    marginLeft: 6,
   },
   filterRow: {
     flexDirection: 'row',

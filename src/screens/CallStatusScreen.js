@@ -127,8 +127,10 @@ const CallStatusScreen = ({ navigation, route }) => {
     }
   }, [call?.status]);
 
-  useEffect(() => {
-    if (!call?.status) return;
+const displayStatus =
+  call?.status === "NO_MATCH"
+    ? "connecting..."
+    : call?.status || "Connecting...";
 
     if (call?.status === 'NO_MATCH' && role === 'male') {
       const retry = setTimeout(() => {

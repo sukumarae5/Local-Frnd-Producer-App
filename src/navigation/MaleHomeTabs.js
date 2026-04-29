@@ -70,40 +70,59 @@ const TabIcon = ({ focused, name }) => {
 const MaleHomeTabs = () => {
   return (
     <Tab.Navigator
+  // screenOptions={{
+  //   headerShown: false,
+  //   tabBarShowLabel: false,
+
+  //   tabBarStyle: {
+  //     position: "fixed",
+  //     left: 40,
+  //     right: 40,
+  //     bottom: 20,
+  //     height: 60,
+  //     borderRadius: 30,
+  //     backgroundColor: "#ffffff",
+  //     borderTopWidth: 0,
+  //     elevation: 8,
+  //   },
+
+  //   tabBarItemStyle: {
+  //     justifyContent: "center",
+  //     alignItems: "center",
+  //     paddingTop: 10,
+  //   },
+
+  //   // ✅ THIS FIXES ALL SCREENS
+  //   sceneContainerStyle: {
+  //     paddingBottom: 100,
+  //   },
+  // }}
 
   screenOptions={{
   headerShown: false,
   tabBarShowLabel: false,
 
-  // tabBarStyle: {
-  //   position: "absolute",
-  //   left: 40,
-  //   right: 40,
-  //   // bottom: 20,
-  //   height: 60,
-  //   // borderRadius: 30,
-  //   backgroundColor: "#ffffff",
-  //   borderTopWidth: 0,
-  //   elevation: 8,
-  // },
+  tabBarStyle: {
+    position: "fixed",
+    left: 40,
+    right: 40,
+    bottom: 20,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#ffffff",
+    borderTopWidth: 0,
+    elevation: 8,
+  },
 
-
-tabBarStyle: {
-  position: "absolute",
-  left: 20,
-  right: 20,
-  height: 60,
-  borderRadius: 10,
-  backgroundColor: "#fff",
-  borderTopWidth: 0,
-  elevation: 10,
-},
   tabBarItemStyle: {
     justifyContent: "center",
     alignItems: "center",
     paddingTop: 10,
   },
 
+  sceneContainerStyle: {
+    paddingBottom: 100,
+  },
 
   // ✅ ADDED ONLY THIS
   tabBarBackground: () => (

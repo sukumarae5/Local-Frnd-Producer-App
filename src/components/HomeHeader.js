@@ -1,19 +1,7 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Dimensions } from 'react-native';
-
-const { width, height } = Dimensions.get('window');
-
-const wp = (percent) => (width * percent) / 100;
-const hp = (percent) => (height * percent) / 100;
 
 const HomeHeader = ({
   navigation,
@@ -21,130 +9,63 @@ const HomeHeader = ({
   unread,
   imageUrl,
   withSpacing,
-
+  isSmallDevice,
+  wp,
+  hp,
 }) => {
   return (
     <View
-      style={[
-        styles.headerContainer,
-        { paddingTop: withSpacing ? hp(1.2) : 0 },
-      ]}
+      style={[styles.headerContainer, { paddingTop: withSpacing ? 10 : 0 }]}
     >
+      
       <View style={styles.headerRow}>
-        
-        {/* COIN */}
+        {/* Coin */}
         <TouchableOpacity onPress={() => navigation.navigate('PlanScreen')}>
           <LinearGradient
             colors={['#FFA726', '#FF7043']}
-            style={[
-              styles.coinBox,
-              {
-                height: wp(10),
-                borderRadius: wp(5),
-                paddingHorizontal: wp(3),
-              },
-            ]}
+            style={styles.coinBox}
           >
             <Image
               source={require('../assets/coin1.png')}
-              style={{
-                width: wp(5.5),
-                height: wp(5.5),
-              }}
+              style={styles.coinImage}
             />
-            <Text
-              style={[
-                styles.coinText,
-                { fontSize: wp(3.5), marginLeft: wp(1.5) },
-              ]}
-            >
+            <Text style={styles.coinText}>
               {userdata?.user?.coin_balance ?? 0}
             </Text>
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* RIGHT ICONS */}
+        {/* Right icons */}
         <View style={styles.rightIcons}>
-          
-          {/* MESSAGE */}
           <TouchableOpacity
             onPress={() => navigation.navigate('MessagesScreen')}
           >
-            <View
-              style={[
-                styles.iconCircle,
-                {
-                  width: wp(9),
-                  height: wp(9),
-                  borderRadius: wp(4.5),
-                },
-              ]}
-            >
-              <Icon name="message-processing-outline" size={wp(5)} color="#fff" />
+            <View style={styles.iconCircle}>
+              <Icon name="message-processing-outline" size={22} color="#fff" />
             </View>
           </TouchableOpacity>
 
-          {/* NOTIFICATION */}
           <TouchableOpacity
             onPress={() => navigation.navigate('NotificationScreen')}
-            style={{ marginLeft: wp(2) }}
           >
-            <View
-              style={[
-                styles.iconCircle,
-                {
-                  width: wp(9),
-                  height: wp(9),
-                  borderRadius: wp(4.5),
-                },
-              ]}
-            >
-              <Icon name="bell-outline" size={wp(5)} color="#fff" />
+            <View style={styles.iconCircle}>
+              <Icon name="bell-outline" size={22} color="#fff" />
             </View>
 
             {unread > 0 && (
-              <View
-                style={[
-                  styles.badge,
-                  {
-                    top: -wp(1),
-                    right: -wp(1),
-                    minWidth: wp(4.5),
-                    height: wp(4.5),
-                    borderRadius: wp(2.2),
-                  },
-                ]}
-              >
-                <Text style={[styles.badgeText, { fontSize: wp(2.5) }]}>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
                   {unread > 99 ? '99+' : unread}
                 </Text>
               </View>
             )}
           </TouchableOpacity>
 
-          {/* PROFILE */}
-          {/* <TouchableOpacity
+          <TouchableOpacity
             onPress={() => navigation.navigate('UplodePhotoScreen')}
-            style={{ marginLeft: wp(2) }}
-          > */}
-            <TouchableOpacity
-            onPress={() => navigation.navigate('AboutScreen', {
-      user_id: userdata?.user?.user_id,
-    })}
-            style={{ marginLeft: wp(2) }}
           >
-            <Image
-              source={imageUrl}
-              style={{
-                width: wp(9),
-                height: wp(9),
-                borderRadius: wp(4.5),
-                borderWidth: 2,
-                borderColor: '#A35DFE',
-              }}
-            />
+            <Image source={imageUrl} style={styles.profilePic} />
           </TouchableOpacity>
-
         </View>
       </View>
     </View>
@@ -167,9 +88,20 @@ const styles = StyleSheet.create({
   coinBox: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 12,
+    height: 40,
+    borderRadius: 20,
+  },
+
+  coinImage: {
+    width: 22,
+    height: 22,
+    resizeMode: 'contain',
   },
 
   coinText: {
+    marginLeft: 6,
+    fontSize: 14,
     fontWeight: '800',
     color: '#fff',
   },
@@ -180,21 +112,41 @@ const styles = StyleSheet.create({
   },
 
   iconCircle: {
+    width: 35,
+    height: 35,
+    borderRadius: 20,
     backgroundColor: '#ce17fc',
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: 10,
+  },
+
+  profilePic: {
+    width: 35,
+    height: 35,
+    borderRadius: 20,
+    marginLeft: 10,
+    borderWidth: 2,
+    borderColor: '#A35DFE',
   },
 
   badge: {
     position: 'absolute',
+    top: -4,
+    right: -4,
     backgroundColor: '#ff0044',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 2,
+    paddingHorizontal: 4,
   },
 
   badgeText: {
     color: '#fff',
+    fontSize: 10,
     fontWeight: '700',
   },
+  
 });

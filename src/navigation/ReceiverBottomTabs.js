@@ -72,22 +72,43 @@ const TabIcon = ({ focused, name }) => {
 const ReceiverBottomTabs = () => {
   return (
     <Tab.Navigator
+//       screenOptions={{
+//         headerShown: false,
+//         tabBarShowLabel: false,
+//  tabBarStyle: {
+//   position: "fixed",
+//   left: 40,
+//   right: 40,
+//   bottom: 20,
+//   height: 60,
+//   borderRadius: 30,
+//   backgroundColor: "#ffffff",
+//   borderTopWidth: 0,
+//   elevation: 8,
+// },
+
+// tabBarItemStyle: {
+//   justifyContent: "center",
+//   alignItems: "center",
+//   paddingTop: 10,
+// },
+//       }}
 
 screenOptions={{
   headerShown: false,
   tabBarShowLabel: false,
 
   tabBarStyle: {
-  position: "absolute",
-  left: 20,
-  right: 20,
- 
-  height: 60,
-  borderRadius: 10,
-  backgroundColor: "#fff",
-  borderTopWidth: 0,
-  elevation: 10,
-},
+    position: "fixed",
+    left: 40,
+    right: 40,
+    bottom: 20,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#ffffff",
+    borderTopWidth: 0,
+    elevation: 8,
+  },
 
   tabBarItemStyle: {
     justifyContent: "center",
@@ -96,29 +117,32 @@ screenOptions={{
   },
 
   // ✅ ONLY ADDED THIS
- tabBarBackground: () => {
-  const TAB_COUNT = 4; // number of tabs
-  const tabWidth = width / TAB_COUNT;
-
-  return (
-    <View style={{ flex: 1 }}>
-      {[1, 2, 3].map((_, index) => (
-        <View
-          key={index}
-          style={{
-            position: "absolute",
-            left: tabWidth * (index + 1) - 0.5,
-            top: "50%",
-            marginTop: -12,
-            width: 1,
-            height: 24,
-            backgroundColor: "#E5E5E5",
-          }}
-        />
-      ))}
+  tabBarBackground: () => (
+    <View style={{ flex: 1, justifyContent: "center" }}>
+      <View
+        style={{
+          position: "absolute",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          width: "100%",
+          height: "100%",
+          paddingHorizontal: 60,
+        }}
+      >
+        {[1, 2, 3].map((_, index) => (
+          <View
+            key={index}
+            style={{
+              width: 1,
+              height: 25,
+              backgroundColor: "#E5E5E5",
+            }}
+          />
+        ))}
+      </View>
     </View>
-  );
-}
+  ),
 }}
     >
       {/* <Tab.Screen

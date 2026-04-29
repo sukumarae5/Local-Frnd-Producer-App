@@ -50,11 +50,13 @@ const BottomCallPills = ({
 export default BottomCallPills;
 
 const styles = StyleSheet.create({
- bottomWhiteArea: {
-  paddingHorizontal: 12,
-  paddingVertical: 10,
-  flexDirection: "row",
-},
+  bottomWhiteArea: {
+     backgroundColor: "transparent",
+    padding: 14,
+    flexDirection: "row",
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+  },
 
   bottomPill: {
     flex: 1,
