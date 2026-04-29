@@ -178,26 +178,7 @@ const HomeScreen = () => {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
           />
-
-          {/* SEARCH */}
-          <View style={styles.searchContainer}>
-            <Icon name="magnify" size={wp(5.5)} color="#999" />
-            <TextInput
-              placeholder="Search"
-              placeholderTextColor="#8E8E93"
-              style={styles.searchInput}
-            />
-          </View>
         </View>
-
-        {/* LIST */}
-        <FlatList
-          data={sections}
-          keyExtractor={item => item.id}
-          renderItem={renderItem}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-        />
       </View>
     </WelcomeScreenbackgroungpage>
   );
@@ -325,7 +306,7 @@ const styles = StyleSheet.create({
   },
 
   listContent: {
-    paddingBottom: hp(10),
+    paddingBottom: hp(2),
   },
 
   callsWrapper: {

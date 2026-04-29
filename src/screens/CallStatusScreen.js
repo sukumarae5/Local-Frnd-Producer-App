@@ -33,16 +33,16 @@ const GradientHeart = ({ size, style }) => {
     <MaskedView
       style={[{ width: size, height: size }, style]}
       renderToHardwareTextureAndroid
-  shouldRasterizeIOS
+      shouldRasterizeIOS
       maskElement={<Icon name="heart" size={size} color="black" />}
     >
       <View style={{ flex: 1, backgroundColor: '#E9C9FF' }}>
-      <LinearGradient
-        colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={{ flex: 1 }}
-      />
+        <LinearGradient
+          colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={{ flex: 1 }}
+        />
       </View>
     </MaskedView>
   );
@@ -127,11 +127,12 @@ const CallStatusScreen = ({ navigation, route }) => {
     }
   }, [call?.status]);
 
-const displayStatus =
-  call?.status === "NO_MATCH"
-    ? "connecting..."
-    : call?.status || "Connecting...";
+  const displayStatus =
+    call?.status === 'NO_MATCH'
+      ? 'connecting...'
+      : call?.status || 'Connecting...';
 
+  useEffect(() => {
     if (call?.status === 'NO_MATCH' && role === 'male') {
       const retry = setTimeout(() => {
         dispatch(callRequest({ call_type }));
@@ -146,11 +147,6 @@ const displayStatus =
       dispatch(callRequest({ call_type }));
     }
   }, []);
-
-  const displayStatus =
-    call?.status === 'NO_MATCH'
-      ? 'connecting...'
-      : call?.status || 'Connecting...';
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', e => {
@@ -168,31 +164,6 @@ const displayStatus =
     return unsubscribe;
   }, [navigation, call]);
 
-  // useEffect(() => {
-  //   if (!socketRef.current) return;
-
-  //   const socket = socketRef.current;
-
-  //   const onConnected = ({ session_id }) => {
-  //     console.log("🚀 FORCE NAVIGATION FROM audio_connected");
-
-  //     const screen =
-  //       call_type === "VIDEO"
-  //         ? "VideocallScreen"
-  //         : "AudiocallScreen";
-
-  //     navigation.replace(screen, {
-  //       session_id,
-  //       role: "caller",
-  //     });
-  //   };
-
-  //   socket.on("audio_connected", onConnected);
-
-  //   return () => {
-  //     socket.off("audio_connected", onConnected);
-  //   };
-  // }, []);
 
   /* ---------------- UI ANIMATIONS ---------------- */
   const ripple1 = useRef(new Animated.Value(0)).current;
