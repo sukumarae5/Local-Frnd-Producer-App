@@ -10,7 +10,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
-import { RTCView } from 'react-native-webrtc';
+import { RTCIceCandidate, RTCView } from 'react-native-webrtc';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { mediaDevices, MediaStream } from 'react-native-webrtc';
@@ -26,6 +26,7 @@ import EndCallConfirmModal from '../screens/EndCallConfirmationScreen';
 import { SocketContext } from '../socket/SocketProvider';
 import { createPC } from '../utils/webrtc';
 import callManager from '../utils/callManager';
+const PRIMARY = '#A020F0'; // your purple
 
 const AudiocallScreen = ({ route, navigation }) => {
   const { session_id, role } = route.params;
@@ -118,19 +119,25 @@ const AudiocallScreen = ({ route, navigation }) => {
         },
 
         onIceState: setIceState,
-        onTrack: event => {
-          console.log('🔥 REMOTE TRACK RECEIVED');
+        onTrack: stream => {
+          console.log('✅ REMOTE STREAM RECEIVED');
 
-          const stream = event?.streams?.[0];
+          const audioTrack = stream.getAudioTracks()[0];
 
-          if (!stream) {
-            console.log('⚠️ No stream received');
-            return;
+          if (audioTrack) {
+            audioTrack.enabled = true;
+            console.log('🔊 AUDIO TRACK ENABLED');
           }
 
-          if (stream) {
-            setRemoteStream(stream);
-          }
+          setRemoteStream(stream);
+
+          setTimeout(() => {
+            InCallManager.stop(); // reset
+            InCallManager.start({ media: 'audio' });
+
+            InCallManager.setForceSpeakerphoneOn(true);
+            InCallManager.setSpeakerphoneOn(true);
+          }, 500);
         },
       });
 
@@ -165,20 +172,6 @@ const AudiocallScreen = ({ route, navigation }) => {
 
         setShowEndModal(true);
       });
-
-      // socket.on('audio_call_ended', () => {
-      //   console.log('📴 REMOTE ENDED CALL');
-
-      //   manualExitRef.current = true; // ✅ IMPORTANT
-      //   disableExitRef.current = true; // ✅ IMPORTANT
-
-      //   stopCallMedia();
-
-      //   callManager.reset();
-      //   dispatch(clearCall());
-
-      //   leaveScreen(); // ✅ DIRECT EXIT (NO MODAL)
-      // });
 
       socket.on('audio_connected', async () => {
         console.log('🚀 audio_connected');
@@ -271,11 +264,12 @@ const AudiocallScreen = ({ route, navigation }) => {
       audioTrack.enabled = true;
     }
 
-    // 🔥 ADD THIS (VERY IMPORTANT)
     setTimeout(() => {
+      InCallManager.start({ media: 'audio' }); // 🔥 restart audio engine
       InCallManager.setForceSpeakerphoneOn(true);
       InCallManager.setSpeakerphoneOn(true);
-    }, 300);
+      InCallManager.setMicrophoneMute(false);
+    }, 1000); // increase delay
   }, [remoteStream]);
 
   const flushIce = async () => {
@@ -283,7 +277,7 @@ const AudiocallScreen = ({ route, navigation }) => {
 
     for (const c of pendingIceRef.current) {
       try {
-        await pcRef.current.addIceCandidate(c);
+        await pcRef.current.addIceCandidate(new RTCIceCandidate(c));
       } catch {}
     }
 
@@ -300,7 +294,9 @@ const AudiocallScreen = ({ route, navigation }) => {
 
       await flushIce();
       pcRef.current.getReceivers().forEach(r => {
-        if (r.track) r.track.enabled = true;
+        if (r.track) {
+          r.track.enabled = true;
+        }
       });
       const answer = await pcRef.current.createAnswer();
       await pcRef.current.setLocalDescription(answer);
@@ -315,27 +311,32 @@ const AudiocallScreen = ({ route, navigation }) => {
 
   const onAnswer = async ({ answer }) => {
     try {
-      console.log('📥 Received ANSWER');
-
-      if (!pcRef.current) return;
-
       await pcRef.current.setRemoteDescription(answer);
-      console.log('🚀 FLUSHING ICE');
 
+      // ✅ ENABLE TRACKS
+      pcRef.current.getReceivers().forEach(r => {
+        if (r.track) r.track.enabled = true;
+      });
+
+      // 🔥 CRITICAL: flush AFTER remote desc
       await flushIce();
+
+      console.log('✅ ANSWER APPLIED + ICE FLUSHED');
 
       onConnected();
     } catch (err) {
       console.log('❌ onAnswer ERROR:', err);
     }
   };
-
   const onIce = async ({ candidate }) => {
     console.log('📥 Received ICE:', candidate);
 
     if (!candidate || !pcRef.current || endedRef.current) return;
 
-    if (!pcRef.current.remoteDescription) {
+    if (
+      !pcRef.current.remoteDescription ||
+      !pcRef.current.remoteDescription.type
+    ) {
       console.log('⏳ Storing ICE (no remote description yet)');
       pendingIceRef.current.push(candidate);
       return;
@@ -343,7 +344,7 @@ const AudiocallScreen = ({ route, navigation }) => {
 
     console.log('✅ Adding ICE immediately');
 
-    await pcRef.current.addIceCandidate(candidate);
+    await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
   };
   /* ================= CONNECTED ================= */
 
@@ -497,6 +498,7 @@ const AudiocallScreen = ({ route, navigation }) => {
           <View style={styles.userCard}>
             <Image source={{ uri: me.avatar }} style={styles.avatar} />
             <Text style={styles.userName}>{me.name}</Text>
+            <Text style={styles.desc}>{me.about || 'No bio available'}</Text>
           </View>
 
           <TouchableOpacity
@@ -508,30 +510,41 @@ const AudiocallScreen = ({ route, navigation }) => {
           >
             <Image source={{ uri: other.avatar }} style={styles.avatar} />
             <Text style={styles.userName}>{other.name}</Text>
+            <Text style={styles.desc}>{other.about || 'No bio available'}</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* <View style={styles.controls}>
+      <View style={styles.controls}>
         <TouchableOpacity
           style={[
             styles.circleBtn,
-            speakerOn && { backgroundColor: '#E8F5E9' },
+            {
+              backgroundColor: speakerOn ? PRIMARY : '#fff',
+            },
           ]}
           onPress={toggleSpeaker}
         >
           <Ionicons
             name={speakerOn ? 'volume-high' : 'volume-mute'}
             size={24}
-            color={speakerOn ? '#4CAF50' : '#999'} // green when ON
+            color={speakerOn ? '#fff' : PRIMARY}
           />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.circleBtn} onPress={toggleMic}>
+        <TouchableOpacity
+          style={[
+            styles.circleBtn,
+            {
+              backgroundColor: micOn ? PRIMARY : '#fff',
+            },
+          ]}
+          onPress={toggleMic}
+        >
           <Ionicons
-            name={micOn ? 'mic' : 'mic-off'}
-            size={22}
-            color="#9b4dff"
+            name={micOn ? 'mic' : 'mic-off'} // 🔥 icon change
+            size={24}
+            color={micOn ? '#fff' : PRIMARY}
           />
         </TouchableOpacity>
 
@@ -542,34 +555,6 @@ const AudiocallScreen = ({ route, navigation }) => {
           }}
         >
           <Ionicons name="call" size={22} color="#8f0a0a" />
-        </TouchableOpacity>
-      </View> */}
-
-      <View style={styles.controls}>
-        {/* 🔊 SPEAKER */}
-        <TouchableOpacity style={styles.circleBtn} onPress={toggleSpeaker}>
-          <Ionicons
-            name={speakerOn ? 'volume-high' : 'volume-mute'}
-            size={24}
-            color={speakerOn ? '#A020F0' : '#B8B8B8'} // purple active, gray inactive
-          />
-        </TouchableOpacity>
-
-        {/* 🎤 MIC */}
-        <TouchableOpacity style={styles.circleBtn} onPress={toggleMic}>
-          <Ionicons
-            name={micOn ? 'mic' : 'mic-off'}
-            size={24}
-            color={micOn ? '#A020F0' : '#B8B8B8'}
-          />
-        </TouchableOpacity>
-
-        {/* ❌ END CALL */}
-        <TouchableOpacity
-          style={styles.endBtn}
-          onPress={() => setShowEndModal(true)}
-        >
-          <Ionicons name="call" size={26} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -602,8 +587,6 @@ const AudiocallScreen = ({ route, navigation }) => {
               rating,
             }),
           );
-
-          // socketRef.current?.emit('audio_call_hangup', { session_id });
 
           if (!remoteEndedRef.current) {
             socketRef.current?.emit('audio_call_hangup', { session_id });
@@ -715,30 +698,24 @@ const styles = StyleSheet.create({
   },
 
   circleBtn: {
-    backgroundColor: '#FFFFFF',
     width: 60,
     height: 60,
     borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
   },
 
   endBtn: {
-    backgroundColor: '#FF4D4F', // 🔥 RED
+    backgroundColor: '#FF4D4F',
     width: 65,
     height: 65,
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 8,
-    shadowColor: '#FF4D4F',
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
   },
+
   debug: {
     position: 'absolute',
     bottom: 10,

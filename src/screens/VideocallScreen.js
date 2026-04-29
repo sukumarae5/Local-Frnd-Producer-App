@@ -11,7 +11,12 @@ import {
 
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { RTCView, mediaDevices, MediaStream } from 'react-native-webrtc';
+import {
+  RTCView,
+  mediaDevices,
+  MediaStream,
+  RTCIceCandidate,
+} from 'react-native-webrtc';
 import { CommonActions } from '@react-navigation/native';
 import InCallManager from 'react-native-incall-manager';
 import { useDispatch, useSelector } from 'react-redux';
@@ -24,6 +29,8 @@ import { submitRatingRequest } from '../features/rating/ratingAction';
 import { SocketContext } from '../socket/SocketProvider';
 import { createPC } from '../utils/webrtc';
 import store from '../reduxStore/store';
+
+const PRIMARY = '#A020F0';
 
 const VideocallScreen = ({ route, navigation }) => {
   const { session_id, role } = route.params || {};
@@ -79,7 +86,7 @@ const VideocallScreen = ({ route, navigation }) => {
   const manualExitRef = useRef(false);
   const remoteEndedRef = useRef(false);
   const disableExitRef = useRef(false);
-const isEndingCallRef = useRef(false);
+  const isEndingCallRef = useRef(false);
   /* ---------------- SWAP VIDEO ---------------- */
 
   const swapVideos = () => {
@@ -150,12 +157,34 @@ const isEndingCallRef = useRef(false);
           },
 
           onTrack: stream => {
-            console.log('✅ REMOTE STREAM RECEIVED');
+            console.log('🎥 TRACK RECEIVED');
 
-            if (stream) {
-              setRemoteStream(stream);
-              setRemoteURL(stream.toURL());
+            if (!stream) return;
+
+            // 🔥 ENABLE AUDIO TRACK
+            const audioTrack = stream.getAudioTracks()[0];
+            if (audioTrack) {
+              audioTrack.enabled = true;
+              console.log('🔊 AUDIO ENABLED');
             }
+
+            // 🔥 ENABLE VIDEO TRACK
+            const videoTrack = stream.getVideoTracks()[0];
+            if (videoTrack) {
+              videoTrack.enabled = true;
+            }
+
+            setRemoteStream(stream);
+            setRemoteURL(stream.toURL());
+
+            // 🔥 FORCE AUDIO ROUTE (VERY IMPORTANT)
+            setTimeout(() => {
+              InCallManager.stop();
+              InCallManager.start({ media: 'video' });
+
+              InCallManager.setForceSpeakerphoneOn(true);
+              InCallManager.setSpeakerphoneOn(true);
+            }, 500);
           },
         });
 
@@ -200,105 +229,55 @@ const isEndingCallRef = useRef(false);
         socket.on('video_call_ended', () => {
           stopCallMedia();
 
-            setShowEndModal(true);
-         
+          setShowEndModal(true);
         });
 
-        // socket.on('video_connected', async () => {
-        //   console.log('🚀 video_connected');
+        socket.on('video_connected', async () => {
+          console.log('🚀 video_connected');
 
-        //   onConnected();
+          onConnected();
 
-        //   if (!pcRef.current) {
-        //     console.log('❌ PC not ready');
-        //     return;
-        //   }
-        //   // 🛑 SAFETY CHECK (CRITICAL)
-        //   if (!caller || !caller.user_id) {
-        //     console.log('⛔ Caller not ready → skipping');
-        //     return;
-        //   }
+          if (!pcRef.current) {
+            console.log('❌ PC not ready');
+            return;
+          }
 
-        //   if (!myId) {
-        //     console.log('⛔ My ID not ready → skipping');
-        //     return;
-        //   }
+          let callerId = caller?.user_id;
 
-        //   const isCaller = String(myId) === String(caller.user_id);
+          if (!callerId) {
+            const state = store.getState();
+            callerId = state.calls.connectedCallDetails?.caller?.user_id;
+          }
 
-        //   console.log('👤 My ID:', myId);
-        //   console.log('📞 Caller ID:', caller.user_id);
-        //   console.log('🎯 Am I caller?', isCaller);
+          if (!callerId) {
+            console.log('❌ Caller still not ready → abort');
+            return;
+          }
 
-        //   if (!isCaller) {
-        //     console.log('🙋 I am receiver');
-        //     return;
-        //   }
+          const isCaller = String(myId) === String(callerId);
 
-        //   console.log('📞 I am caller → creating offer');
+          console.log('👤 My ID:', myId);
+          console.log('📞 Caller ID:', callerId);
+          console.log('🎯 Am I caller?', isCaller);
 
-        //   setTimeout(async () => {
-        //     try {
-        //       const offer = await pcRef.current.createOffer();
-        //       await pcRef.current.setLocalDescription(offer);
+          if (!isCaller) {
+            console.log('🙋 Receiver');
+            return;
+          }
 
-        //       console.log('📤 SENDING OFFER');
+          try {
+            console.log('📞 Caller → creating offer');
 
-        //       socket.emit('video_offer', { session_id, offer });
-        //     } catch (err) {
-        //       console.log('❌ OFFER ERROR:', err);
-        //     }
-        //   }, 500);
-        // });
+            await new Promise(r => setTimeout(r, 300));
 
+            const offer = await pcRef.current.createOffer();
+            await pcRef.current.setLocalDescription(offer);
 
-socket.on('video_connected', async () => {
-  console.log('🚀 video_connected');
-
-  onConnected();
-
-  if (!pcRef.current) {
-    console.log('❌ PC not ready');
-    return;
-  }
-
-  let callerId = caller?.user_id;
-
-  if (!callerId) {
-    const state = store.getState();
-    callerId = state.calls.connectedCallDetails?.caller?.user_id;
-  }
-
-  if (!callerId) {
-    console.log('❌ Caller still not ready → abort');
-    return;
-  }
-
-  const isCaller = String(myId) === String(callerId);
-
-  console.log('👤 My ID:', myId);
-  console.log('📞 Caller ID:', callerId);
-  console.log('🎯 Am I caller?', isCaller);
-
-  if (!isCaller) {
-    console.log('🙋 Receiver');
-    return;
-  }
-
-  try {
-    console.log('📞 Caller → creating offer');
-
-    await new Promise(r => setTimeout(r, 300));
-
-    const offer = await pcRef.current.createOffer();
-    await pcRef.current.setLocalDescription(offer);
-
-    socket.emit('video_offer', { session_id, offer });
-
-  } catch (err) {
-    console.log('❌ OFFER ERROR:', err);
-  }
-});
+            socket.emit('video_offer', { session_id, offer });
+          } catch (err) {
+            console.log('❌ OFFER ERROR:', err);
+          }
+        });
 
         socket.emit('video_join', { session_id });
       } catch (err) {
@@ -319,16 +298,14 @@ socket.on('video_connected', async () => {
 
       stopCallMedia();
     };
-  }, [connected]); 
-
-
+  }, [connected]);
 
   const flushIce = async () => {
     if (!pcRef.current) return;
 
     for (const c of pendingIceRef.current) {
       try {
-        await pcRef.current.addIceCandidate(c);
+        await pcRef.current.addIceCandidate(new RTCIceCandidate(c));
       } catch {}
     }
 
@@ -360,7 +337,7 @@ socket.on('video_connected', async () => {
 
     try {
       if (pcRef.current.remoteDescription) {
-        await pcRef.current.addIceCandidate(candidate);
+        await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
       } else {
         pendingIceRef.current.push(candidate);
       }
@@ -376,11 +353,14 @@ socket.on('video_connected', async () => {
 
     setConnectedUI(true);
 
-    // dispatch(callDetailsRequest());
-
     timerRef.current = setInterval(() => {
       setSeconds(s => s + 1);
     }, 1000);
+
+    setSpeakerOn(true);
+
+    InCallManager.setForceSpeakerphoneOn(true);
+    InCallManager.setSpeakerphoneOn(true);
   };
 
   /* ---------------- STOP CALL ---------------- */
@@ -419,33 +399,32 @@ socket.on('video_connected', async () => {
 
   /* ---------------- EXIT CONFIRM ---------------- */
 
-useEffect(() => {
-  const unsubscribe = navigation.addListener('beforeRemove', e => {
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', e => {
+      // ✅ FINAL HARD EXIT
+      if (isEndingCallRef.current) return;
 
-    // ✅ FINAL HARD EXIT
-    if (isEndingCallRef.current) return;
+      if (disableExitRef.current) {
+        navigation.dispatch(e.data.action);
+        return;
+      }
 
-    if (disableExitRef.current) {
-      navigation.dispatch(e.data.action);
-      return;
-    }
+      e.preventDefault();
 
-    e.preventDefault();
-
-    Alert.alert('Exit from Call', 'Are you sure you want to exit the call?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Exit',
-        style: 'destructive',
-        onPress: () => {
-          setShowEndModal(true); // ✅ show rating modal
+      Alert.alert('Exit from Call', 'Are you sure you want to exit the call?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Exit',
+          style: 'destructive',
+          onPress: () => {
+            setShowEndModal(true); // ✅ show rating modal
+          },
         },
-      },
-    ]);
-  });
+      ]);
+    });
 
-  return unsubscribe;
-}, [navigation]);
+    return unsubscribe;
+  }, [navigation]);
   /* ---------------- AUTO CLEANUP ---------------- */
 
   useEffect(() => {
@@ -585,7 +564,6 @@ useEffect(() => {
               return;
             }
 
-            
             setShowEndModal(true);
           }}
         />
@@ -596,31 +574,31 @@ useEffect(() => {
         visible={showEndModal}
         otherUser={other}
         onCancel={() => setShowEndModal(false)}
-        onConfirm={(rating) => {
-  if (isEndingCallRef.current) return;
-  isEndingCallRef.current = true;
+        onConfirm={rating => {
+          if (isEndingCallRef.current) return;
+          isEndingCallRef.current = true;
 
-  disableExitRef.current = true;
+          disableExitRef.current = true;
 
-  setShowEndModal(false);
+          setShowEndModal(false);
 
-  dispatch(
-    submitRatingRequest({
-      session_id,
-      rated_user_id: other?.user_id,
-      rating,
-      duration: seconds,
-    }),
-  );
+          dispatch(
+            submitRatingRequest({
+              session_id,
+              rated_user_id: other?.user_id,
+              rating,
+              duration: seconds,
+            }),
+          );
 
-  socketRef.current?.emit('video_call_hangup', { session_id });
+          socketRef.current?.emit('video_call_hangup', { session_id });
 
-  stopCallMedia();
+          stopCallMedia();
 
-  dispatch(clearCall());
+          dispatch(clearCall());
 
-  leaveScreen();
-}}
+          leaveScreen();
+        }}
       />
     </View>
   );
@@ -640,14 +618,17 @@ const RoundBtn = ({ id, icon, onPress, large, activeBtn, setActiveBtn }) => {
         styles.roundBtn,
         large && styles.endBtn,
         {
-          backgroundColor: isEnd ? '#ff3b30' : isActive ? '#ff3b30' : '#fff',
+          backgroundColor: isEnd ? '#FF4D4F' : isActive ? PRIMARY : '#fff',
+
+          borderWidth: isActive || isEnd ? 0 : 2,
+          borderColor: PRIMARY,
         },
       ]}
     >
       <Ionicons
         name={icon}
         size={large ? 30 : 22}
-        color={isActive ? '#fff' : '#9b2a91'}
+        color={isEnd ? '#fff' : isActive ? '#fff' : PRIMARY}
       />
     </TouchableOpacity>
   );
