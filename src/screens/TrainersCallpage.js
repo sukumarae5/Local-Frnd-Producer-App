@@ -33,6 +33,37 @@ const { width } = Dimensions.get('window');
 const CELL_WIDTH = width / 3 - 18;
 const WAVE_DISTANCE = 10;
 
+const FilterChip = ({ active, onPress, icon, label }) => {
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+      <LinearGradient
+        colors={
+          active
+            ? ['#D51BF9', '#8C37F8'] // strong
+            : ['#EED4FF', '#F6ECFF'] // light gradient
+        }
+        style={styles.chip}
+      >
+        <MaterialIcons
+          name={icon}
+          size={16}
+          color={active ? '#fff' : '#8C37F8'}
+        />
+        <Text
+  style={{
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 6,
+    color: active ? '#fff' : '#8C37F8',
+  }}
+>
+          {label}
+        </Text>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+};
+
 const TrainersCallPage = ({ navigation }) => {
   const dispatch = useDispatch();
   const socketCtx = useContext(SocketContext);
@@ -238,125 +269,52 @@ const TrainersCallPage = ({ navigation }) => {
         </MaskedView>
 
         <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-        >
-          {/* ONLINE */}
-          <TouchableOpacity
-            style={[
-              styles.chip,
-              activeFilter === 'ONLINE' && styles.chipActive,
-            ]}
-            onPress={setOnlineFilter}
-          >
-            <MaterialIcons
-              name="wifi"
-              size={16}
-              color={activeFilter === 'ONLINE' ? '#fff' : '#111111'}
-            />
-            <Text
-              style={[
-                styles.chipText,
-                activeFilter === 'ONLINE' && styles.chipTextActive,
-              ]}
-            >
-              Online
-            </Text>
-          </TouchableOpacity>
+  horizontal
+  showsHorizontalScrollIndicator={false}
+  contentContainerStyle={styles.filterRow}
+>
+  <FilterChip
+    active={activeFilter === 'ONLINE'}
+    onPress={setOnlineFilter}
+    icon="wifi"
+    label="Online"
+  />
 
-          {/* AUDIO */}
-          <TouchableOpacity
-            style={[styles.chip, activeFilter === 'AUDIO' && styles.chipActive]}
-            onPress={() => setTypeFilter('AUDIO')}
-          >
-            <MaterialIcons
-              name="call"
-              size={16}
-              color={activeFilter === 'AUDIO' ? '#fff' : '#111111'}
-            />
-            <Text
-              style={[
-                styles.chipText,
-                activeFilter === 'AUDIO' && styles.chipTextActive,
-              ]}
-            >
-              Audio
-            </Text>
-          </TouchableOpacity>
+  <FilterChip
+    active={activeFilter === 'AUDIO'}
+    onPress={() => setTypeFilter('AUDIO')}
+    icon="call"
+    label="Audio"
+  />
 
-          {/* VIDEO */}
-          <TouchableOpacity
-            style={[styles.chip, activeFilter === 'VIDEO' && styles.chipActive]}
-            onPress={() => setTypeFilter('VIDEO')}
-          >
-            <MaterialIcons
-              name="videocam"
-              size={16}
-              color={activeFilter === 'VIDEO' ? '#fff' : '#111111'}
-            />
-            <Text
-              style={[
-                styles.chipText,
-                activeFilter === 'VIDEO' && styles.chipTextActive,
-              ]}
-            >
-              Video
-            </Text>
-          </TouchableOpacity>
+  <FilterChip
+    active={activeFilter === 'VIDEO'}
+    onPress={() => setTypeFilter('VIDEO')}
+    icon="videocam"
+    label="Video"
+  />
 
-          {/* LANGUAGE */}
-          <TouchableOpacity
-            style={[
-              styles.chip,
-              activeFilter === 'LANGUAGE' && styles.chipActive,
-            ]}
-            onPress={setLanguageFilter}
-          >
-            <MaterialIcons
-              name="translate"
-              size={16}
-              color={activeFilter === 'LANGUAGE' ? '#fff' : '#111111'}
-            />
-            <Text
-              style={[
-                styles.chipText,
-                activeFilter === 'LANGUAGE' && styles.chipTextActive,
-              ]}
-            >
-              Telugu
-            </Text>
-          </TouchableOpacity>
+  <FilterChip
+    active={activeFilter === 'LANGUAGE'}
+    onPress={setLanguageFilter}
+    icon="translate"
+    label="Telugu"
+  />
 
-          {/* INTEREST */}
-          <TouchableOpacity
-            style={[
-              styles.chip,
-              activeFilter === 'INTEREST' && styles.chipActive,
-            ]}
-            onPress={setInterestFilter}
-          >
-            <MaterialIcons
-              name="favorite"
-              size={16}
-              color={activeFilter === 'INTEREST' ? '#fff' : '#111111'}
-            />
-            <Text
-              style={[
-                styles.chipText,
-                activeFilter === 'INTEREST' && styles.chipTextActive,
-              ]}
-            >
-              Party
-            </Text>
-          </TouchableOpacity>
+  <FilterChip
+    active={activeFilter === 'INTEREST'}
+    onPress={setInterestFilter}
+    icon="favorite"
+    label="Party"
+  />
 
-          {/* RESET */}
-          <TouchableOpacity style={styles.chip} onPress={resetFilters}>
-            <MaterialIcons name="refresh" size={16} color="#111111" />
-            <Text style={styles.chipText}>Reset</Text>
-          </TouchableOpacity>
-        </ScrollView>
+  <FilterChip
+    active={false}
+    onPress={resetFilters}
+    icon="refresh"
+    label="Reset"
+  />
+</ScrollView>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionText}>
             {activeFilter === 'ONLINE' && 'ONLINE'}
@@ -421,12 +379,14 @@ const TrainersCallPage = ({ navigation }) => {
       </LinearGradient>
 
       {/* CALL BUTTONS */}
-      <BottomCallPills
-        callingRandom={callingRandom}
-        callingRandomVideo={callingRandomVideo}
-        onRandomAudio={startRandomAudioCall}
-        onRandomVideo={startRandomVideoCall}
-      />
+      <View style={styles.bottomPillsContainer}>
+  <BottomCallPills
+    callingRandom={callingRandom}
+    callingRandomVideo={callingRandomVideo}
+    onRandomAudio={startRandomAudioCall}
+    onRandomVideo={startRandomVideoCall}
+  />
+</View>
     </SafeAreaView>
   );
 };
@@ -445,7 +405,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingTop:
       Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 10 : 10,
-    paddingBottom: 16, // ✅ more breathing space
+    paddingBottom: 30, // ✅ more breathing space
     paddingHorizontal: 16,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
@@ -478,10 +438,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
   },
 
-  chipActive: {
-    backgroundColor: '#C2185B',
-  },
-
   chipText: {
     fontSize: 12,
     color: '#111111',
@@ -489,9 +445,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
 
-  chipTextActive: {
-    color: '#fff',
-  },
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -593,4 +546,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
   },
+
+  bottomPillsContainer: {
+  position: 'absolute',
+  bottom: 0, // 🔥 adjust this value (0, 10, 20)
+  left: 0,
+  right: 0,
+  alignItems: 'center',
+},
 });

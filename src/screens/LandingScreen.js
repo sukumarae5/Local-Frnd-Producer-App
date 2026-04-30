@@ -35,11 +35,14 @@ const LandingScreen = ({ navigation }) => {
 
   const handleNavigation = async () => {
     let nextScreen = 'OnboardScreen';
+    let nextScreen = 'OnboardScreen';
 
     try {
       const token = await AsyncStorage.getItem('twittoke');
       const gender = await AsyncStorage.getItem('gender');
 
+      if (token && token !== 'null' && token !== '' && gender) {
+        try {
       if (token && token !== 'null' && token !== '' && gender) {
         try {
           const decoded = jwtDecode(token);
@@ -176,20 +179,49 @@ const styles = StyleSheet.create({
 
   leftHeart: {
     position: 'absolute',
-    top: 140,
-    width: 80,
-    height: 140,
+    top: 150, // move partially outside
+    left: -40,
     resizeMode: 'contain',
-    opacity: 0.6,
+    opacity: 0.3, // 🔥 very light
   },
 
   rightHeart: {
     position: 'absolute',
-    top: 30,
-    left: 160,
-    width: 290,
-    height: 230,
+    top: 45, // move partially outside
+    right: -100,
+
     resizeMode: 'contain',
-    opacity: 0.6,
+    opacity: 0.3,
+  },
+  sparkle: {
+    position: 'absolute',
+    bottom: 110,
+    right: 110,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  sparkCore: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#fff',
+    shadowOpacity: 1,
+    shadowRadius: 8,
+  },
+
+  sparkLineHorizontal: {
+    position: 'absolute',
+    width: 20,
+    height: 2,
+    backgroundColor: '#FFFFFF',
+  },
+
+  sparkLineVertical: {
+    position: 'absolute',
+    height: 20,
+    width: 2,
+    backgroundColor: '#FFFFFF',
   },
 });

@@ -1,41 +1,72 @@
-import React, { useEffect, useRef,useContext  } from "react";
-import { View, Text, StyleSheet, Image, Animated } from "react-native";
-import LinearGradient from "react-native-linear-gradient";
-import { useSelector, useDispatch } from "react-redux";
-import { callDetailsRequest, callRequest, cancelWaitingRequest, femaleCancelRequest } from "../features/calls/callAction";
-import { SocketContext } from "../socket/SocketProvider";
-import { useFocusEffect } from "@react-navigation/native";
+import React, { useEffect, useRef, useContext } from 'react';
+import { View, Text, StyleSheet, Image, Animated } from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  callDetailsRequest,
+  callRequest,
+  cancelWaitingRequest,
+  femaleCancelRequest,
+} from '../features/calls/callAction';
+import { SocketContext } from '../socket/SocketProvider';
+import { useFocusEffect } from '@react-navigation/native';
+import MaskedView from '@react-native-masked-view/masked-view';
+import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/Ionicons';
+
+import { Dimensions } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
+
+const wp = p => (width * p) / 100;
+const hp = p => (height * p) / 100;
 
 const smallAvatars = [
-  require("../assets/girl1.jpg"),
-  require("../assets/boy1.jpg"),
-  require("../assets/girl2.jpg"),
-  require("../assets/girl3.jpg"),
-  require("../assets/boy2.jpg"),
+  require('../assets/girl1.jpg'),
+  require('../assets/boy1.jpg'),
+  require('../assets/girl2.jpg'),
+  require('../assets/girl3.jpg'),
+  require('../assets/boy2.jpg'),
 ];
+
+const GradientHeart = ({ size, style }) => {
+  return (
+    <MaskedView
+      style={[{ width: size, height: size }, style]}
+      renderToHardwareTextureAndroid
+      shouldRasterizeIOS
+      maskElement={<Icon name="heart" size={size} color="black" />}
+    >
+      <View style={{ flex: 1, backgroundColor: '#E9C9FF' }}>
+        <LinearGradient
+          colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={{ flex: 1 }}
+        />
+      </View>
+    </MaskedView>
+  );
+};
 
 const CENTER_SIZE = 150;
 const SMALL_SIZE = 40;
 const DOT_RADIUS = (CENTER_SIZE * 1.7) / 2;
 
 const CallStatusScreen = ({ navigation, route }) => {
-
-
-const dispatch = useDispatch();
-const { socketRef, connected } = useContext(SocketContext);
+  const dispatch = useDispatch();
+  const { socketRef, connected } = useContext(SocketContext);
 
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const navigatedRef = useRef(false);
 
-  const call = useSelector((state) => state.calls?.call);
-console.log(call)
-  const call_type = route?.params?.call_type || "AUDIO";
-  const role = route?.params?.role || "male";
+  const call = useSelector(state => state.calls?.call);
+  console.log(call);
+  const call_type = route?.params?.call_type || 'AUDIO';
+  const role = route?.params?.role || 'male';
 
-
-useEffect(() => {
-  console.log("CALL OBJECT =>", call);
-}, [call]);
+  useEffect(() => {
+    console.log('CALL OBJECT =>', call);
+  }, [call]);
 
   useEffect(() => {
     const anim = Animated.loop(
@@ -43,7 +74,7 @@ useEffect(() => {
         toValue: 1,
         duration: 10000,
         useNativeDriver: true,
-      })
+      }),
     );
 
     anim.start();
@@ -51,139 +82,94 @@ useEffect(() => {
     return () => anim.stop();
   }, [rotateAnim]);
 
+  useEffect(() => {
+    if (role !== 'female') return;
+    if (!connected || !socketRef.current) return;
 
-useEffect(() => {
+    const socket = socketRef.current;
 
-  if (role !== "female") return;
-  if (!connected || !socketRef.current) return;
+    const onIncomingCall = data => {
+      // ✅ chat calls must NOT auto join
+      // if (data?.is_friend === true) return;
 
-  const socket = socketRef.current;
+      if (navigatedRef.current) return;
+      navigatedRef.current = true;
 
-  const onIncomingCall = (data) => {
+      const screen =
+        data.call_type === 'VIDEO' ? 'VideocallScreen' : 'AudiocallScreen';
 
-    // ✅ chat calls must NOT auto join
-// if (data?.is_friend === true) return;
+      navigation.replace(screen, {
+        session_id: data.session_id,
+        role: 'receiver',
+      });
+    };
 
-    if (navigatedRef.current) return;
-    navigatedRef.current = true;
+    socket.on('incoming_call', onIncomingCall);
 
-    const screen =
-      data.call_type === "VIDEO"
-        ? "VideocallScreen"
-        : "AudiocallScreen";
+    return () => {
+      socket.off('incoming_call', onIncomingCall);
+    };
+  }, [role, connected]);
 
-    navigation.replace(screen, {
-      session_id: data.session_id,
-      role: "receiver",
-    });
-  };
+  useEffect(() => {
+    if (!call?.status) return;
 
-  socket.on("incoming_call", onIncomingCall);
+    const status = call.status.toUpperCase();
 
-  return () => {
-    socket.off("incoming_call", onIncomingCall);
-  };
+    if (call.is_friend && status === 'ACCEPTED') {
+      const screen =
+        call.call_type === 'VIDEO' ? 'VideocallScreen' : 'AudiocallScreen';
 
-}, [role, connected]);
-
-
-useEffect(() => {
-
-  if (!call?.status) return;
-
-  const status = call.status.toUpperCase();
-
-  if (call.is_friend && status === "ACCEPTED") {
-
-    const screen =
-      call.call_type === "VIDEO"
-        ? "VideocallScreen"
-        : "AudiocallScreen";
-
-    navigation.replace(screen, {
-      session_id: call.session_id,
-      role: "receiver",
-    });
-  }
-
-}, [call?.status]);
-  
-useEffect(() => {
-  if (!call?.status) return;
-
-  if (call?.status === "NO_MATCH" && role === "male") {
-    const retry = setTimeout(() => {
-      dispatch(callRequest({ call_type })); 
-    }, 2000);
-
-    return () => clearTimeout(retry);
-  }
-}, [call?.status]);
-
-useEffect(() => {
-  if (role === "male") {
-    dispatch(callRequest({ call_type }));
-  }
-}, []);
-
-const displayStatus =
-  call?.status === "NO_MATCH"
-    ? "connecting..."
-    : call?.status || "Connecting...";
-
-
-useEffect(() => {
-  const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-
-    if (call?.status === "SEARCHING") {
-
-      if (role === "female") {
-        dispatch(femaleCancelRequest());
-      }
-
-      if (role === "male") {
-        dispatch(cancelWaitingRequest());
-      }
-
+      navigation.replace(screen, {
+        session_id: call.session_id,
+        role: 'receiver',
+      });
     }
+  }, [call?.status]);
 
-  });
+  const displayStatus =
+    call?.status === 'NO_MATCH'
+      ? 'connecting...'
+      : call?.status || 'Connecting...';
 
-  return unsubscribe;
-}, [navigation, call]);
+  useEffect(() => {
+    if (call?.status === 'NO_MATCH' && role === 'male') {
+      const retry = setTimeout(() => {
+        dispatch(callRequest({ call_type }));
+      }, 2000);
 
-// useEffect(() => {
-//   if (!socketRef.current) return;
+      return () => clearTimeout(retry);
+    }
+  }, [call?.status]);
 
-//   const socket = socketRef.current;
+  useEffect(() => {
+    if (role === 'male') {
+      dispatch(callRequest({ call_type }));
+    }
+  }, []);
 
-//   const onConnected = ({ session_id }) => {
-//     console.log("🚀 FORCE NAVIGATION FROM audio_connected");
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', e => {
+      if (call?.status === 'SEARCHING') {
+        if (role === 'female') {
+          dispatch(femaleCancelRequest());
+        }
 
-//     const screen =
-//       call_type === "VIDEO"
-//         ? "VideocallScreen"
-//         : "AudiocallScreen";
+        if (role === 'male') {
+          dispatch(cancelWaitingRequest());
+        }
+      }
+    });
 
-//     navigation.replace(screen, {
-//       session_id,
-//       role: "caller",
-//     });
-//   };
+    return unsubscribe;
+  }, [navigation, call]);
 
-//   socket.on("audio_connected", onConnected);
 
-//   return () => {
-//     socket.off("audio_connected", onConnected);
-//   };
-// }, []);
-
-/* ---------------- UI ANIMATIONS ---------------- */
+  /* ---------------- UI ANIMATIONS ---------------- */
   const ripple1 = useRef(new Animated.Value(0)).current;
   const ripple2 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-
     const anim = Animated.loop(
       Animated.parallel([
         Animated.timing(ripple1, {
@@ -199,21 +185,20 @@ useEffect(() => {
             useNativeDriver: true,
           }),
         ]),
-      ])
+      ]),
     );
 
     anim.start();
 
     return () => anim.stop();
-
   }, [ripple1, ripple2]);
 
   const rippleStyle1 = {
-    position: "absolute",
+    position: 'absolute',
     width: 170,
     height: 170,
     borderRadius: 85,
-    backgroundColor: "rgba(225, 123, 253, 0.96)",
+    backgroundColor: 'rgba(225, 123, 253, 0.96)',
     transform: [
       {
         scale: ripple1.interpolate({
@@ -229,11 +214,11 @@ useEffect(() => {
   };
 
   const rippleStyle2 = {
-    position: "absolute",
+    position: 'absolute',
     width: 170,
     height: 170,
     borderRadius: 85,
-    backgroundColor: "rgba(196, 18, 245, 0.96)",
+    backgroundColor: 'rgba(196, 18, 245, 0.96)',
     transform: [
       {
         scale: ripple2.interpolate({
@@ -248,29 +233,34 @@ useEffect(() => {
     }),
   };
 
-
-
   return (
     <LinearGradient
-      colors={["#E9C9FF", "#F4C9F2", "#FFD1E8"]}
+      colors={['#E9C9FF', '#F4C9F2', '#FFD1E8']}
       style={styles.container}
     >
+      <GradientHeart
+        size={wp(30)} // responsive size
+        style={{
+          position: 'absolute',
+          top: hp(20),
+          left: -wp(10),
+          opacity: 0.9,
+        }}
+      />
 
-      <View style={styles.topheats}>
-        <Image
-          source={require("../assets/leftheart.png")}
-          style={styles.leftheart}
-        />
-        <Image
-          source={require("../assets/rightheart.png")}
-          style={styles.rightheart}
-        />
-      </View>
+      <GradientHeart
+        size={wp(60)}
+        style={{
+          position: 'absolute',
+          top: hp(10),
+          right: -wp(20),
+          opacity: 1,
+        }}
+      />
 
       <View style={{ height: 60 }} />
 
       <View style={styles.centerArea}>
-
         <Animated.View style={rippleStyle1} />
         <Animated.View style={rippleStyle2} />
 
@@ -278,9 +268,7 @@ useEffect(() => {
 
         <Animated.View style={styles.rotatingRing}>
           {smallAvatars.map((img, i) => {
-
-            const angle =
-              (i * (360 / smallAvatars.length)) * (Math.PI / 180);
+            const angle = i * (360 / smallAvatars.length) * (Math.PI / 180);
 
             const r = DOT_RADIUS;
 
@@ -304,30 +292,30 @@ useEffect(() => {
 
         <View style={styles.centerCircle}>
           <Image
-            source={require("../assets/girl2.jpg")}
+            source={require('../assets/girl2.jpg')}
             style={styles.centerImage}
           />
         </View>
-
       </View>
 
       <View style={styles.tag}>
         <Text style={styles.tagText}>
-          {call_type === "VIDEO" ? "Video Call" : "Audio Call"}
+          {call_type === 'VIDEO' ? 'Video Call' : 'Audio Call'}
         </Text>
       </View>
 
-      <Text style={styles.searchingText}>
-  {displayStatus}
-</Text>
+      <Text style={styles.searchingText}>{displayStatus}</Text>
 
       <View style={{ flex: 1 }} />
 
-      <Image
-        source={require("../assets/smallheart1.png")}
-        style={styles.bottomHeart}
+      <GradientHeart
+        size={wp(18)}
+        style={{
+          position: 'absolute',
+          bottom: hp(16), // 🔥 responsive bottom
+          opacity: 0.9,
+        }}
       />
-
     </LinearGradient>
   );
 };
@@ -337,45 +325,34 @@ export default CallStatusScreen;
 /* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: "center" },
-
-  topheats: {
-    position: "absolute",
-    top: 30,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 30,
-    zIndex: 10,
+  container: { flex: 1, alignItems: 'center' },
+  heartIcon: {
+    position: 'absolute',
   },
 
-  leftheart: { marginTop: 150, left: -40 },
-  rightheart: { marginTop: 80, left: 40 },
-
   centerArea: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 270,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: hp(25), // instead of 220
   },
 
   dottedCircle: {
-    position: "absolute",
+    position: 'absolute',
     width: CENTER_SIZE * 1.7,
     height: CENTER_SIZE * 1.7,
     borderRadius: (CENTER_SIZE * 2.4) / 2,
     borderWidth: 2,
-    borderColor: "#C97CFF",
-    borderStyle: "dotted",
+    borderColor: '#C97CFF',
+    borderStyle: 'dotted',
     opacity: 0.6,
   },
 
   rotatingRing: {
-    position: "absolute",
+    position: 'absolute',
     width: CENTER_SIZE,
     height: CENTER_SIZE,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   smallAvatar: {
@@ -383,8 +360,8 @@ const styles = StyleSheet.create({
     height: SMALL_SIZE,
     borderRadius: SMALL_SIZE / 2,
     borderWidth: 2,
-    borderColor: "#fff",
-    position: "absolute",
+    borderColor: '#fff',
+    position: 'absolute',
   },
 
   centerCircle: {
@@ -392,10 +369,10 @@ const styles = StyleSheet.create({
     height: CENTER_SIZE + 18,
     borderRadius: (CENTER_SIZE + 20) / 2,
     borderWidth: 8,
-    borderColor: "#A943FF",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
+    borderColor: '#A943FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
     elevation: 10,
   },
 
@@ -406,29 +383,23 @@ const styles = StyleSheet.create({
   },
 
   tag: {
-    backgroundColor: "#A943FF",
+    backgroundColor: '#A943FF',
     borderRadius: 12,
     paddingVertical: 6,
     paddingHorizontal: 18,
-    marginTop: 100,
+    marginTop: 80,
   },
 
   tagText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
   },
 
   searchingText: {
     fontSize: 22,
-    fontWeight: "700",
-    color: "#5A0066",
+    fontWeight: '700',
+    color: '#5A0066',
     marginTop: 12,
-  },
-
-  bottomHeart: {
-    width: 35,
-    height: 35,
-    marginBottom: 200,
   },
 });

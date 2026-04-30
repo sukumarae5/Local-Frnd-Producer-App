@@ -1,4 +1,4 @@
-import React, { useContext, useCallback } from "react";
+import React, { useContext, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,148 +6,158 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Icon from "react-native-vector-icons/Ionicons";
-import Svg, { Path } from "react-native-svg";
-import { useNavigation } from "@react-navigation/native";
-import { useDispatch, useSelector } from "react-redux";
-import { SocketContext } from "../socket/SocketProvider";
-import { useFocusEffect } from "@react-navigation/native";
-import WelcomeScreenbackgroungpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
+} from 'react-native';
+import MaskedView from '@react-native-masked-view/masked-view';
+import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/Ionicons';
+import Svg, { Path } from 'react-native-svg';
+import { useNavigation } from '@react-navigation/native';
+import { useDispatch, useSelector } from 'react-redux';
+import { SocketContext } from '../socket/SocketProvider';
+import { useFocusEffect } from '@react-navigation/native';
+import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
 
-const { width } = Dimensions.get("window");
+const { width } = Dimensions.get('window');
+
+const GradientHeart = ({ size = 140, style }) => {
+  return (
+    <MaskedView
+      style={style}
+      maskElement={<Icon name="heart" size={size} color="black" />}
+    >
+      <LinearGradient
+        colors={[
+          'rgba(255,255,255,0.5)', // top
+          'rgba(152,50,248,0.15)', // bottom
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }} // 180deg
+        style={{ width: size, height: size }}
+      />
+    </MaskedView>
+  );
+};
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const { socketRef } = useContext(SocketContext);
 
-  const { userdata } = useSelector((state) => state.user);
+  const { userdata } = useSelector(state => state.user);
 
   console.log(userdata);
 
   useFocusEffect(
     useCallback(() => {
-      dispatch({ type: "USER_DATA_REQUEST" });
-    }, [])
+      dispatch({ type: 'USER_DATA_REQUEST' });
+    }, []),
   );
 
   return (
     <WelcomeScreenbackgroungpage>
+      <View style={styles.container}>
+        {/* ================= TOP PURPLE SECTION ================= */}
+        <View style={styles.topBg}>
+          {/* HEART BACKGROUND */}
+          <GradientHeart size={140} style={styles.leftHeart} />
+          <GradientHeart size={220} style={styles.rightHeart} />
 
-    <SafeAreaView style={styles.safe}>
-      {/* ================= TOP PURPLE SECTION ================= */}
-      <View style={styles.topBg}>
-        {/* HEART BACKGROUND */}
-        <Image
-          pointerEvents="none"
-          source={require("../assets/leftheart.png")}
-          style={styles.leftHeart}
-          />
-
-        <Image
-          pointerEvents="none"
-          source={require("../assets/rightheart.png")}
-          style={styles.rightHeart}
-          />
-
-        {/* HEADER */}
-        <View style={styles.header}>
-          <Icon
-            name="arrow-back"
-            size={22}
-            onPress={() => navigation.goBack()}
-          />
-          <Text style={styles.headerTitle}>Profile</Text>
-        </View>
-
-        {/* ================= AVATAR ================= */}
-        <View style={styles.avatarWrap}>
-          <View style={styles.avatarRing}>
-            <Image
-              source={{
-                uri:
-                userdata?.images?.avatar ||
-                userdata?.images?.profile_image ||
-                "https://i.pravatar.cc/150?img=12",
-              }}
-              style={styles.avatar}
+          {/* HEADER */}
+          <View style={styles.header}>
+            <Icon
+              name="arrow-back"
+              size={22}
+              onPress={() => navigation.goBack()}
             />
+            <Text style={styles.headerTitle}>Profile</Text>
           </View>
-        </View>
 
-        {/* NAME + EDIT */}
-        <View style={styles.nameRow}>
-          <TouchableOpacity
-            style={styles.editCircle}
-            activeOpacity={0.7}
-            onPress={() => navigation.navigate("EditProfileScreen")}
+          {/* AVATAR */}
+          <View style={styles.avatarWrap}>
+            <View style={styles.avatarRing}>
+              <Image
+                pointerEvents="none"
+                source={{
+                  uri:
+                    userdata?.images?.avatar ||
+                    userdata?.images?.profile_image ||
+                    'https://i.pravatar.cc/150?img=12',
+                }}
+                style={styles.avatar}
+              />
+            </View>
+          </View>
+
+          {/* NAME */}
+          <View style={styles.nameRow}>
+            <TouchableOpacity
+              style={styles.editCircle}
+              onPress={() => navigation.navigate('EditProfileScreen')}
             >
-            <Icon name="pencil" size={14} color="#fff" />
-          </TouchableOpacity>
+              <Icon name="pencil" size={14} color="#fff" />
+            </TouchableOpacity>
 
-          <Text style={styles.username}>
-            {userdata?.name || userdata?.user?.name || "User"}
-          </Text>
-        </View>
+            <Text style={styles.username}>
+              {userdata?.name || userdata?.user?.name || 'User'}
+            </Text>
+          </View>
 
-        {/* WHITE CURVE */}
-        <Svg
-          pointerEvents="none"
-          width={width}
-          height={140}
-          style={{ position: "absolute", bottom: -1 }}
+          {/* CURVE */}
+          <Svg
+            pointerEvents="none"
+            width={width}
+            height={140}
+            style={{ position: 'absolute', bottom: -1 }}
           >
-          <Path
-            d={`
+            <Path
+              d={`
               M0 80
               C ${width * 0.25} 10, ${width * 0.75} 150, ${width} 80
               L ${width} 140
               L 0 140
               Z
-              `}
+            `}
               fill="#FFFFFF"
-              />
-        </Svg>
-      </View>
+            />
+          </Svg>
+        </View>
 
-      {/* ================= WHITE CONTENT ================= */}
-      <View style={styles.content}>
-        <View style={styles.listBox}>
-          <Item
-            icon="star-outline"
-            color="#F6A623"
-            title="Favorites"
-            sub="you sent them a flashnote!"
-          />
-
-          <Item
-            icon="person-outline"
-            color="#FF5A5A"
-            title="Invite Friends"
-            sub="Invite your friends and earn Flashnotes!"
+        {/* ================= CONTENT ================= */}
+        <View style={styles.content}>
+          <View style={styles.listBox}>
+            <Item
+              icon="star-outline"
+              color="#F6A623"
+              title="Favorites"
+              sub="you sent them a flashnote!"
             />
 
-          <Item
-            icon="settings-outline"
-            color="#999"
-            title="App Settings"
-            sub="Manage your notifications, connected accounts.."
-            onPress={() => navigation.navigate("SettingScreen")}
+            <Item
+              icon="person-outline"
+              color="#FF5A5A"
+              title="Invite Friends"
+              sub="Invite your friends and earn Flashnotes!"
             />
 
-          <Item
-            icon="help-circle-outline"
-            color="#2ECC71"
-            title="Need Help?"
-            sub="FAQ, tutorial and contact"
-            onPress={() => navigation.navigate("HelpCenterScreen")}
+            <Item
+              icon="settings-outline"
+              color="#999"
+              title="App Settings"
+              sub="Manage your notifications, connected accounts.."
+              onPress={() => navigation.navigate('SettingScreen')}
             />
+
+            <Item
+              icon="help-circle-outline"
+              color="#2ECC71"
+              title="Need Help?"
+              sub="FAQ, tutorial and contact"
+              onPress={() => navigation.navigate('HelpCenterScreen')}
+            />
+          </View>
         </View>
       </View>
-    </SafeAreaView>
-            </WelcomeScreenbackgroungpage>
+    </WelcomeScreenbackgroungpage>
   );
 };
 
@@ -171,47 +181,47 @@ export default ProfileScreen;
 /* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
-  safe: {
+  container: {
     flex: 1,
   },
-
   topBg: {
     height: 300,
-    backgroundColor: "#F5E1FF",
+    backgroundColor: '#F3D1FF',
+    paddingTop: 10, // 🔥 replaces SafeArea
   },
 
   leftHeart: {
-    position: "absolute",
-    left: -30,
-    top: 40,
+    position: 'absolute',
+    left: -50,
+    top: 90,
     width: 150,
     height: 150,
-    resizeMode: "contain",
+    resizeMode: 'contain',
   },
 
   rightHeart: {
-    position: "absolute",
-    right: -40,
-    top: 30,
+    position: 'absolute',
+    right: -20,
+    top: 20,
     width: 170,
     height: 170,
-    resizeMode: "contain",
+    resizeMode: 'contain',
   },
 
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
   },
 
   headerTitle: {
     fontSize: 20,
-    fontWeight: "600",
+    fontWeight: '600',
     marginLeft: 10,
   },
 
   avatarWrap: {
-    alignItems: "center",
+    alignItems: 'center',
     marginTop: 5,
   },
 
@@ -220,9 +230,9 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 6,
-    borderColor: "#C44DFF",
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: '#C44DFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   avatar: {
@@ -232,54 +242,54 @@ const styles = StyleSheet.create({
   },
 
   nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12,
   },
 
   editCircle: {
-    backgroundColor: "#C44DFF",
+    backgroundColor: '#C44DFF',
     width: 32,
     height: 32,
     borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 8,
   },
 
   username: {
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: '700',
   },
 
   content: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
     paddingTop: 20,
   },
 
   listBox: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
   },
 
   item: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 18,
     paddingHorizontal: 20,
     borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
+    borderBottomColor: '#eee',
   },
 
   itemTitle: {
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: '500',
   },
 
   itemSub: {
     fontSize: 11,
-    color: "#777",
+    color: '#777',
     marginTop: 2,
   },
 });

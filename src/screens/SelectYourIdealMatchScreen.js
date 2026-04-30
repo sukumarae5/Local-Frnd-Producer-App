@@ -1,117 +1,125 @@
-import React from "react";
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Image,
-} from "react-native";
-import Icon from "react-native-vector-icons/Ionicons";
-import LinearGradient from "react-native-linear-gradient";
-import { SafeAreaView } from "react-native-safe-area-context";
-import WelcomeScreenbackgroundgpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
-import { useSelector } from "react-redux";
+  Dimensions,
+} from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
+import LinearGradient from 'react-native-linear-gradient';
+import WelcomeScreenbackgroundgpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
+import { useSelector } from 'react-redux';
+import ContinueButton from '../components/Common/ContinueButton';
+
+const { width, height } = Dimensions.get('window');
 
 const SelectYourIdealMatchScreen = ({ navigation }) => {
   const { userdata } = useSelector(state => state.user);
-  console.log("Selected Gender:", userdata.user.gender)
 
-const handleContinue = () => {
-  const gender = userdata?.user?.gender;
+  const handleContinue = () => {
+    const gender = userdata?.user?.gender;
 
-  if (!gender) {
-    alert("Gender not found");
-    return;
-  }
+    if (!gender) {
+      alert('Gender not found');
+      return;
+    }
 
-  navigation.reset({
-    index: 0,
-    routes: [
-      {
-        name:
-          gender === "Male"
-            ? "MaleHomeTabs"
-            : "ReceiverBottomTabs",
-      },
-    ],
-  });
-};
+    navigation.reset({
+      index: 0,
+      routes: [
+        {
+          name: gender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs',
+        },
+      ],
+    });
+  };
+
   return (
     <WelcomeScreenbackgroundgpage>
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Icon name="chevron-back" size={26} color="#000" />
+            <Icon name="chevron-back" size={width * 0.06} color="#000" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Select Your ideal Match</Text>
-          <View style={{ width: 26 }} />
-        </View>
 
-        {/* TOP FADING BACKGROUND */}
-        {/* <LinearGradient
-          colors={["#F5E2FF", "#FFFFFF"]}
-          style={styles.bgGradient}
-        /> */}
+          <Text style={styles.headerTitle}>Select Your Ideal Match</Text>
+        </View>
 
         {/* MAIN CONTENT */}
         <View style={styles.mainWrapper}>
-
-          {/* TOP GRADIENT CARD */}
+          {/* TOP CARD */}
           <LinearGradient
-            colors={["#D916F1", "#7E0FFF"]}
+            colors={['#D916F1', '#7E0FFF']}
             style={styles.topCard}
           >
             <Image
-              source={require("../components/BackgroundPages/main_log1.png")}
+              source={require('../components/BackgroundPages/main_log1.png')}
               style={styles.cardIcon}
             />
             <Text style={styles.cardText}>Love</Text>
           </LinearGradient>
 
-          {/* OVERLAY HEARTS */}
-          <Image
-            source={require("../assets/smallheart.png")}
-            style={[styles.smallHeart, { top: 120, left: 40 }]}
-          />
-          <Image
-            source={require("../assets/smallheart.png")}
-            style={[styles.smallHeart, { top: 120, right: 40 ,width:70,height:40}]}
+          {/* FLOATING HEARTS */}
+
+          <Icon
+            name="heart"
+            size={width * 0.07}
+            color="#D51BF9"
+            style={[
+              styles.heartIcon,
+              { top: height * 0.12, left: width * 0.1,transform: [{ rotate: '-20deg' }] },
+            ]}
           />
 
-          {/* HANDSHAKE IMAGE */}
+          <Icon
+            name="heart"
+            size={width * 0.12}
+            color="#8C37F8"
+            style={[
+              styles.heartIcon,
+              { top: height * 0.13, right: width * 0.04 ,transform: [{ rotate: '20deg' }] },
+            ]}
+          />
+          {/* HAND IMAGE */}
           <Image
-            source={require("../assets/lovehand.png")}
+            source={require('../assets/lovehand.png')}
             style={styles.handImage}
           />
 
-          {/* TITLE TEXT */}
-          <Text style={styles.bottomText}>Lets{"\n"}Make{"\n"}Friends</Text>
+          {/* TEXT */}
+          <Text style={styles.bottomText}>
+            Lets{'\n'}Make{'\n'}Friends
+          </Text>
         </View>
-         <Image
-            source={require("../assets/smallheart.png")}
-            style={[styles.smallHeart, { top: 610, left: -12 ,width:30,height:40}]}
-          />
- <Image
-            source={require("../assets/smallheart.png")}
-            style={[styles.smallHeart, { top: 570, right: 40 ,width:30,height:40}]}
-          />
 
-        {/* CONTINUE BUTTON */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={handleContinue}
-          style={styles.continueWrapper}
-        >
-          <LinearGradient
-            colors={["#D916F1", "#7E0FFF"]}
-            style={styles.continueBtn}
-          >
-            <Text style={styles.continueText}>CONTINUE</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+        {/* BOTTOM HEARTS */}
+        <Icon
+          name="heart"
+          size={width * 0.15}
+          color="#D51BF9"
+          style={[
+            styles.heartIcon,
+            { bottom: height * 0.33, left: -width * 0.065  },
+          ]}
+        />
 
-      </SafeAreaView>
+        <Icon
+          name="heart"
+          size={width * 0.07}
+          color="#8C37F8"
+          style={[
+            styles.heartIcon,
+            { bottom: height * 0.37, right: width * 0.1,transform: [{ rotate: '15deg' }]  },
+          ]}
+        />
+        {/* BUTTON */}
+        <View style={styles.bottomFixed}>
+          <ContinueButton onPress={handleContinue} />
+        </View>
+      </View>
     </WelcomeScreenbackgroundgpage>
   );
 };
@@ -121,104 +129,81 @@ export default SelectYourIdealMatchScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: width * 0.05,
   },
 
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: height * 0.015,
   },
 
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#000",
-    marginLeft:-100,
-        
-
-  },
-
-  bgGradient: {
-    width: "100%",
-    height: 150,
-    position: "absolute",
-    top: 0,
-    left: 0,
-    
+    fontSize: width * 0.045,
+    fontWeight: '700',
+    marginLeft: width * 0.03,
   },
 
   mainWrapper: {
     flex: 1,
-    alignItems: "center",
-    marginTop: 40,
-    paddingTop: 80,
+    alignItems: 'center',
+    marginTop: height * 0.05,
   },
 
   topCard: {
-    width: 150,
-    height: 170,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
+    width: width * 0.4,
+    height: height * 0.22,
+    borderRadius: width * 0.05,
+    justifyContent: 'center',
+    alignItems: 'center',
     elevation: 3,
   },
 
   cardIcon: {
-    width: 60,
-    height: 60,
-    resizeMode: "contain",
-    marginBottom: 10,
-    backgroundColor:"white",
-    borderRadius:130
+    width: width * 0.15,
+    height: width * 0.15,
+    borderRadius: width * 0.2,
+    backgroundColor: 'white',
+    marginBottom: height * 0.01,
   },
 
   cardText: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "700",
+    color: '#fff',
+    fontSize: width * 0.05,
+    fontWeight: '700',
   },
 
   smallHeart: {
-    width: 30,
-    height: 30,
-    resizeMode: "contain",
-    position: "absolute",
+    width: width * 0.07,
+    height: width * 0.07,
+    position: 'absolute',
+    resizeMode: 'contain',
   },
 
   handImage: {
-    marginTop: 20,
-    width: 300,
-    height: 180,
-    resizeMode: "contain",
+    marginTop: height * 0.02,
+    width: width * 0.7,
+    height: height * 0.22,
+    resizeMode: 'contain',
   },
 
   bottomText: {
-    marginTop: 20,
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#8A2DFF",
-    textAlign: "center",
-    lineHeight: 28,
+    marginTop: height * 0.02,
+    fontSize: width * 0.055,
+    fontWeight: '700',
+    color: '#8A2DFF',
+    textAlign: 'center',
+    lineHeight: height * 0.035,
   },
 
-  continueWrapper: {
-    paddingHorizontal: 20,
-    marginBottom: 25,
+  bottomFixed: {
+    position: 'absolute',
+    bottom: height * 0.025,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
-
-  continueBtn: {
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-
-  continueText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 1,
+  heartIcon: {
+    position: 'absolute',
   },
 });

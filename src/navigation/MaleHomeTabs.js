@@ -1,14 +1,14 @@
-import React from "react";
-import { View } from "react-native";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import Ionicons from "react-native-vector-icons/Ionicons";
-import LinearGradient from "react-native-linear-gradient";
+import React from 'react';
+import { View } from 'react-native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import LinearGradient from 'react-native-linear-gradient';
 
-import HomeScreen from "../screens/HomeScreen";
-import MessagesScreen from "../screens/MessagesScreen";
-import TrainersCallpage from "../screens/TrainersCallpage";
-import RecentsCallHistoryScreen from "../screens/RecentsCallHistoryScreen";
-import ProfileScreen from "../screens/ProfileScreen";
+import HomeScreen from '../screens/HomeScreen';
+import MessagesScreen from '../screens/MessagesScreen';
+import TrainersCallpage from '../screens/TrainersCallpage';
+import RecentsCallHistoryScreen from '../screens/RecentsCallHistoryScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -17,7 +17,7 @@ const TabIcon = ({ focused, name }) => {
   if (!focused) {
     return (
       <Ionicons
-        name={name}     // outline icon
+        name={name} // outline icon
         size={30}
         color="#D51BF9"
       />
@@ -27,15 +27,15 @@ const TabIcon = ({ focused, name }) => {
   // -------- active (gradient ring + gradient bg) --------
   return (
     <LinearGradient
-      colors={["#D51BF9", "#8C37F8"]}
+      colors={['#D51BF9', '#8C37F8']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={{
         width: 40,
         height: 40,
         borderRadius: 20,
-        justifyContent: "center",
-        alignItems: "center",
+        justifyContent: 'center',
+        alignItems: 'center',
       }}
     >
       <View
@@ -43,21 +43,21 @@ const TabIcon = ({ focused, name }) => {
           width: 36,
           height: 36,
           borderRadius: 18,
-          backgroundColor: "#ffffff",
-          justifyContent: "center",
-          alignItems: "center",
+          backgroundColor: '#ffffff',
+          justifyContent: 'center',
+          alignItems: 'center',
         }}
       >
         <LinearGradient
-          colors={["#D51BF9", "#8C37F8"]}
+          colors={['#D51BF9', '#8C37F8']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
             width: 30,
             height: 30,
             borderRadius: 15,
-            justifyContent: "center",
-            alignItems: "center",
+            justifyContent: 'center',
+            alignItems: 'center',
           }}
         >
           <Ionicons name={name} size={20} color="#fff" />
@@ -70,89 +70,89 @@ const TabIcon = ({ focused, name }) => {
 const MaleHomeTabs = () => {
   return (
     <Tab.Navigator
-  // screenOptions={{
-  //   headerShown: false,
-  //   tabBarShowLabel: false,
+      // screenOptions={{
+      //   headerShown: false,
+      //   tabBarShowLabel: false,
 
-  //   tabBarStyle: {
-  //     position: "fixed",
-  //     left: 40,
-  //     right: 40,
-  //     bottom: 20,
-  //     height: 60,
-  //     borderRadius: 30,
-  //     backgroundColor: "#ffffff",
-  //     borderTopWidth: 0,
-  //     elevation: 8,
-  //   },
+      //   tabBarStyle: {
+      //     position: "fixed",
+      //     left: 40,
+      //     right: 40,
+      //     bottom: 20,
+      //     height: 60,
+      //     borderRadius: 30,
+      //     backgroundColor: "#ffffff",
+      //     borderTopWidth: 0,
+      //     elevation: 8,
+      //   },
 
-  //   tabBarItemStyle: {
-  //     justifyContent: "center",
-  //     alignItems: "center",
-  //     paddingTop: 10,
-  //   },
+      //   tabBarItemStyle: {
+      //     justifyContent: "center",
+      //     alignItems: "center",
+      //     paddingTop: 10,
+      //   },
 
-  //   // ✅ THIS FIXES ALL SCREENS
-  //   sceneContainerStyle: {
-  //     paddingBottom: 100,
-  //   },
-  // }}
+      //   // ✅ THIS FIXES ALL SCREENS
+      //   sceneContainerStyle: {
+      //     paddingBottom: 100,
+      //   },
+      // }}
 
-  screenOptions={{
-  headerShown: false,
-  tabBarShowLabel: false,
+      screenOptions={{
+        headerShown: false,
+        tabBarShowLabel: false,
 
-  tabBarStyle: {
-    position: "fixed",
-    left: 40,
-    right: 40,
-    bottom: 20,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#ffffff",
-    borderTopWidth: 0,
-    elevation: 8,
-  },
+        tabBarStyle: {
+          position: 'fixed',
+          left: 40,
+          right: 40,
 
-  tabBarItemStyle: {
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: 10,
-  },
+          height: 60,
+          borderRadius: 20,
+          backgroundColor: '#ffffff',
+          borderTopWidth: 0,
+          elevation: 8,
+        },
 
-  sceneContainerStyle: {
-    paddingBottom: 100,
-  },
+        tabBarItemStyle: {
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingTop: 10,
+        },
 
-  // ✅ ADDED ONLY THIS
-  tabBarBackground: () => (
-    <View style={{ flex: 1, justifyContent: "center" }}>
-      <View
-        style={{
-          position: "absolute",
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          width: "100%",
-          height: "100%",
-          paddingHorizontal: 70,
-        }}
-      >
-        {[1, 2, 3, 4].map((_, index) => (
-          <View
-            key={index}
-            style={{
-              width: 1,
-              height: 25,
-              backgroundColor: "#E5E5E5",
-            }}
-          />
-        ))}
-      </View>
-    </View>
-  ),
-}}
->
+        sceneContainerStyle: {
+          paddingBottom: 100,
+        },
+
+        // ✅ ADDED ONLY THIS
+        tabBarBackground: () => (
+          <View style={{ flex: 1, justifyContent: 'center' }}>
+            <View
+              style={{
+                position: 'absolute',
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                width: '100%',
+                height: '100%',
+                paddingHorizontal: 70,
+              }}
+            >
+              {[1, 2, 3, 4].map((_, index) => (
+                <View
+                  key={index}
+                  style={{
+                    width: 1,
+                    height: 25,
+                    backgroundColor: '#E5E5E5',
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+        ),
+      }}
+    >
       {/* HOME */}
       <Tab.Screen
         name="Home"

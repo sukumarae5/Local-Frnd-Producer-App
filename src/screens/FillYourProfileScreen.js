@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,32 +10,34 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-} from "react-native";
-import Icon from "react-native-vector-icons/Ionicons";
-import DateTimePicker from "@react-native-community/datetimepicker";
+} from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
-import { useDispatch, useSelector } from "react-redux";
-import WelcomeScreenbackgroundgpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
-import { languageApiFetchRequest } from "../features/language/languageAction";
-import { fetchCitiesRequest } from "../features/Countries/locationActions";
-import { newUserDataRequest } from "../features/user/userAction";
+import { useDispatch, useSelector } from 'react-redux';
+import WelcomeScreenbackgroundgpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
+import { languageApiFetchRequest } from '../features/language/languageAction';
+import { fetchCitiesRequest } from '../features/Countries/locationActions';
+import { newUserDataRequest } from '../features/user/userAction';
+import ContinueButton from '../components/Common/ContinueButton';
 
-const { width, height } = Dimensions.get("window");
+const { width, height } = Dimensions.get('window');
 
 const FillYourProfileScreen = ({ navigation, route }) => {
   const country_id = route?.params?.country_id ?? null;
 
   const dispatch = useDispatch();
 
-  const { languages } = useSelector((state) => state.language);
-  const { states, cities } = useSelector((state) => state.location);
-  const { message: apiResponse } = useSelector((state) => state.user);
+  const { languages } = useSelector(state => state.language);
+  const { states, cities } = useSelector(state => state.location);
+  const { message: apiResponse } = useSelector(state => state.user);
 
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [date, setDate] = useState(new Date());
-  const [dob, setDob] = useState("");
+  const [dob, setDob] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [focusedInput, setFocusedInput] = useState(null);
 
   const [language, setLanguage] = useState(null);
   const [stateValue, setStateValue] = useState(null);
@@ -53,9 +55,9 @@ const FillYourProfileScreen = ({ navigation, route }) => {
   }, [dispatch]);
 
   const isFormValid =
-    name.trim() !== "" &&
-    username.trim() !== "" &&
-    dob.trim() !== "" &&
+    name.trim() !== '' &&
+    username.trim() !== '' &&
+    dob.trim() !== '' &&
     language !== null &&
     stateValue !== null &&
     cityValue !== null;
@@ -64,8 +66,8 @@ const FillYourProfileScreen = ({ navigation, route }) => {
     setShowMandatoryMsg(!isFormValid);
   }, [isFormValid]);
 
-  const calculateAge = (dobString) => {
-    const [day, month, year] = dobString.split("-").map(Number);
+  const calculateAge = dobString => {
+    const [day, month, year] = dobString.split('-').map(Number);
     const birthDate = new Date(year, month - 1, day);
     const today = new Date();
 
@@ -89,14 +91,14 @@ const FillYourProfileScreen = ({ navigation, route }) => {
 
     if (age < 18) {
       Alert.alert(
-        "Age Restriction ❌",
-        "You must be at least 18 years old to continue."
+        'Age Restriction ❌',
+        'You must be at least 18 years old to continue.',
       );
       return;
     }
 
     if (!country_id) {
-      Alert.alert("Error", "Country ID missing.");
+      Alert.alert('Error', 'Country ID missing.');
       return;
     }
 
@@ -109,7 +111,7 @@ const FillYourProfileScreen = ({ navigation, route }) => {
         state_id: stateValue.id,
         city_id: cityValue.id,
         country_id,
-      })
+      }),
     );
   };
 
@@ -119,23 +121,23 @@ const FillYourProfileScreen = ({ navigation, route }) => {
     setIsResponseHandled(true);
 
     Alert.alert(
-      apiResponse.success ? "Success ✅" : "Error ❌",
+      apiResponse.success ? 'Success ✅' : 'Error ❌',
       apiResponse.message,
       [
         {
-          text: "OK",
+          text: 'OK',
           onPress: () => {
             if (apiResponse.success) {
-              navigation.navigate("LifeStyleScreen");
+              navigation.navigate('LifeStyleScreen');
             }
           },
         },
-      ]
+      ],
     );
   }, [apiResponse]);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener("focus", () => {
+    const unsubscribe = navigation.addListener('focus', () => {
       setIsResponseHandled(false);
     });
     return unsubscribe;
@@ -143,26 +145,26 @@ const FillYourProfileScreen = ({ navigation, route }) => {
 
   return (
     <WelcomeScreenbackgroundgpage>
+      <View style={{ flex: 1 }}>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+  style={{ flex: 1 }}
+  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+>
         <View style={styles.container}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Icon name="chevron-back" size={width * 0.06} color="#000" />
-          </TouchableOpacity>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Icon name="chevron-back" size={24} color="#000" />
+            </TouchableOpacity>
+
+            <Text style={styles.headerTitle}>Fill Your Profile</Text>
+          </View>
 
           <ScrollView
             showsVerticalScrollIndicator={false}
-            nestedScrollEnabled={true}
+      
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: height * 0.1 }}
+            contentContainerStyle={{ paddingBottom: height * 0.1  }}
           >
-            <Text style={styles.title}>Fill Your Profile</Text>
-
             {showMandatoryMsg && (
               <Text style={styles.mandatoryText}>
                 * All fields are mandatory
@@ -171,7 +173,12 @@ const FillYourProfileScreen = ({ navigation, route }) => {
 
             <Text style={styles.label}>Full Name</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                focusedInput === 'name' && styles.inputActive,
+              ]}
+              onFocus={() => setFocusedInput('name')}
+              onBlur={() => setFocusedInput(null)}
               placeholder="Full Name"
               value={name}
               onChangeText={setName}
@@ -179,7 +186,12 @@ const FillYourProfileScreen = ({ navigation, route }) => {
 
             <Text style={styles.label}>Username</Text>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input,
+                focusedInput === 'username' && styles.inputActive,
+              ]}
+              onFocus={() => setFocusedInput('username')}
+              onBlur={() => setFocusedInput(null)}
               placeholder="Username"
               value={username}
               onChangeText={setUsername}
@@ -188,10 +200,16 @@ const FillYourProfileScreen = ({ navigation, route }) => {
             {/* DOB */}
             <Text style={styles.label}>Date of Birth</Text>
             <TouchableOpacity
-              style={styles.inputIconBox}
-              onPress={() => setShowDatePicker(true)}
+              style={[
+                styles.inputIconBox,
+                focusedInput === 'dob' && styles.inputActive,
+              ]}
+              onPress={() => {
+                setFocusedInput('dob');
+                setShowDatePicker(true);
+              }}
             >
-              <Text style={{ flex: 1 }}>{dob || "DD/MM/YYYY"}</Text>
+              <Text style={{ flex: 1 }}>{dob || 'DD/MM/YYYY'}</Text>
               <Icon name="calendar-outline" size={width * 0.05} />
             </TouchableOpacity>
 
@@ -201,14 +219,22 @@ const FillYourProfileScreen = ({ navigation, route }) => {
                 mode="date"
                 maximumDate={new Date()}
                 onChange={(event, selectedDate) => {
-                  setShowDatePicker(false);
-                  if (selectedDate) {
-                    const day = selectedDate.getDate().toString().padStart(2,"0");
-                    const month = (selectedDate.getMonth()+1).toString().padStart(2,"0");
-                    const year = selectedDate.getFullYear();
-                    setDob(`${day}-${month}-${year}`);
-                  }
-                }}
+  if (event.type === 'dismissed') {
+    setShowDatePicker(false);
+    return;
+  }
+
+  if (selectedDate) {
+    setShowDatePicker(false);
+
+    const day = selectedDate.getDate().toString().padStart(2, '0');
+    const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+    const year = selectedDate.getFullYear();
+
+    setDob(`${day}-${month}-${year}`);
+    setDate(selectedDate); // 🔥 important
+  }
+}}
               />
             )}
 
@@ -225,7 +251,7 @@ const FillYourProfileScreen = ({ navigation, route }) => {
               }}
             >
               <Text style={styles.dropdownText}>
-                {language?.native_name || "Select Language"}
+                {language?.native_name || 'Select Language'}
               </Text>
               <Icon name="chevron-down" size={width * 0.05} />
             </TouchableOpacity>
@@ -236,7 +262,7 @@ const FillYourProfileScreen = ({ navigation, route }) => {
                 nestedScrollEnabled
                 keyboardShouldPersistTaps="handled"
               >
-                {(languages || []).map((item) => (
+                {(languages || []).map(item => (
                   <TouchableOpacity
                     key={item.id}
                     style={styles.dropdownItem}
@@ -245,9 +271,7 @@ const FillYourProfileScreen = ({ navigation, route }) => {
                       setShowLanguageDrop(false);
                     }}
                   >
-                    <Text style={styles.dropdownItemText}>
-                      {item.name_en}
-                    </Text>
+                    <Text style={styles.dropdownItemText}>{item.name_en}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -264,7 +288,7 @@ const FillYourProfileScreen = ({ navigation, route }) => {
               }}
             >
               <Text style={styles.dropdownText}>
-                {stateValue?.name || "Select State"}
+                {stateValue?.name || 'Select State'}
               </Text>
               <Icon name="chevron-down" size={width * 0.05} />
             </TouchableOpacity>
@@ -275,7 +299,7 @@ const FillYourProfileScreen = ({ navigation, route }) => {
                 nestedScrollEnabled
                 keyboardShouldPersistTaps="handled"
               >
-                {(states || []).map((item) => (
+                {(states || []).map(item => (
                   <TouchableOpacity
                     key={item.id}
                     style={styles.dropdownItem}
@@ -303,7 +327,7 @@ const FillYourProfileScreen = ({ navigation, route }) => {
               }}
             >
               <Text style={styles.dropdownText}>
-                {cityValue?.name || "Select City"}
+                {cityValue?.name || 'Select City'}
               </Text>
               <Icon name="chevron-down" size={width * 0.05} />
             </TouchableOpacity>
@@ -314,7 +338,7 @@ const FillYourProfileScreen = ({ navigation, route }) => {
                 nestedScrollEnabled
                 keyboardShouldPersistTaps="handled"
               >
-                {(cities || []).map((item) => (
+                {(cities || []).map(item => (
                   <TouchableOpacity
                     key={item.id}
                     style={styles.dropdownItem}
@@ -328,20 +352,16 @@ const FillYourProfileScreen = ({ navigation, route }) => {
                 ))}
               </ScrollView>
             )}
-
-            <TouchableOpacity
-              style={[
-                styles.continueButton,
-                { backgroundColor: isFormValid ? "#B45BFA" : "#D3C8F6" },
-              ]}
-              disabled={!isFormValid}
-              onPress={handleSubmit}
-            >
-              <Text style={styles.continueText}>CONTINUE</Text>
-            </TouchableOpacity>
+        
           </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
+          </View>
+</KeyboardAvoidingView>
+          <View style={styles.bottomFixed}>
+            <ContinueButton disabled={!isFormValid} onPress={handleSubmit} />
+          </View>
+      
+      
+      </View>
     </WelcomeScreenbackgroundgpage>
   );
 };
@@ -349,73 +369,78 @@ const FillYourProfileScreen = ({ navigation, route }) => {
 export default FillYourProfileScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: height * 0.08, paddingHorizontal: width * 0.05 },
+  container: {
+    flex: 1,
 
-  backButton: {
-    position: "absolute",
-    top: height * 0.07,
-    left: width * 0.04,
-    zIndex: 10,
+    paddingHorizontal: width * 0.05,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: height * 0.025,
+  marginTop: height * 0.015,
   },
 
-  title: {
-    fontSize: width * 0.055,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: height * 0.04,
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginLeft: 10,
   },
-
   input: {
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
     height: height * 0.06,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#E3D8FF",
+    borderColor: '#E3D8FF',
     paddingHorizontal: width * 0.03,
     marginBottom: height * 0.02,
   },
 
   inputIconBox: {
-    backgroundColor: "#fff",
-    flexDirection: "row",
-    alignItems: "center",
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
     height: height * 0.06,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#E3D8FF",
+    borderColor: '#E3D8FF',
     paddingHorizontal: width * 0.03,
     marginBottom: height * 0.02,
   },
 
   sectionTitle: {
     fontSize: width * 0.045,
-    fontWeight: "600",
+    fontWeight: '600',
     marginTop: height * 0.015,
   },
 
   dropdown: {
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
     height: height * 0.06,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#E3D8FF",
+    borderColor: '#E3D8FF',
     paddingHorizontal: width * 0.03,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: height * 0.015,
   },
+  inputActive: {
+    borderColor: '#D51BF9',
+    borderWidth: 1.5,
+  },
 
-  label: { fontSize: width * 0.035, fontWeight: "600" },
+  label: { fontSize: width * 0.035, marginTop: 15, fontWeight: '600' },
 
   dropdownText: { flex: 1, fontSize: width * 0.04 },
 
   dropdownList: {
     maxHeight: height * 0.25,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#E3D8FF",
-    marginBottom: height * 0.02,
+    borderColor: '#E3D8FF',
+    marginBottom: height * 0.01,
   },
 
   dropdownItem: {
@@ -425,18 +450,16 @@ const styles = StyleSheet.create({
 
   dropdownItemText: { fontSize: width * 0.04 },
 
-  continueButton: {
-    marginTop: height * 0.02,
-    borderRadius: 10,
-    paddingVertical: height * 0.02,
-    alignItems: "center",
-  },
-
-  continueText: { color: "#fff", fontWeight: "700", fontSize: width * 0.04 },
-
   mandatoryText: {
-    color: "red",
-    textAlign: "center",
+    color: 'red',
+    textAlign: 'center',
     marginBottom: height * 0.01,
+  },
+  bottomFixed: {
+    position: 'absolute',
+    bottom: height * 0.03,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
 });

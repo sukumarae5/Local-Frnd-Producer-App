@@ -1,22 +1,55 @@
 // PerfectMatchScreen.js
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   StatusBar,
   ActivityIndicator,
-} from "react-native";
+} from 'react-native';
 
-import { useSelector, useDispatch } from "react-redux";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import WelcomeScreenbackgroungpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
-import Svg, { Defs, ClipPath, Path, Image as SvgImage } from "react-native-svg";
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
+import Svg, { Defs, ClipPath, Path, Image as SvgImage } from 'react-native-svg';
+import LinearGradient from 'react-native-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
 
-import { callDetailsRequest } from "../features/calls/callAction";
+import { callDetailsRequest } from '../features/calls/callAction';
 
 /* ---------------- HEART IMAGE ---------------- */
+
+const GradientHeartAvatar = ({ source, size = 160, border = 6 }) => {
+  return (
+    <LinearGradient
+      colors={['#D51BF9', '#8C37F8']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }} // matches 75deg feel
+      style={{
+        width: size + border * 2,
+        height: size + border * 2,
+        borderRadius: (size + border * 2) / 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <HeartImage source={source} size={size} />
+    </LinearGradient>
+  );
+};
+
+const GradientText = ({ text, style }) => (
+  <MaskedView maskElement={<Text style={style}>{text}</Text>}>
+    <LinearGradient
+      colors={['#D51BF9', '#8C37F8']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      <Text style={[style, { opacity: 0 }]}>{text}</Text>
+    </LinearGradient>
+  </MaskedView>
+);
 
 const HeartImage = ({ source, size = 150 }) => (
   <Svg width={size} height={size} viewBox="0 0 100 100">
@@ -46,9 +79,10 @@ const PerfectMatchScreen = () => {
   const { call_type, session_id } = route.params || {};
 
   const [count, setCount] = useState(3);
+  const [navigated, setNavigated] = useState(false);
 
   const connectedCallDetails = useSelector(
-    state => state.calls?.connectedCallDetails
+    state => state.calls?.connectedCallDetails,
   );
 
   const myId = useSelector(state => state.auth?.user?.user_id);
@@ -66,52 +100,57 @@ const PerfectMatchScreen = () => {
   const caller = connectedCallDetails?.caller;
   const connectedUser = connectedCallDetails?.connected_user;
 
-  const me =
-    String(caller?.user_id) === String(myId)
-      ? caller
-      : connectedUser;
+  const me = String(caller?.user_id) === String(myId) ? caller : connectedUser;
 
   const other =
-    String(caller?.user_id) === String(myId)
-      ? connectedUser
-      : caller;
+    String(caller?.user_id) === String(myId) ? connectedUser : caller;
 
   /* ---------------- COUNTDOWN NAVIGATION ---------------- */
-useEffect(() => {
-  if (!session_id || !call_type) return;
+  useEffect(() => {
+    if (!session_id || !call_type) return;
 
-  const interval = setInterval(() => {
-    setCount(prev => prev - 1);
-  }, 1000);
+    const interval = setInterval(() => {
+      setCount(prev => {
+        if (prev <= 1) {
+          clearInterval(interval); // ✅ stop at 0
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
 
-  return () => clearInterval(interval);
-}, []);
+    return () => clearInterval(interval);
+  }, []);
+  useEffect(() => {
+    if (count === 0) {
+      console.log('➡️ Navigating to Call Screen');
 
-useEffect(() => {
-  if (count !== 0) return;
+      const screen =
+        call_type === 'VIDEO' ? 'VideocallScreen' : 'AudiocallScreen';
 
-  console.log("➡️ Navigating to Call Screen");
+      const isCaller = String(caller?.user_id) === String(myId);
 
-  const screen =
-    call_type === "VIDEO"
-      ? "VideocallScreen"
-      : "AudiocallScreen";
+      navigation.replace(screen, {
+        session_id,
+        role: isCaller ? 'caller' : 'receiver',
+      });
+    }
+  }, [count]);
+  useEffect(() => {
+    if (count === 0 && !navigated) {
+      setNavigated(true);
 
-  // navigation.replace(screen, {
-  //   session_id,
-  //   role: "receiver",
-  // });
+      const screen =
+        call_type === 'VIDEO' ? 'VideocallScreen' : 'AudiocallScreen';
 
-  const isCaller =
-  String(caller?.user_id) === String(myId);
+      const isCaller = String(caller?.user_id) === String(myId);
 
-navigation.replace(screen, {
-  session_id,
-  role: isCaller ? "caller" : "receiver",
-});
-
-}, [count]);
-
+      navigation.replace(screen, {
+        session_id,
+        role: isCaller ? 'caller' : 'receiver',
+      });
+    }
+  }, [count, navigated]);
   /* ---------------- LOADING ---------------- */
 
   if (!caller || !connectedUser) {
@@ -134,23 +173,20 @@ navigation.replace(screen, {
         {/* Profiles */}
         <View style={styles.profileRow}>
           <View style={styles.profileBlock}>
-            <HeartImage source={{ uri: me?.avatar }} size={160} />
+            <GradientHeartAvatar source={{ uri: me?.avatar }} size={160} />
             <Text style={styles.name}>{me?.name}</Text>
           </View>
 
           <View style={styles.profileBlock}>
-            <HeartImage source={{ uri: other?.avatar }} size={160} />
+            <GradientHeartAvatar source={{ uri: other?.avatar }} size={160} />{' '}
             <Text style={styles.name}>{other?.name}</Text>
           </View>
         </View>
 
-        <Text style={styles.matchText}>💜 Perfect Match</Text>
-        <Text style={styles.congrats}>Congratulations!</Text>
-
+        <GradientText text="💜 Perfect Match" style={styles.matchText} />
+        <GradientText text="Congratulations!" style={styles.congrats} />
         {/* Countdown */}
-        <Text style={styles.countdown}>
-          Connecting in {count}...
-        </Text>
+        <Text style={styles.countdown}>Connecting in {count}...</Text>
       </View>
     </WelcomeScreenbackgroungpage>
   );
@@ -163,51 +199,51 @@ export default PerfectMatchScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   loaderContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   profileRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
     gap: 30,
     marginBottom: 40,
   },
 
   profileBlock: {
-    alignItems: "center",
+    alignItems: 'center',
   },
 
   name: {
     marginTop: 10,
     fontSize: 16,
-    fontWeight: "600",
-    color: "#222",
+    fontWeight: '600',
+    color: '#222',
   },
 
   matchText: {
     marginTop: 20,
     fontSize: 20,
-    color: "#c464ff",
-    fontWeight: "700",
+
+    fontWeight: '700',
   },
 
   congrats: {
     fontSize: 28,
-    color: "#c464ff",
-    fontWeight: "bold",
+
+    fontWeight: 'bold',
   },
 
   countdown: {
     marginTop: 20,
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: '600',
   },
 });

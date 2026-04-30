@@ -1,10 +1,12 @@
 import React from 'react';
 import { View, Image, StyleSheet, Dimensions } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width, height } = Dimensions.get("window");
 
 const WelcomeScreenbackgroungpage = ({ children }) => {
   return (
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
     <View style={styles.wrapper}>
 
       {/* TOP BG IMAGE */}
@@ -27,6 +29,7 @@ const WelcomeScreenbackgroungpage = ({ children }) => {
       />
 
     </View>
+    </SafeAreaView>
   );
 };
 

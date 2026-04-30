@@ -8,7 +8,6 @@ import {
   Dimensions,
   TextInput,
   FlatList,
-  SafeAreaView,
   Platform,
   StatusBar,
 } from 'react-native';
@@ -143,7 +142,7 @@ const HomeScreen = () => {
 
   return (
     <WelcomeScreenbackgroungpage>
-      <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
         <StatusBar
           translucent
           backgroundColor="transparent"
@@ -180,7 +179,7 @@ const HomeScreen = () => {
             contentContainerStyle={styles.listContent}
           />
         </View>
-      </SafeAreaView>
+      </View>
     </WelcomeScreenbackgroungpage>
   );
 };
@@ -188,21 +187,12 @@ const HomeScreen = () => {
 export default HomeScreen;
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-
   container: {
     flex: 1,
   },
 
   headerContainer: {
     paddingHorizontal: wp(4),
-    paddingTop:
-      Platform.OS === 'android'
-        ? (StatusBar.currentHeight || 0) + hp(1.5)
-        : hp(1.2),
     paddingBottom: hp(1.2),
   },
 
@@ -320,6 +310,6 @@ const styles = StyleSheet.create({
   },
 
   callsWrapper: {
-    marginBottom: hp(1),
+    marginBottom: hp(0.5),
   },
 });

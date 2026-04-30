@@ -112,7 +112,7 @@ console.log(friendStatus)
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionLabel}>Stories</Text>
+      {/* <Text style={styles.sectionLabel}>Stories</Text> */}
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
 

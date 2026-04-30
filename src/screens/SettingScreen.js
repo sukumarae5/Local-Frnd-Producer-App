@@ -38,82 +38,88 @@ const SettingScreen = () => {
     });
   };
 
-  return (
-    <WelcomeScreenbackgroungpage>
-      <SafeAreaView style={styles.safe}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContainer}
+ return (
+  <WelcomeScreenbackgroungpage>
+    <View style={styles.container}>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContainer}
+      >
+
+        {/* HEADER */}
+        <View style={styles.header}>
+          <Icon
+            name="arrow-back"
+            size={22}
+            onPress={() => navigation.goBack()}
+          />
+          <Text style={styles.headerTitle}>Settings</Text>
+        </View>
+
+        {/* LIST */}
+        <View style={styles.listBox}>
+          <Item icon="person-outline" title="Personal Information" />
+          <Item icon="shield-checkmark-outline" title="Privacy & Permission" />
+          <Item icon="notifications-outline" title="Notification" />
+          <Item icon="lock-closed-outline" title="Security" />
+          <Item icon="server-outline" title="Data & Storage" />
+          <Item icon="chatbox-ellipses-outline" title="Feedback" />
+          <Item icon="language-outline" title="Language" />
+          <Item icon="information-circle-outline" title="About lokal frnd" />
+        </View>
+
+        {/* LOGOUT */}
+        <TouchableOpacity
+          style={styles.logoutItem}
+          onPress={() => setShowLogoutModal(true)}
         >
-          {/* ---------- HEADER ---------- */}
-          <View style={styles.header}>
-            <Icon
-              name="arrow-back"
-              size={22}
-              onPress={() => navigation.goBack()}
-            />
-            <Text style={styles.headerTitle}>Setting</Text>
+          <View style={styles.logoutIcon}>
+            <Icon name="log-out-outline" size={20} color="#fff" />
           </View>
+          <Text style={styles.logoutText}>Log Out</Text>
+          <Icon name="chevron-forward" size={18} color="#aaa" />
+        </TouchableOpacity>
 
-          {/* ---------- SETTINGS LIST ---------- */}
-          <View style={styles.listBox}>
-            <Item icon="person-outline" title="Personal Information" />
-            <Item icon="shield-checkmark-outline" title="Privacy & Permission" />
-            <Item icon="notifications-outline" title="Notification" />
-            <Item icon="lock-closed-outline" title="Security" />
-            <Item icon="server-outline" title="Data & Storage" />
-            <Item icon="chatbox-ellipses-outline" title="Feedback" />
-            <Item icon="language-outline" title="Language" />
-            <Item icon="information-circle-outline" title="About lokal frnd" />
-          </View>
+      </ScrollView>
 
-          {/* ---------- LOG OUT ---------- */}
-          <TouchableOpacity
-            style={styles.logoutItem}
-            onPress={() => setShowLogoutModal(true)}
-          >
-            <View style={styles.logoutIcon}>
-              <Icon name="log-out-outline" size={20} color="#fff" />
+      {/* MODAL */}
+      <Modal transparent visible={showLogoutModal} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+
+            <View style={styles.modalIcon}>
+              <Icon name="person-outline" size={24} color="#fff" />
             </View>
-            <Text style={styles.logoutText}>Log Out</Text>
-            <Icon name="chevron-forward" size={18} color="#aaa" />
-          </TouchableOpacity>
-        </ScrollView>
 
-        {/* ---------- LOGOUT MODAL ---------- */}
-        <Modal transparent visible={showLogoutModal} animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalBox}>
-              <View style={styles.modalIcon}>
-                <Icon name="person-outline" size={24} color="#fff" />
-              </View>
+            <Text style={styles.modalTitle}>Logout?</Text>
+            <Text style={styles.modalSub}>
+              Are you sure you want to logout?
+            </Text>
 
-              <Text style={styles.modalTitle}>Logout?</Text>
-              <Text style={styles.modalSub}>
-                Are you sure you want to logout?
-              </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setShowLogoutModal(false)}
+              >
+                <Text style={styles.cancelText}>CANCEL</Text>
+              </TouchableOpacity>
 
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={styles.cancelBtn}
-                  onPress={() => setShowLogoutModal(false)}
-                >
-                  <Text style={styles.cancelText}>CANCEL</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.confirmBtn}
-                  onPress={handleConfirmLogout}
-                >
-                  <Text style={styles.confirmText}>CONFIRM</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                style={styles.confirmBtn}
+                onPress={handleConfirmLogout}
+              >
+                <Text style={styles.confirmText}>CONFIRM</Text>
+              </TouchableOpacity>
             </View>
+
           </View>
-        </Modal>
-      </SafeAreaView>
-    </WelcomeScreenbackgroungpage>
-  );
+        </View>
+      </Modal>
+
+    </View>
+  </WelcomeScreenbackgroungpage>
+);
 };
 
 /* ---------- REUSABLE ITEM ---------- */
@@ -131,28 +137,28 @@ export default SettingScreen;
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-  },
+  container: {
+  flex: 1,
+},
 
-  scrollContainer: {
-    flexGrow: 1,
-    paddingBottom: height * 0.04,
-  },
-
+scrollContainer: {
+  flexGrow: 1,
+  paddingBottom: height * 0.05,
+},
   /* HEADER */
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 15,
-    marginTop: height * 0.07,
-  },
+  flexDirection: "row",
+  alignItems: "center",
+  paddingHorizontal: 16,
+  paddingTop: height * 0.01, 
+  marginBottom: 10,
+},
 
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginLeft: 10,
-  },
+headerTitle: {
+  fontSize: 20,
+  fontWeight: "600",
+  marginLeft: 10,
+},
 
   /* LIST */
   listBox: {
