@@ -1,28 +1,30 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
-   
     <uses-permission android:name="android.permission.INTERNET" />
-   
+
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-<uses-permission android:name="android.permission.WAKE_LOCK" />
-
-<uses-permission android:name="android.permission.RECORD_AUDIO" />
-
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-<uses-permission android:name="android.permission.READ_PHONE_STATE" />
-<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
-<uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
 
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
         android:name=".MainApplication"
@@ -34,12 +36,13 @@
         android:usesCleartextTraffic="true"
         android:supportsRtl="true"
         android:networkSecurityConfig="@xml/network_security_config"
-        >
+        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+        tools:replace="android:appComponentFactory">
 
-<service 
-    android:name="com.asterinet.reactnative.incallmanager.InCallManagerService"
-    android:foregroundServiceType="microphone"
-    android:exported="false" />
+        <service
+            android:name="com.asterinet.reactnative.incallmanager.InCallManagerService"
+            android:foregroundServiceType="microphone"
+            android:exported="false" />
 
         <activity
             android:name=".MainActivity"

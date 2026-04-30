@@ -8,11 +8,11 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import LinearGradient from "react-native-linear-gradient";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { Picker } from "@react-native-picker/picker";
 import { useDispatch, useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -21,12 +21,18 @@ import {
   FETCH_LIFESTYLE_OPTIONS_REQUEST,
   USER_LIFESTYLE_REQUEST,
 } from "../features/lifeStyle/lifestyleTypes";
+
 import { newUserDataRequest } from "../features/user/userAction";
 import WelcomeScreenbackgroungpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
+
+const { width, height } = Dimensions.get("window");
+const RF = (size) => (width / 375) * size;
 
 const LifeStyleScreen = ({ navigation }) => {
   const [about, setAbout] = useState("");
   const [selectedChoices, setSelectedChoices] = useState({});
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+
   const [userId, setUserId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResponseHandled, setIsResponseHandled] = useState(false);
@@ -43,9 +49,7 @@ const LifeStyleScreen = ({ navigation }) => {
     const loadUserId = async () => {
       try {
         const id = await AsyncStorage.getItem("user_id");
-        if (id) {
-          setUserId(Number(id));
-        }
+        if (id) setUserId(Number(id));
       } catch (error) {
         console.log("Error loading user id:", error);
       }
@@ -85,6 +89,7 @@ const LifeStyleScreen = ({ navigation }) => {
     const unsubscribe = navigation.addListener("focus", () => {
       setIsResponseHandled(false);
     });
+
     return unsubscribe;
   }, [navigation]);
 
@@ -108,10 +113,13 @@ const LifeStyleScreen = ({ navigation }) => {
       ...prev,
       [categoryId]: optionId,
     }));
+
+    setOpenDropdownId(null);
   };
 
   const getSelectedOptionName = (categoryId) => {
     const selectedId = selectedChoices[categoryId];
+
     if (!selectedId) return "";
 
     const selectedOption = normalizedOptions.find(
@@ -156,13 +164,14 @@ const LifeStyleScreen = ({ navigation }) => {
           contentContainerStyle={styles.inner}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled={true}
         >
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.headerRow}
             activeOpacity={0.8}
           >
-            <Ionicons name="chevron-back" size={22} color="#111" />
+            <Ionicons name="chevron-back" size={RF(22)} color="#111" />
             <Text style={styles.header}>Life Style</Text>
           </TouchableOpacity>
 
@@ -179,47 +188,74 @@ const LifeStyleScreen = ({ navigation }) => {
                 );
 
                 const selectedName = getSelectedOptionName(category.id);
+                const isOpen = openDropdownId === category.id;
 
                 return (
                   <View key={category.id} style={styles.card}>
                     <Text style={styles.label}>{category.name}</Text>
 
-                    <View style={styles.dropdownWrapper}>
-                      <Picker
-                        selectedValue={selectedChoices[category.id] || ""}
-                        onValueChange={(value) =>
-                          handleSelect(category.id, value)
-                        }
-                        style={styles.picker}
-                        dropdownIconColor="#7B2CF3"
+                    <TouchableOpacity
+                      style={[styles.dropdown, isOpen && styles.activeDropdown]}
+                      activeOpacity={0.8}
+                      onPress={() =>
+                        setOpenDropdownId(isOpen ? null : category.id)
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownText,
+                          !selectedName && styles.placeholderText,
+                        ]}
                       >
-                        <Picker.Item label="Select..." value="" />
-                        {relatedOptions.map((opt) => (
-                          <Picker.Item
-                            key={opt.id}
-                            label={opt.name}
-                            value={opt.id}
-                          />
-                        ))}
-                      </Picker>
-                    </View>
+                        {selectedName || "Select..."}
+                      </Text>
 
-                    {selectedName ? (
-                      <View style={styles.selectedBox}>
-                        <Text style={styles.selectedLabel}>Selected:</Text>
-                        <Text style={styles.selectedValue}>{selectedName}</Text>
-                      </View>
-                    ) : null}
+                      <Ionicons
+                        name={isOpen ? "chevron-up" : "chevron-down"}
+                        size={RF(18)}
+                        color="#777"
+                      />
+                    </TouchableOpacity>
+
+                    {isOpen && (
+                      <ScrollView
+                        style={styles.dropdownList}
+                        nestedScrollEnabled={true}
+                        keyboardShouldPersistTaps="handled"
+                      >
+                        {relatedOptions.length > 0 ? (
+                          relatedOptions.map((opt) => (
+                            <TouchableOpacity
+                              key={opt.id}
+                              style={styles.dropdownItem}
+                              activeOpacity={0.8}
+                              onPress={() => handleSelect(category.id, opt.id)}
+                            >
+                              <Text style={styles.dropdownItemText}>
+                                {opt.name}
+                              </Text>
+                            </TouchableOpacity>
+                          ))
+                        ) : (
+                          <View style={styles.dropdownItem}>
+                            <Text style={styles.noDataText}>
+                              No options found
+                            </Text>
+                          </View>
+                        )}
+                      </ScrollView>
+                    )}
                   </View>
                 );
               })}
 
               <View style={styles.card}>
                 <Text style={styles.label}>About</Text>
+
                 <TextInput
                   style={styles.textArea}
                   placeholder="Type Here..."
-                  placeholderTextColor="#888"
+                  placeholderTextColor="#B5B5B5"
                   multiline
                   value={about}
                   onChangeText={setAbout}
@@ -233,7 +269,9 @@ const LifeStyleScreen = ({ navigation }) => {
                 activeOpacity={0.85}
               >
                 <LinearGradient
-                  colors={["#9D4CF1", "#D800F4"]}
+                  colors={["#D800F4", "#8C35F5"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
                   style={styles.button}
                 >
                   {isSubmitting ? (
@@ -259,115 +297,132 @@ const styles = StyleSheet.create({
   },
 
   inner: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 40,
+    paddingHorizontal: width * 0.04,
+    paddingTop: height * 0.018,
+    paddingBottom: height * 0.08,
   },
 
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 18,
+    marginBottom: height * 0.03,
   },
 
   header: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginLeft: 8,
+    fontSize: RF(18),
+    fontWeight: "600",
+    marginLeft: width * 0.018,
     color: "#111",
   },
 
+  card: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    elevation: 0,
+    padding: 0,
+    marginBottom: height * 0.018,
+  },
+
+  label: {
+    fontSize: RF(14),
+    fontWeight: "500",
+    marginBottom: height * 0.008,
+    color: "#111",
+  },
+
+  dropdown: {
+    backgroundColor: "#fff",
+    height: height * 0.058,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E7E7E7",
+    paddingHorizontal: width * 0.035,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  activeDropdown: {
+    borderColor: "#C72CFF",
+  },
+
+  dropdownText: {
+    flex: 1,
+    fontSize: RF(14),
+    color: "#444",
+    fontWeight: "400",
+  },
+
+  placeholderText: {
+    color: "#9A9A9A",
+  },
+
+  dropdownList: {
+    maxHeight: height * 0.25,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E7E7E7",
+    marginTop: 5,
+    overflow: "hidden",
+  },
+
+  dropdownItem: {
+    paddingVertical: height * 0.015,
+    paddingHorizontal: width * 0.035,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F1F1",
+  },
+
+  dropdownItemText: {
+    fontSize: RF(14),
+    color: "#333",
+    fontWeight: "400",
+  },
+
+  noDataText: {
+    fontSize: RF(13),
+    color: "#999",
+  },
+
+  textArea: {
+    borderWidth: 1,
+    borderColor: "#E7E7E7",
+    borderRadius: 8,
+    paddingHorizontal: width * 0.035,
+    paddingTop: height * 0.015,
+    height: height * 0.15,
+    textAlignVertical: "top",
+    backgroundColor: "#fff",
+    color: "#111",
+    fontSize: RF(14),
+  },
+
+  buttonWrapper: {
+    marginTop: height * 0.03,
+  },
+
+  button: {
+    height: height * 0.06,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  buttonText: {
+    color: "#fff",
+    fontSize: RF(15),
+    fontWeight: "700",
+  },
+
   loaderWrapper: {
-    marginTop: 40,
+    marginTop: height * 0.06,
     alignItems: "center",
     justifyContent: "center",
   },
 
   loadingText: {
     marginTop: 10,
-    fontSize: 14,
+    fontSize: RF(14),
     color: "#666",
-  },
-
-  card: {
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#EEE5FF",
-    elevation: 2,
-  },
-
-  label: {
-    fontSize: 15,
-    fontWeight: "600",
-    marginBottom: 8,
-    color: "#1A1A1A",
-  },
-
-  dropdownWrapper: {
-    borderWidth: 1,
-    borderColor: "#D8C7FF",
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    overflow: "hidden",
-  },
-
-  picker: {
-    height: 52,
-    width: "100%",
-    color: "#222",
-  },
-
-  selectedBox: {
-    marginTop: 10,
-    backgroundColor: "#F5EEFF",
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: "#E4D5FF",
-  },
-
-  selectedLabel: {
-    fontSize: 12,
-    color: "#7A52C7",
-    marginBottom: 2,
-    fontWeight: "600",
-  },
-
-  selectedValue: {
-    fontSize: 15,
-    color: "#4B1FAE",
-    fontWeight: "700",
-  },
-
-  textArea: {
-    borderWidth: 1,
-    borderColor: "#D8C7FF",
-    borderRadius: 12,
-    padding: 12,
-    height: 120,
-    textAlignVertical: "top",
-    backgroundColor: "#fff",
-    color: "#111",
-  },
-
-  buttonWrapper: {
-    marginTop: 8,
-  },
-
-  button: {
-    paddingVertical: 15,
-    borderRadius: 14,
-    alignItems: "center",
-  },
-
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.4,
   },
 });

@@ -7,64 +7,42 @@ import {
   Image,
   ImageBackground,
   Animated,
+  Easing,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import LinearGradient from 'react-native-linear-gradient';
+
+const LOGO_SIZE = 500;
 
 const LandingScreen = ({ navigation }) => {
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-  const sparkle = useRef(new Animated.Value(0)).current;
+  const shineAnim = useRef(new Animated.Value(-LOGO_SIZE)).current;
 
   useEffect(() => {
-    handleNavigation();
-
-    setTimeout(() => {
-      runAnimation();
-    }, 100); // small delay fixes rendering timing
+    startShineEffect();
+     handleNavigation();
   }, []);
 
-  const runAnimation = () => {
-    sparkle.setValue(0);
-
-    Animated.sequence([
-      // 🔥 Circular shine rotation
-      Animated.timing(rotateAnim, {
-        toValue: 100,
-        duration: 3200,
+  const startShineEffect = () => {
+    Animated.loop(
+      Animated.timing(shineAnim, {
+        toValue: LOGO_SIZE,
+        duration: 1800,
+        easing: Easing.linear,
         useNativeDriver: true,
       }),
-
-      // ✨ Spark
-      Animated.timing(sparkle, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-
-      Animated.timing(sparkle, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      rotateAnim.setValue(0);
-      runAnimation();
-    });
+    ).start();
   };
 
-  const rotate = rotateAnim.interpolate({
-    inputRange: [0, 360],
-    outputRange: ['0deg', '360deg'],
-  });
-
   const handleNavigation = async () => {
+    let nextScreen = 'OnboardScreen';
     let nextScreen = 'OnboardScreen';
 
     try {
       const token = await AsyncStorage.getItem('twittoke');
       const gender = await AsyncStorage.getItem('gender');
 
+      if (token && token !== 'null' && token !== '' && gender) {
+        try {
       if (token && token !== 'null' && token !== '' && gender) {
         try {
           const decoded = jwtDecode(token);
@@ -93,60 +71,29 @@ const LandingScreen = ({ navigation }) => {
     <ImageBackground
       source={require('../components/BackgroundPages/backgroundimage.jpg')}
       style={styles.background}
+      resizeMode="cover"
     >
-      {/* LEFT HEART */}
-     <MaskedView
-  style={styles.leftHeart}
-  maskElement={
-    <Ionicons name="heart" size={130} color="black" />
-  }
->
-        <View style={{ flex: 1, backgroundColor: '#E9C9FF' }}>
-  
-  <LinearGradient
-    colors={[
-      "rgba(139, 66, 207, 0.5)",
-      "rgba(81, 34, 126, 0.15)"
-    ]}
-    start={{ x: 0.5, y: 0 }}   // top
-    end={{ x: 0.5, y: 1 }}     // bottom
-    style={{ width: 130, height: 130 }}
-  />
-  </View>
-</MaskedView>
+      <Image
+        source={require('../assets/leftheart.png')}
+        style={styles.leftHeart}
+      />
 
-      {/* RIGHT HEART */}
-      <MaskedView
-  style={styles.rightHeart}
-  maskElement={
-    <Ionicons name="heart" size={250} color="black" />
-  }
->
-        <View style={{ flex: 1, backgroundColor: '#E9C9FF' }}>
-  
-  <LinearGradient
-    colors={[
-      "rgba(201, 18, 201, 0.5)",
-      "rgba(83, 20, 143, 0.15)"
-    ]}
-    start={{ x: 0.5, y: 0 }}
-    end={{ x: 0.5, y: 1 }}
-    style={{ width: 250, height: 250 }}
-  />
-  </View>
-</MaskedView>
+      <Image
+        source={require('../assets/rightheart.png')}
+        style={styles.rightHeart}
+      />
 
       <View style={styles.container}>
-        <View style={styles.logoWrapper}>
-          {/* ✅ Logo */}
+        <View style={styles.logoBox}>
+          {/* Original logo - colors unchanged */}
           <Image
             source={require('../components/BackgroundPages/main_log1.png')}
             style={styles.logo}
           />
 
-          {/* 🔥 Curved Edge Shine */}
+          {/* Silver light effect clipped only inside logo */}
           <MaskedView
-            style={StyleSheet.absoluteFill}
+            style={styles.maskLayer}
             maskElement={
               <Image
                 source={require('../components/BackgroundPages/main_log1.png')}
@@ -155,49 +102,30 @@ const LandingScreen = ({ navigation }) => {
             }
           >
             <Animated.View
-              style={{
-                flex: 1,
-                justifyContent: 'center',
-                alignItems: 'center',
-                transform: [{ rotate }],
-              }}
+              style={[
+                styles.shineWrapper,
+                {
+                  transform: [
+                    { translateX: shineAnim },
+                    { rotate: '18deg' },
+                  ],
+                },
+              ]}
             >
               <LinearGradient
                 colors={[
                   'transparent',
-                  'rgba(255,255,255,0.1)',
-                  'rgba(255, 255, 255, 0.9)', // 🔥 sharp highlight
-                  'rgba(255,255,255,0.1)',
+                  'rgba(255,255,255,0.15)',
+                  'rgba(230,230,230,0.85)',
+                  'rgba(255,255,255,0.25)',
                   'transparent',
                 ]}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={styles.arcShine}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.shine}
               />
             </Animated.View>
           </MaskedView>
-
-          {/* ✨ Spark */}
-          <Animated.View
-            style={[
-              styles.sparkle,
-              {
-                opacity: sparkle,
-                transform: [
-                  {
-                    scale: sparkle.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.7, 1.3],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            <View style={styles.sparkCore} />
-            <View style={styles.sparkLineHorizontal} />
-            <View style={styles.sparkLineVertical} />
-          </Animated.View>
         </View>
       </View>
     </ImageBackground>
@@ -205,7 +133,6 @@ const LandingScreen = ({ navigation }) => {
 };
 
 export default LandingScreen;
-
 
 const styles = StyleSheet.create({
   background: {
@@ -216,26 +143,38 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1,
   },
 
-  logoWrapper: {
-    width: 500,
-    height: 500,
-    justifyContent: 'center',
+  logoBox: {
+    width: LOGO_SIZE,
+    height: LOGO_SIZE,
     alignItems: 'center',
+    justifyContent: 'center',
   },
 
   logo: {
-    width: '100%',
-    height: '100%',
+    width: LOGO_SIZE,
+    height: LOGO_SIZE,
     resizeMode: 'contain',
   },
 
-  arcShine: {
-    width: 50, // 🔥 thin curved highlight
-    height: 500,
-    borderRadius: 250,
+  maskLayer: {
+    position: 'absolute',
+    width: LOGO_SIZE,
+    height: LOGO_SIZE,
+    top: 0,
+    left: 0,
+  },
+
+  shineWrapper: {
+    width: 120,
+    height: LOGO_SIZE * 1.4,
+    position: 'absolute',
+    top: -100,
+  },
+
+  shine: {
+    flex: 1,
   },
 
   leftHeart: {
