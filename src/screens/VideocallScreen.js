@@ -47,8 +47,7 @@ const VideocallScreen = ({ route, navigation }) => {
     state => state?.calls?.connectedCallDetails,
   );
 
-  const myId = useSelector(state => state.auth?.user?.user_id);
-
+  const myId = useSelector(state => state.user.userdata?.user?.user_id);
   const caller = connectedCallDetails?.caller;
   const connectedUser = connectedCallDetails?.connected_user;
 
@@ -244,15 +243,13 @@ const VideocallScreen = ({ route, navigation }) => {
             return;
           }
 
-          let callerId = caller?.user_id;
+          const state = store.getState();
+          const callState = state.calls.call;
+
+          const callerId = callState?.caller_id;
 
           if (!callerId) {
-            const state = store.getState();
-            callerId = state.calls.connectedCallDetails?.caller?.user_id;
-          }
-
-          if (!callerId) {
-            console.log('❌ Caller still not ready → abort');
+            console.log('❌ caller_id missing in call state');
             return;
           }
 
@@ -263,16 +260,18 @@ const VideocallScreen = ({ route, navigation }) => {
           console.log('🎯 Am I caller?', isCaller);
 
           if (!isCaller) {
-            console.log('🙋 Receiver');
-            return;
+            console.log('🙋 Receiver ready (waiting for offer)');
+            return; // ✅ VERY IMPORTANT
           }
 
           try {
             console.log('📞 Caller → creating offer');
 
-            await new Promise(r => setTimeout(r, 300));
+            const offer = await pcRef.current.createOffer({
+              offerToReceiveAudio: true,
+              offerToReceiveVideo: true,
+            });
 
-            const offer = await pcRef.current.createOffer();
             await pcRef.current.setLocalDescription(offer);
 
             socket.emit('video_offer', { session_id, offer });
@@ -440,80 +439,79 @@ const VideocallScreen = ({ route, navigation }) => {
   }, []);
 
   useEffect(() => {
-  const socket = socketRef.current;
-  if (!socket) return;
+    const socket = socketRef.current;
+    if (!socket) return;
 
-  const handleMic = ({ user_id, micOn }) => {
-    if (String(user_id) !== String(myId)) {
-      setOtherMicOn(micOn);
-    }
-  };
+    const handleMic = ({ user_id, micOn }) => {
+      if (String(user_id) !== String(myId)) {
+        setOtherMicOn(micOn);
+      }
+    };
 
-  socket.on('mic_status_update', handleMic);
+    socket.on('mic_status_update', handleMic);
 
-  return () => {
-    socket.off('mic_status_update', handleMic);
-  };
-}, []);
+    return () => {
+      socket.off('mic_status_update', handleMic);
+    };
+  }, []);
   /* ---------------- UI ---------------- */
 
   return (
     <View style={styles.container}>
-       {!otherMicOn && (
-      <View style={{
-        position: 'absolute',
-        top: 90,
-        right: 20,
-        backgroundColor: '#FF4D4F',
-        padding: 6,
-        borderRadius: 20,
-        zIndex: 20
-      }}>
-        <Ionicons name="mic-off" size={16} color="#fff" />
-      </View>
-    )}
-
-    {!micOn && (
-      <View style={{
-        position: 'absolute',
-        top: 90,
-        left: 20,
-        backgroundColor: '#FF4D4F',
-        padding: 6,
-        borderRadius: 20,
-        zIndex: 20
-      }}>
-        <Ionicons name="mic-off" size={16} color="#fff" />
-      </View>
-    )}
-
-      {!connectedCallDetails ? (
-        <View style={styles.waiting}>
-          <Text style={{ color: 'white' }}>Loading call...</Text>
+      {!otherMicOn && (
+        <View
+          style={{
+            position: 'absolute',
+            top: 90,
+            right: 20,
+            backgroundColor: '#FF4D4F',
+            padding: 6,
+            borderRadius: 20,
+            zIndex: 20,
+          }}
+        >
+          <Ionicons name="mic-off" size={16} color="#fff" />
         </View>
-      ) : !localURL ? (
+      )}
+
+      {!micOn && (
+        <View
+          style={{
+            position: 'absolute',
+            top: 90,
+            left: 20,
+            backgroundColor: '#FF4D4F',
+            padding: 6,
+            borderRadius: 20,
+            zIndex: 20,
+          }}
+        >
+          <Ionicons name="mic-off" size={16} color="#fff" />
+        </View>
+      )}
+
+      {!localURL ? (
         <View style={styles.waiting}>
           <Text style={{ color: 'white' }}>Starting camera...</Text>
         </View>
       ) : !remoteURL ? (
         <>
-          {/* SHOW LOCAL VIDEO WHILE WAITING */}
+          {/* ✅ ALWAYS SHOW LOCAL VIDEO */}
           <RTCView
-            key="bigVideo"
             streamURL={localURL}
             style={styles.bigVideo}
             objectFit="cover"
             mirror
           />
+
           <View style={styles.waitingOverlay}>
             <Text style={{ color: 'white' }}>Waiting for user...</Text>
           </View>
         </>
       ) : (
         <>
-          {/* 🔥 BOTH VIDEOS */}
+          {/* BOTH VIDEOS */}
           <RTCView
-            key="bigVideo"
             streamURL={isRemoteLarge ? remoteURL : localURL}
             style={styles.bigVideo}
             objectFit="cover"
@@ -525,7 +523,6 @@ const VideocallScreen = ({ route, navigation }) => {
             onPress={() => setIsRemoteLarge(prev => !prev)}
           >
             <RTCView
-              key="smallVideo"
               streamURL={isRemoteLarge ? localURL : remoteURL}
               style={styles.smallVideo}
               objectFit="cover"
@@ -569,22 +566,22 @@ const VideocallScreen = ({ route, navigation }) => {
           icon={micOn ? 'mic' : 'mic-off'}
           onPress={() => {
             const track = localStreamRef.current?.getAudioTracks()[0];
-if (!track) return;
+            if (!track) return;
 
-const newState = !track.enabled;
+            const newState = !track.enabled;
 
-track.enabled = newState;
-setMicOn(newState);
+            track.enabled = newState;
+            setMicOn(newState);
 
-const socket = socketRef.current;
+            const socket = socketRef.current;
 
-if (socket && socket.connected) {
-  socket.emit('mic_status', {
-    session_id,
-    user_id: myId,
-    micOn: newState,
-  });
-}
+            if (socket && socket.connected) {
+              socket.emit('mic_status', {
+                session_id,
+                user_id: myId,
+                micOn: newState,
+              });
+            }
           }}
         />
 

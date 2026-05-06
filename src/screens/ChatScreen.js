@@ -416,7 +416,7 @@ const ChatScreen = ({ route, navigation }) => {
 
   const startFriendCall = type => {
     if (!userId) return;
-console.log('📞 CALL TYPE:', type);
+    console.log('📞 CALL TYPE:', type);
     dispatch({
       type: 'OUTGOING_CALL_STARTED',
       payload: {
@@ -434,9 +434,9 @@ console.log('📞 CALL TYPE:', type);
       }),
     );
 
-navigation.navigate('CallStatusScreen', {
-  call_type: type,
-});
+    navigation.navigate('CallStatusScreen', {
+      call_type: type,
+    });
   };
 
   const renderItem = ({ item }) => {
@@ -616,15 +616,15 @@ navigation.navigate('CallStatusScreen', {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
-            onContentSizeChange={() =>
-              flatRef.current?.scrollToEnd({ animated: true })
-            }
+            // onContentSizeChange={() =>
+            //   flatRef.current?.scrollToEnd({ animated: true })
+            // }
           />
 
           <View
             style={[
               styles.bottomWrap,
-              { paddingBottom: Platform.OS === 'ios' ? insets.bottom : 4 },
+              { paddingBottom: Platform.OS === 'ios' ? insets.bottom : 0 },
             ]}
           >
             <View style={styles.inputPill}>
@@ -843,7 +843,7 @@ const styles = StyleSheet.create({
   bottomWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: isSmall ? 8 : 12,
+    paddingHorizontal: isSmall ? 7 : 10,
     paddingTop: 6,
     backgroundColor: '#FCE6F6',
   },
@@ -859,6 +859,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E6E6E6',
     elevation: 2,
+    
   },
   leftIcon: {
     width: 30,
