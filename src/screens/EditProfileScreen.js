@@ -49,10 +49,7 @@ const EditProfileScreen = () => {
 
   /* ===== REDUX ===== */
   const { userdata } = useSelector(state => state.user);
-  const { newUserData } = useSelector(state => state.user);
-
-  const { message: apiResponse } = useSelector(state => state.user);
-  console.log(apiResponse);
+  const { success, message, error } = useSelector(state => state.user);
   /* ===== BASIC INFO ===== */
 
   const [profileImg, setProfileImg] = useState(null);
@@ -133,8 +130,7 @@ const EditProfileScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
-      if (!userdata || isFormInitialized.current) return;
-
+      if (!userdata) return;
       console.log('🟢 Initializing EditProfile form');
 
       // BASIC INFO (ONLY ONCE)
@@ -183,6 +179,14 @@ const EditProfileScreen = () => {
       isFormInitialized.current = true; // 🔒 LOCK IT
     }, [userdata]),
   );
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      isFormInitialized.current = false; // 🔥 allow refresh
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const onDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
@@ -236,25 +240,24 @@ const EditProfileScreen = () => {
   const [isResponseHandled, setIsResponseHandled] = useState(false);
 
   useEffect(() => {
-    if (!apiResponse || isResponseHandled) return;
+    if (!success && !error) return;
 
-    setIsResponseHandled(true); // ✅ stop future alerts
+    let errorMessage = '';
+
+    if (error?.message) {
+      errorMessage = error.message;
+    } else if (error?.errors) {
+      // 🔥 handle field errors
+      errorMessage = Object.values(error.errors).flat().join('\n');
+    } else if (message) {
+      errorMessage = message;
+    }
 
     Alert.alert(
-      apiResponse.success ? 'Success ✅' : 'Error ❌',
-      apiResponse.message,
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            if (apiResponse.success) {
-              navigation.goBack();
-            }
-          },
-        },
-      ],
+      success ? 'Success ✅' : 'Error ❌',
+      errorMessage || 'Something went wrong',
     );
-  }, [apiResponse, isResponseHandled]);
+  }, [success, error]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {

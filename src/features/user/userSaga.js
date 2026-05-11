@@ -89,12 +89,13 @@ function* handleNewUserData(action) {
 
     
   } catch (error) {
-    yield put(
-      newUserDataFailed(
-        error?.response?.data?.message || error.message
-      )
-    );
-  }
+  const backendError =
+    error?.response?.data || {
+      message: error.message,
+    };
+
+  yield put(newUserDataFailed(backendError));
+}
 }
 
 

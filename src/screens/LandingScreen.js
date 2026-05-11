@@ -33,38 +33,83 @@ const LandingScreen = ({ navigation }) => {
     ).start();
   };
 
-  const handleNavigation = async () => {
-    let nextScreen = 'OnboardScreen';
+  // const handleNavigation = async () => {
+  //   let nextScreen = 'OnboardScreen';
 
-    try {
-      const token = await AsyncStorage.getItem('twittoke');
-      const gender = await AsyncStorage.getItem('gender');
+  //   try {
+  //     const token = await AsyncStorage.getItem('twittoke');
+  //     const gender = await AsyncStorage.getItem('gender');
 
       
-      if (token && token !== 'null' && token !== '' && gender) {
-        try {
-          const decoded = jwtDecode(token);
-          const currentTime = Date.now() / 1000;
+  //     if (token && token !== 'null' && token !== '' && gender) {
+  //       try {
+  //         const decoded = jwtDecode(token);
+  //         const currentTime = Date.now() / 1000;
 
-          if (decoded.exp > currentTime) {
-            nextScreen =
-              gender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs';
-          } else {
-            await AsyncStorage.clear();
+  //         if (decoded.exp > currentTime) {
+  //           nextScreen =
+  //             gender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs';
+  //         } else {
+  //           await AsyncStorage.clear();
+  //         }
+  //       } catch (e) {
+  //         await AsyncStorage.clear();
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.log('Auth Error:', error);
+  //   }
+
+  //   setTimeout(() => {
+  //     navigation.replace(nextScreen);
+  //   }, 2500);
+  // };
+
+
+  const handleNavigation = async () => {
+  let nextScreen = 'OnboardScreen';
+
+  try {
+    const token = await AsyncStorage.getItem('twittoke');
+    const gender = await AsyncStorage.getItem('gender');
+
+    console.log('🔑 TOKEN:', token);
+    console.log('⚧ GENDER:', gender);
+
+    // ✅ only check token (NOT gender)
+    if (token && token !== 'null' && token !== '') {
+      try {
+        const decoded = jwtDecode(token);
+        const currentTime = Date.now() / 1000;
+
+        if (decoded.exp > currentTime) {
+
+          // ✅ decide flow AFTER login
+          if (!gender) {
+            nextScreen = 'OnboardScreen';
+          } else if (gender.toLowerCase() === 'male') {
+            nextScreen = 'MaleHomeTabs';
+          } else if (gender.toLowerCase() === 'female') {
+            nextScreen = 'ReceiverBottomTabs';
           }
-        } catch (e) {
+
+        } else {
+          console.log('⏰ Token expired');
           await AsyncStorage.clear();
         }
+      } catch (e) {
+        console.log('❌ Invalid token');
+        await AsyncStorage.clear();
       }
-    } catch (error) {
-      console.log('Auth Error:', error);
     }
+  } catch (error) {
+    console.log('Auth Error:', error);
+  }
 
-    setTimeout(() => {
-      navigation.replace(nextScreen);
-    }, 2500);
-  };
-
+  setTimeout(() => {
+    navigation.replace(nextScreen);
+  }, 2000);
+};
   return (
     <ImageBackground
       source={require('../components/BackgroundPages/backgroundimage.jpg')}

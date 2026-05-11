@@ -30,7 +30,7 @@ const FillYourProfileScreen = ({ navigation, route }) => {
 
   const { languages } = useSelector(state => state.language);
   const { states, cities } = useSelector(state => state.location);
-  const { message: apiResponse } = useSelector(state => state.user);
+const apiResponse = useSelector(state => state.user.message);
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -115,26 +115,26 @@ const FillYourProfileScreen = ({ navigation, route }) => {
     );
   };
 
-  useEffect(() => {
-    if (!apiResponse || isResponseHandled) return;
+useEffect(() => {
+  if (!apiResponse || isResponseHandled) return;
 
-    setIsResponseHandled(true);
+  setIsResponseHandled(true);
 
-    Alert.alert(
-      apiResponse.success ? 'Success ✅' : 'Error ❌',
-      apiResponse.message,
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            if (apiResponse.success) {
-              navigation.navigate('LifeStyleScreen');
-            }
-          },
+  Alert.alert(
+    apiResponse?.success ? 'Success ✅' : 'Error ❌',
+    apiResponse?.message || 'Something went wrong',
+    [
+      {
+        text: 'OK',
+        onPress: () => {
+          if (apiResponse?.success) {
+            navigation.navigate('LifeStyleScreen');
+          }
         },
-      ],
-    );
-  }, [apiResponse]);
+      },
+    ],
+  );
+}, [apiResponse]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {

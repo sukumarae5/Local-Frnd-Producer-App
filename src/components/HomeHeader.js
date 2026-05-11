@@ -62,7 +62,7 @@ const HomeHeader = ({
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => navigation.navigate('UplodePhotoScreen')}
+            onPress={() => navigation.navigate('MyProfileScreen')}
           >
             <Image source={imageUrl} style={styles.profilePic} />
           </TouchableOpacity>

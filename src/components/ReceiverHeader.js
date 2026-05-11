@@ -71,7 +71,7 @@ const ReceiverHeader = ({
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => navigation.navigate("UplodePhotoScreen")}
+          onPress={() => navigation.navigate("MyProfileScreen")}
         >
           {avatar ? (
             <Image source={{ uri: avatar }} style={styles.avatar} />

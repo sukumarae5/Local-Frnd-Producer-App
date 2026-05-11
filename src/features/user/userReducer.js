@@ -71,20 +71,6 @@ export default function userReducer(state = initialState, action) {
       return { ...state, loading: false, error: action.payload };
       
 
-    //   case NEW_USER_DATA_REQUEST:
-    //   return { ...state, loading: true, error: null };
-
-    // case NEW_USER_DATA_SUCCESS:
-    //   return {
-    //     ...state,
-    //     loading: false,
-    //     userdata: action.payload, // 🔥 store only user object
-    //   };
-
-    // case NEW_USER_DATA_FAILED:
-    //   return { ...state, loading: false, error: action.payload };
-      
-
     case USER_LOGOUT_REQUEST:
   return { ...initialState };
 
@@ -100,20 +86,33 @@ case NEW_USER_DATA_SUCCESS:
   return {
     ...state,
     loading: false,
-    success: true,
+    success: action.payload?.success,
     error: null,
-     message:action.payload
-
-     
-    
+    message: {
+      success: true,
+      message: action.payload?.message,
+    },
+    userdata: {
+      ...state.userdata,
+      user: {
+        ...state.userdata?.user,
+        ...action.payload?.data?.user,
+      },
+    },
   };
-
 case NEW_USER_DATA_FAILED:
   return {
     ...state,
     loading: false,
     success: false,
     error: action.payload,
+    message: {
+      success: false,
+      message:
+        action.payload?.message ||
+        action.payload ||
+        'Something went wrong',
+    },
   };
 
 

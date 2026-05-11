@@ -45,8 +45,7 @@ const LifeStyleScreen = ({ navigation }) => {
     options = [],
   } = useSelector(state => state.lifestyle);
 
-  const { message: apiResponse } = useSelector(state => state.user);
-
+  const apiResponse = useSelector(state => state.user.message);
   useEffect(() => {
     const loadUserId = async () => {
       try {
