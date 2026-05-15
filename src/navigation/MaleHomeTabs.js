@@ -94,10 +94,6 @@ const MaleHomeTabs = () => {
           paddingTop: 10,
         },
 
-        sceneContainerStyle: {
-          paddingBottom: 100,
-        },
-
         // ✅ ADDED ONLY THIS
         tabBarBackground: () => (
           <View style={{ flex: 1, justifyContent: 'center' }}>

@@ -18,8 +18,9 @@ import {
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import Voice from '@react-native-voice/voice';
 import { launchCamera } from 'react-native-image-picker';
-import DocumentPicker from '@react-native-documents/picker';
-
+import { pick } from '@react-native-documents/picker';import { chatFileUploadRequest } from "../features/chat/chatAction";
+import { Linking } from "react-native";
+import Video from "react-native-video";
 import { useDispatch, useSelector } from 'react-redux';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -273,17 +274,17 @@ const ChatScreen = ({ route, navigation }) => {
     return out;
   }, [messages]);
 
-  const sendMessage = () => {
-    if (!text.trim() || !userId) return;
+ const sendMessage = () => {
+  if (!text.trim() || !userId) return;
 
-    socketRef.current?.emit('chat_send', {
-      receiverId: userId,
-      content: text.trim(),
-      message_type: 'text',
-    });
+  socketRef.current?.emit('chat_send', {
+    receiverId: userId,
+    content: text.trim(),
+    message_type: 'text',
+  });
 
-    setText('');
-  };
+  setText('');
+};
 
   const startVoiceRecognition = async () => {
     try {
@@ -315,65 +316,66 @@ const ChatScreen = ({ route, navigation }) => {
   };
 
   const openCamera = async () => {
-    try {
-      const hasPermission = await requestPermission(
-        PermissionsAndroid.PERMISSIONS.CAMERA,
-      );
+  try {
+    const hasPermission = await requestPermission(
+      PermissionsAndroid.PERMISSIONS.CAMERA,
+    );
 
-      if (!hasPermission) {
-        Alert.alert('Permission required', 'Please allow camera permission.');
-        return;
-      }
-
-      const result = await launchCamera({
-        mediaType: 'photo',
-        cameraType: 'back',
-        quality: 0.8,
-        saveToPhotos: false,
-      });
-
-      if (result?.didCancel) return;
-
-      const asset = result?.assets?.[0];
-
-      if (!asset?.uri || !userId) return;
-
-      socketRef.current?.emit('chat_send', {
-        receiverId: userId,
-        content: asset.uri,
-        message_type: 'image',
-        file_name: asset.fileName || 'camera-image.jpg',
-        file_type: asset.type || 'image/jpeg',
-      });
-    } catch (e) {
-      console.log('openCamera error:', e);
+    if (!hasPermission) {
+      Alert.alert('Permission required', 'Please allow camera permission.');
+      return;
     }
-  };
 
-  const openFileManager = async () => {
-    try {
-      const result = await DocumentPicker.pick({
-        allowMultiSelection: false,
-      });
+    const result = await launchCamera({
+      mediaType: 'photo',
+      cameraType: 'back',
+      quality: 0.8,
+      saveToPhotos: false,
+    });
 
-      const file = result[0];
+    if (result?.didCancel) return;
 
-      if (!file?.uri || !userId) return;
+    const asset = result?.assets?.[0];
 
-      socketRef.current?.emit('chat_send', {
-        receiverId: userId,
-        content: file.uri,
-        message_type: 'file',
-        file_name: file.name,
-        file_type: file.type,
-        file_size: file.size,
-      });
-    } catch (err) {
-      if (DocumentPicker.isCancel(err)) return;
-      console.log('File error:', err);
-    }
-  };
+    if (!asset?.uri || !userId) return;
 
+    dispatch(chatFileUploadRequest({
+      file: asset,
+      receiverId: userId,
+      message_type: "image",
+      socket: socketRef.current
+    }));
+
+  } catch (e) {
+    console.log('openCamera error:', e);
+  }
+};
+
+const openFileManager = async () => {
+  try {
+    const result = await pick({
+      type: ['*/*'], 
+    });
+
+    const file = result[0];
+
+    if (!file?.uri || !userId) return;
+
+    dispatch(chatFileUploadRequest({
+      file: {
+        uri: file.uri,
+        fileName: file.name,
+        type: file.type || "application/octet-stream",
+      },
+      receiverId: userId,
+      message_type: "file",
+      socket: socketRef.current
+    }));
+
+  } catch (err) {
+    console.log("File error:", err);
+  }
+};
   const startRecording = async () => {
     try {
       if (!audioRecorderRef.current?.startRecorder) {
@@ -403,11 +405,16 @@ const ChatScreen = ({ route, navigation }) => {
 
       if (!path || !userId) return;
 
-      socketRef.current?.emit('chat_send', {
-        receiverId: userId,
-        content: path,
-        message_type: 'audio',
-      });
+      dispatch(chatFileUploadRequest({
+  file: {
+    uri: path,
+    fileName: "voice.mp3",
+    type: "audio/mpeg",
+  },
+  receiverId: userId,
+  message_type: "audio",
+  socket: socketRef.current
+}));
     } catch (e) {
       console.log('stopRecording error:', e);
       setIsRecording(false);
@@ -439,6 +446,45 @@ const ChatScreen = ({ route, navigation }) => {
     });
   };
 
+  const renderContent = (item) => {
+  switch (item.message_type) {
+
+    case "image":
+      return (
+        <Image
+          source={{ uri: item.content }}
+          style={{ width: 200, height: 200, borderRadius: 10 }}
+        />
+      );
+
+    case "video":
+      return (
+        <Video
+          source={{ uri: item.content }}
+          style={{ width: 220, height: 200 }}
+          controls
+        />
+      );
+
+    case "audio":
+      return (
+        <TouchableOpacity onPress={() => Linking.openURL(item.content)}>
+          <Text>▶️ Play Audio</Text>
+        </TouchableOpacity>
+      );
+
+    case "file":
+      return (
+        <TouchableOpacity onPress={() => Linking.openURL(item.content)}>
+          <Text>📎 Open File</Text>
+        </TouchableOpacity>
+      );
+
+    default:
+      return <Text>{item.content}</Text>;
+  }
+};
+
   const renderItem = ({ item }) => {
     if (item.type === 'date') {
       return (
@@ -457,21 +503,15 @@ const ChatScreen = ({ route, navigation }) => {
         })
       : '';
 
-    const getMessageLabel = () => {
-      if (item.message_type === 'audio') return '🎤 Voice message';
-      if (item.message_type === 'image') return '📷 Camera image';
-      if (item.message_type === 'file') return `📎 ${item.file_name || 'File'}`;
-      return item.content;
-    };
+   
 
     return (
       <View
         style={[styles.bubble, isMe ? styles.myBubble : styles.otherBubble]}
       >
-        <Text style={[styles.msgText, isMe && styles.myMsgText]}>
-          {getMessageLabel()}
-        </Text>
-
+       <View>
+  {renderContent(item)}
+</View>
         <View style={styles.metaRow}>
           {!!time && (
             <Text style={[styles.timeText, isMe && styles.myTimeText]}>
@@ -646,8 +686,10 @@ const ChatScreen = ({ route, navigation }) => {
               <TouchableOpacity
                 style={styles.smallIconBtn}
                 activeOpacity={0.7}
-                onPress={openFileManager}
-              >
+onPress={() => {
+  console.log("📎 pressed");
+  openFileManager();
+}}              >
                 <Ionicons name="attach-outline" size={28} color="#C026F8" />
               </TouchableOpacity>
 

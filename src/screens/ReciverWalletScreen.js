@@ -13,7 +13,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useSelector, useDispatch } from 'react-redux';
 import { userDatarequest } from '../features/user/userAction';
-import coinImg from '../assets/coin1.png';
+import ReceiverHeader from '../components/ReceiverHeader';
 import ringImg from '../assets/ring.png';
 import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
 import GoOnlineCard from '../components/GoOnlineCard';
@@ -21,10 +21,11 @@ import GoOnlineCard from '../components/GoOnlineCard';
 const { width } = Dimensions.get('window');
 const scale = size => (width / 375) * size;
 
-const ReciverWalletScreen = ({navigation }) => {
+const ReciverWalletScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { userdata } = useSelector(state => state.user);
-  const coins = userdata?.user?.coin_balance ?? 0;
+const coins = userdata?.user?.rings_balance ?? 0;
+  const avatar = userdata?.images?.avatar || userdata?.images?.profile_image;
 
   useEffect(() => {
     dispatch(userDatarequest());
@@ -39,29 +40,13 @@ const ReciverWalletScreen = ({navigation }) => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.container}
         >
-
           {/* TOP BAR */}
-          <View style={styles.topBar}>
-            <LinearGradient
-              colors={['#E9D5FF', '#C084FC']}
-              style={styles.coinBadge}
-            >
-              <Image source={coinImg} style={styles.coinImage} />
-              <Text style={styles.coinText}>{coins}</Text>
-            </LinearGradient>
-
-            <View style={styles.iconRow}>
-              <View style={styles.iconCircle}>
-                <Icon name="chatbubble" size={18} color="#fff" />
-              </View>
-              <View style={styles.iconCircle}>
-                <Icon name="notifications" size={18} color="#fff" />
-              </View>
-              <View style={styles.iconCircle}>
-                <Icon name="person" size={18} color="#fff" />
-              </View>
-            </View>
-          </View>
+          <ReceiverHeader
+            navigation={navigation}
+            coins={coins}
+            avatar={avatar}
+            unread={0}
+          />
 
           {/* HEART BACKGROUND */}
           <View style={styles.heartsContainer}>
@@ -80,15 +65,11 @@ const ReciverWalletScreen = ({navigation }) => {
             colors={['#C026D3', '#7E22CE']}
             style={styles.conversionCard}
           >
-            <Text style={styles.conversionSmall}>
-              Your Conversion Rate is
-            </Text>
+            <Text style={styles.conversionSmall}>Your Conversion Rate is</Text>
 
             <View style={styles.rateRow}>
               <Image source={ringImg} style={styles.ringIcon} />
-              <Text style={styles.rateText}>
-                1 Ring = 1.2 Rs
-              </Text>
+              <Text style={styles.rateText}>1 Ring = 1.2 Rs</Text>
             </View>
           </LinearGradient>
 
@@ -99,17 +80,12 @@ const ReciverWalletScreen = ({navigation }) => {
             colors={['#D51BF9', '#7E22CE']}
             style={styles.rewardOuterBox}
           >
-
             <View style={styles.rewardInnerCard}>
-              <Text style={styles.rewardMainText}>
-                Total rings rewarded
-              </Text>
+              <Text style={styles.rewardMainText}>Total rings rewarded</Text>
 
               <View style={styles.rewardValueBadge}>
                 <Image source={ringImg} style={styles.ringIcon} />
-                <Text style={styles.rewardValueText}>
-                  {coins}
-                </Text>
+                <Text style={styles.rewardValueText}>{coins}</Text>
               </View>
             </View>
 
@@ -118,9 +94,7 @@ const ReciverWalletScreen = ({navigation }) => {
             </View>
 
             <View style={styles.rewardInnerCard}>
-              <Text style={styles.rewardMainText}>
-                Total price converted
-              </Text>
+              <Text style={styles.rewardMainText}>Total price converted</Text>
 
               <View style={styles.rewardValueBadge}>
                 <Text style={styles.rewardValueText}>
@@ -128,71 +102,17 @@ const ReciverWalletScreen = ({navigation }) => {
                 </Text>
               </View>
             </View>
-
           </LinearGradient>
 
           {/* CATEGORY PILLS */}
           {/* ================= CATEGORY PILLS ================= */}
-<View style={styles.pillRow}>
-
-  <View style={styles.pill}>
-    <Icon name="language-outline" size={16} color="#6B7280" />
-    <Text style={styles.pillText}>Telugu</Text>
-  </View>
-
-  <View style={styles.pill}>
-    <Icon name="wine-outline" size={16} color="#6B7280" />
-    <Text style={styles.pillText}>Party</Text>
-  </View>
-
-  <View style={styles.pill}>
-    <Icon name="location-outline" size={16} color="#6B7280" />
-    <Text style={styles.pillText}>lokal</Text>
-  </View>
-
-</View>
 
           {/* GO ONLINE PREMIUM */}
           <View style={styles.goOnlineWrap}>
-          <GoOnlineCard navigation={navigation} />
-        </View>
+            <GoOnlineCard navigation={navigation} />
+          </View>
 
-          {/* CALL OPTIONS */}
-          {/* ================= CALL OPTIONS ================= */}
-<View style={styles.callRow}>
-
-  <LinearGradient
-    colors={['#C026D3', '#9333EA']}
-    style={styles.callCard}
-  >
-    <Icon name="call-outline" size={18} color="#fff" />
-    <Text style={styles.callCardText}>
-      Random{'\n'}audio call
-    </Text>
-  </LinearGradient>
-
-  <LinearGradient
-    colors={['#C026D3', '#9333EA']}
-    style={styles.callCard}
-  >
-    <Icon name="videocam-outline" size={18} color="#fff" />
-    <Text style={styles.callCardText}>
-      Random{'\n'}video call
-    </Text>
-  </LinearGradient>
-
-  <LinearGradient
-    colors={['#C026D3', '#9333EA']}
-    style={styles.callCard}
-  >
-    <Icon name="location-outline" size={18} color="#fff" />
-    <Text style={styles.callCardText}>
-      Random{'\n'}lokal calls
-    </Text>
-  </LinearGradient>
-
-</View>
-
+          
         </ScrollView>
       </View>
     </WelcomeScreenbackgroungpage>
@@ -201,19 +121,18 @@ const ReciverWalletScreen = ({navigation }) => {
 
 export default ReciverWalletScreen;
 const styles = StyleSheet.create({
-
   container: {
-    padding: scale(20),
-    paddingTop: scale(40),
-    paddingBottom: scale(80),
-  },
-
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
+  flex: 1,
+  paddingHorizontal: scale(16),   // ✅ SAME spacing everywhere
+  paddingTop: scale(10),
+  paddingBottom: scale(80),
+},
+topBar: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: scale(10),
+},
   coinBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -357,71 +276,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 25,
   },
-
-  pillRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  marginVertical: scale(20),
-},
-
-pill: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: '#FCE7F3',   // soft pink like screenshot
-  paddingHorizontal: scale(18),
-  paddingVertical: scale(8),
-  borderRadius: scale(25),
-},
-
-pillText: {
-  marginLeft: scale(6),
-  fontSize: scale(14),
-  color: '#6B7280',
-  fontWeight: '500',
-},
-goOnlineWrap: {
-  paddingHorizontal: scale(16),
+  goOnlineWrap: {
   paddingBottom: scale(30),
   marginTop: scale(10),
 },
-callRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  marginBottom: scale(30),
-},
-callCard: {
-  flex: 1,
-  marginHorizontal: scale(5),
-  borderRadius: scale(15),
-  paddingVertical: scale(14),
-  alignItems: 'center',
-  justifyContent: 'center',
-
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 5 },
-  shadowOpacity: 0.3,
-  shadowRadius: 6,
-  elevation: 6,
-},
-callCardText: {
-  color: '#fff',
-  fontSize: scale(12),
-  textAlign: 'center',
-  marginTop: scale(5),
-  fontWeight: '500',
-},
-  callBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: '#F3E8FF',
-  },
-
-  callText: {
-    color: '#6B21A8',
-    fontWeight: '500',
-  },
-
+  
 });

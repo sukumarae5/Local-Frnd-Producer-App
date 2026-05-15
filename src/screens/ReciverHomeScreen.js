@@ -19,7 +19,7 @@ import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeSc
 
 import { userDatarequest } from '../features/user/userAction';
 import { fetchUnreadCount } from '../features/notification/notificationAction';
-import coinImg from '../assets/coin1.png';
+import coinImg from '../assets/ring.png';
 
 const { width, height } = Dimensions.get('window');
 
@@ -37,8 +37,7 @@ const ReciverHomeScreen = ({ navigation }) => {
   }, [dispatch]);
 
   const coins = userdata?.user?.rings_balance ?? 0;
-  const avatar =
-    userdata?.images?.avatar || userdata?.images?.profile_image;
+  const avatar = userdata?.images?.avatar || userdata?.images?.profile_image;
 
   const sections = [
     { id: 'stories' },
@@ -61,7 +60,7 @@ const ReciverHomeScreen = ({ navigation }) => {
           return <ActiveDostSectionScreen />;
         case 'go':
           return (
-            <View style={{ paddingHorizontal: scale(16) }}>
+            <View style={{ marginHorizontal: scale(16) }}>
               <GoOnlineCard navigation={navigation} />
             </View>
           );
@@ -75,15 +74,14 @@ const ReciverHomeScreen = ({ navigation }) => {
   return (
     <WelcomeScreenbackgroungpage>
       <View style={{ flex: 1 }}>
-
-        {/* 🔥 HEADER */}
-        <ReceiverHeader
-          navigation={navigation}
-          coins={coins}
-          avatar={avatar}
-          unread={unread}
-          coinImg={coinImg}
-        />
+        <View style={styles.headerContainer}>
+          <ReceiverHeader
+            navigation={navigation}
+            coins={coins}
+            avatar={avatar}
+            unread={unread}
+          />
+        </View>
 
         {/* 🔥 SEARCH */}
         <View style={styles.searchWrapper}>
@@ -101,7 +99,6 @@ const ReciverHomeScreen = ({ navigation }) => {
             paddingBottom: scale(90), // 🔥 tab-safe spacing
           }}
         />
-
       </View>
     </WelcomeScreenbackgroungpage>
   );
@@ -121,6 +118,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#D51BF9',
     borderRadius: scale(12),
+  },
+  headerContainer: {
+    paddingHorizontal: scale(16), // ✅ SAME as wallet
   },
 
   input: {

@@ -123,24 +123,22 @@ const CallStatusScreen = ({ navigation, route }) => {
       : call?.status || 'Connecting...';
 
   // 3-Minute Timeout and General Cleanup Logic
-  useEffect(() => {
-    let timeoutId = null;
+ useEffect(() => {
+  let timeoutId = null;
 
-    if (role === 'male') {
-      dispatch(callRequest({ call_type }));
+  if (role === 'male' && call?.call_mode === "RANDOM") {
+    dispatch(callRequest({ call_type }));
 
-      // Set a 3-minute timeout (180,000 milliseconds)
-      timeoutId = setTimeout(() => {
-        dispatch(cancelWaitingRequest());
-        // Show alert/message or navigate back
-        navigation.goBack();
-      }, 180000);
-    }
+    timeoutId = setTimeout(() => {
+      dispatch(cancelWaitingRequest());
+      navigation.goBack();
+    }, 180000);
+  }
 
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [dispatch, call_type, role, navigation]);
+  return () => {
+    if (timeoutId) clearTimeout(timeoutId);
+  };
+}, [dispatch, call_type, role, navigation, call]);
 
   // Handle retry
   useEffect(() => {
