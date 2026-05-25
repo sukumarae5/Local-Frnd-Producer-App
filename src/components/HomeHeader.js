@@ -62,9 +62,16 @@ const HomeHeader = ({
             )}
           </TouchableOpacity>
 
-         <TouchableOpacity onPress={() => navigation.navigate('MyProfileScreen')}>
-            <Image source={imageUrl} style={styles.profilePic} />
-          </TouchableOpacity>
+<TouchableOpacity
+  onPress={() =>
+    navigation.navigate('AboutScreen', {
+      userId: userdata?.user?.user_id,
+      isMyProfile: true,
+    })
+  }
+>
+  <Image source={imageUrl} style={styles.profilePic} />
+</TouchableOpacity>
         </View>
       </View>
     </View>

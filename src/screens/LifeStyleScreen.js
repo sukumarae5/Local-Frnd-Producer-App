@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,10 @@ import {
   Alert,
   ActivityIndicator,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
@@ -29,9 +31,12 @@ const { width, height } = Dimensions.get('window');
 const RF = size => (width / 375) * size;
 
 const LifeStyleScreen = ({ navigation }) => {
+  const scrollRef = useRef(null);
+
   const [about, setAbout] = useState('');
   const [selectedChoices, setSelectedChoices] = useState({});
   const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const [userId, setUserId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,6 +51,31 @@ const LifeStyleScreen = ({ navigation }) => {
   } = useSelector(state => state.lifestyle);
 
   const apiResponse = useSelector(state => state.user.message);
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent =
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, e => {
+      setKeyboardHeight(e.endCoordinates?.height || 0);
+
+      setTimeout(() => {
+        scrollRef.current?.scrollToEnd({ animated: true });
+      }, 250);
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   useEffect(() => {
     const loadUserId = async () => {
       try {
@@ -130,6 +160,12 @@ const LifeStyleScreen = ({ navigation }) => {
     return selectedOption?.name || '';
   };
 
+  const handleAboutFocus = () => {
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 300);
+  };
+
   const handleSubmit = () => {
     if (!userId) {
       Alert.alert('Error', 'User ID not found');
@@ -160,13 +196,20 @@ const LifeStyleScreen = ({ navigation }) => {
 
   return (
     <WelcomeScreenbackgroungpage>
-      <View
-        style={{
-          flex: 1,
-        }}
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
       >
         <ScrollView
-          contentContainerStyle={styles.inner}
+          ref={scrollRef}
+          contentContainerStyle={[
+            styles.inner,
+            {
+              paddingBottom:
+                keyboardHeight > 0 ? keyboardHeight + 90 : height * 0.12,
+            },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           nestedScrollEnabled={true}
@@ -264,6 +307,10 @@ const LifeStyleScreen = ({ navigation }) => {
                   multiline
                   value={about}
                   onChangeText={setAbout}
+                  onFocus={handleAboutFocus}
+                  textAlignVertical="top"
+                  returnKeyType="done"
+                  blurOnSubmit={false}
                 />
               </View>
 
@@ -289,7 +336,7 @@ const LifeStyleScreen = ({ navigation }) => {
             </>
           )}
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </WelcomeScreenbackgroungpage>
   );
 };
@@ -297,10 +344,14 @@ const LifeStyleScreen = ({ navigation }) => {
 export default LifeStyleScreen;
 
 const styles = StyleSheet.create({
+  keyboardView: {
+    flex: 1,
+  },
+
   inner: {
+    flexGrow: 1,
     paddingHorizontal: width * 0.04,
     paddingTop: height * 0.018,
-    paddingBottom: height * 0.08,
   },
 
   headerRow: {
@@ -391,8 +442,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: width * 0.035,
     paddingTop: height * 0.015,
-    height: height * 0.15,
-    textAlignVertical: 'top',
+    paddingBottom: height * 0.015,
+    minHeight: height * 0.15,
     backgroundColor: '#fff',
     color: '#111',
     fontSize: RF(14),

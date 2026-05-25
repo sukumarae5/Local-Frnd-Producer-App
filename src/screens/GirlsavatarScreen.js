@@ -18,7 +18,11 @@ import Icon from "react-native-vector-icons/Ionicons";
 import ContinueButton from "../components/Common/ContinueButton";
 
 const { width, height } = Dimensions.get("window");
-const ITEM_SIZE = (width - width * 0.1) / 3;
+
+const SCREEN_PADDING = 8;
+const COLUMN_GAP = 16;
+const ITEM_SIZE =
+  (width - SCREEN_PADDING * 2 - COLUMN_GAP * 2) / 3;
 
 const GirlsavatarScreen = () => {
   const navigation = useNavigation();
@@ -30,7 +34,8 @@ const GirlsavatarScreen = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const renderAvatar = ({ item }) => {
-    const isSelected = selectedAvatar?.avatar_id === item.avatar_id;
+    const isSelected =
+      selectedAvatar?.avatar_id === item.avatar_id;
 
     return (
       <TouchableOpacity
@@ -41,7 +46,10 @@ const GirlsavatarScreen = () => {
           isSelected && styles.avatarSelected,
         ]}
       >
-        <Image source={{ uri: item.image_url }} style={styles.avatarImage} />
+        <Image
+          source={{ uri: item.image_url }}
+          style={styles.avatarImage}
+        />
       </TouchableOpacity>
     );
   };
@@ -62,31 +70,41 @@ const GirlsavatarScreen = () => {
 
   return (
     <WelcomeScreenbackgroundgpage>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
 
-      <View style={{ flex: 1 }}>
+      <View style={styles.container}>
 
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Icon name="chevron-back" size={26} color="#000" />
+          <TouchableOpacity
+            style={styles.backButton}
+            activeOpacity={0.8}
+            onPress={() => navigation.goBack()}
+          >
+            <Icon
+              name="chevron-back"
+              size={24}
+              color="#000"
+            />
           </TouchableOpacity>
 
-          <Text style={styles.title}>Choose your Avatar</Text>
+          <Text style={styles.title}>
+            Select Your avatar
+          </Text>
         </View>
 
         {/* GRID */}
         <FlatList
           data={avatars}
           renderItem={renderAvatar}
-          keyExtractor={(item) => item.avatar_id.toString()}
+          keyExtractor={(item) =>
+            item.avatar_id.toString()
+          }
           numColumns={3}
           extraData={selectedAvatar}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingHorizontal: width * 0.03,
-            paddingBottom: height * 0.12,
-          }}
+          columnWrapperStyle={styles.columnWrapper}
+          contentContainerStyle={styles.listContent}
         />
 
         {/* BUTTON */}
@@ -106,39 +124,58 @@ const GirlsavatarScreen = () => {
 export default GirlsavatarScreen;
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: SCREEN_PADDING,
+  },
+
   header: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: height * 0.015,
-    marginBottom: height * 0.03,
-    paddingHorizontal: width * 0.05,
+    height: 52,
+    marginTop: height * 0.01,
+    marginBottom: 10,
   },
 
-  title: {
-    color: "#090909",
+  backButton: {
+    width: 28,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "flex-start",
+  },
+
+ title: {
+    color: '#090909',
     fontSize: width * 0.045,
-    fontWeight: "600",
+    fontWeight: '600',
     marginLeft: width * 0.03,
+  },
+
+  listContent: {
+    paddingBottom: height * 0.14,
+  },
+
+  columnWrapper: {
+    justifyContent: "space-between",
+    marginBottom: 16,
   },
 
   avatarWrapper: {
     width: ITEM_SIZE,
     height: ITEM_SIZE,
-    margin: width * 0.015,
-    borderRadius: width * 0.03,
-    backgroundColor: "#000",
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: "#E8E8E8",
   },
 
   avatarSelected: {
     borderWidth: 3,
     borderColor: "#d62edc",
-    borderRadius: width * 0.03,
   },
 
   avatarImage: {
     width: "100%",
     height: "100%",
-    borderRadius: width * 0.03,
     resizeMode: "cover",
   },
 

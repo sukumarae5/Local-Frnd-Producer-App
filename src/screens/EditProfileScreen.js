@@ -595,14 +595,31 @@ const Input = ({ value, onChange, placeholder }) => {
   );
 };
 
-const Gender = ({ label, value, setValue }) => (
-  <TouchableOpacity style={styles.genderItem} onPress={() => setValue(label)}>
-    <View style={[styles.radio, value === label && styles.radioActive]}>
-      {value === label && <View style={styles.radioDot} />}
-    </View>
-    <Text>{label}</Text>
-  </TouchableOpacity>
-);
+const Gender = ({ label, value, setValue }) => {
+  // disable opposite gender
+  const isDisabled =
+    (value === 'Male' && label === 'Female') ||
+    (value === 'Female' && label === 'Male');
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.genderItem,
+        isDisabled && { opacity: 0.4 }, // disabled effect
+      ]}
+      disabled={isDisabled}
+      onPress={() => setValue(label)}
+    >
+      <View style={[styles.radio, value === label && styles.radioActive]}>
+        {value === label && <View style={styles.radioDot} />}
+      </View>
+
+      <Text style={{ color: isDisabled ? '#999' : '#000' }}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+};
 
 const AccordionHeader = ({
   title,
