@@ -18,7 +18,7 @@ const GradientIcon = ({ name }) => (
     colors={["#D51BF9", "#8C37F8"]}
     style={styles.iconWrap}
   >
-    <Icon name={name} size={20} color="#fff" />
+    <Icon name={name} size={22} color="#fff" />
   </LinearGradient>
 );
 
@@ -32,23 +32,36 @@ const ReceiverHeader = ({
   return (
     <View style={styles.topBar}>
       {/* COINS */}
-      <TouchableOpacity
-        style={styles.coinWrapper}
-        onPress={() => navigation.navigate("ReciverWalletScreen")}
-      >
-        <LinearGradient
-          colors={["#D51BF9", "#8C37F8"]}
-          style={styles.coinGradient}
-        >
-          <Image source={coinImg} style={styles.coinImage} />
-          <Text style={styles.coinText}>{coins}</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+     <TouchableOpacity
+  style={styles.coinWrapper}
+  onPress={() => navigation.navigate("ReciverWalletScreen")}
+>
+  <LinearGradient
+    // Matches the light purple to medium purple gradient in image_bd5777.png
+    colors={['#FFA726', '#FF7043']}
+    // colors={["#E199FF", "#D16BFF"]} 
+    style={styles.coinGradient}
+    start={{ x: 0, y: 0.5 }}
+    end={{ x: 1, y: 0.5 }}
+  >
+    <Image 
+      source={require('../assets/ring.png')} // Replace with your ring asset
+      style={styles.coinImage} 
+    />
+    <Text style={styles.coinText}>{coins}</Text>
+  </LinearGradient>
+</TouchableOpacity>
 
       {/* RIGHT ICONS */}
       <View style={styles.rightIcons}>
         <TouchableOpacity>
           <GradientIcon name="gift-outline" />
+        </TouchableOpacity>
+
+          <TouchableOpacity
+          onPress={() => navigation.navigate("MessagesScreen")}
+        >
+          <GradientIcon name="chatbubbles-outline" />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -64,14 +77,10 @@ const ReceiverHeader = ({
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate("MessagesScreen")}
-        >
-          <GradientIcon name="chatbubble-ellipses-outline" />
-        </TouchableOpacity>
+      
 
         <TouchableOpacity
-          onPress={() => navigation.navigate("UplodePhotoScreen")}
+          onPress={() => navigation.navigate("MyProfileScreen")}
         >
           {avatar ? (
             <Image source={{ uri: avatar }} style={styles.avatar} />
@@ -91,8 +100,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: scale(16),
-    marginTop: scale(20),
+    
     marginBottom: scale(10),
   },
 
@@ -101,25 +109,28 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
-  coinGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: scale(14),
-    paddingVertical: scale(6),
-    borderRadius: 30,
-  },
+coinGradient: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingHorizontal: 12,
+  height: 40,              // ✅ match HomeHeader
+  borderRadius: 20,        // ✅ same pill shape
+},
 
   coinImage: {
-    width: scale(20),
-    height: scale(20),
-    marginRight: 6,
+    width: 22,
+    height: 22,
+    resizeMode: 'contain',
   },
-
   coinText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: scale(14),
-  },
+  marginLeft: 6,           // ✅ match HomeHeader
+  fontSize: 16,            // ✅ match HomeHeader
+  fontWeight: '800',
+  color: '#f7efd9',
+  textShadowColor: '#634011',
+  textShadowOffset: { width: 1, height: 1 },
+  textShadowRadius: 1,
+},
 
   rightIcons: {
     flexDirection: "row",

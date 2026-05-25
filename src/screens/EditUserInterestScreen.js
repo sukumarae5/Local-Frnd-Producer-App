@@ -18,12 +18,7 @@ import {
   fetchInterestsRequest,
   updateselectinterestsrequest,
 } from "../features/interest/interestActions";
-import { Dimensions } from "react-native";
 
-const { width, height } = Dimensions.get("window");
-
-const wp = (percent) => (width * percent) / 100;
-const hp = (percent) => (height * percent) / 100;
 const PURPLE = "#B832F9";
 
 const EditUserInterestScreen = () => {
@@ -31,29 +26,25 @@ const EditUserInterestScreen = () => {
   const route = useRoute();
   const dispatch = useDispatch();
 
-  /* ===== PARAMS ===== */
   const { selected = [] } = route.params || {};
 
-  /* ===== REDUX STATE ===== */
   const {
     interests = [],
     updateselectedInterests,
-    updateResponse,
     selectedInterests,
     loading,
   } = useSelector((state) => state.interest);
-console.log(selectedInterests)
-  /* ===== LOCAL STATE ===== */
+
+  console.log(selectedInterests);
+
   const [localSelection, setLocalSelection] = useState(selected);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHandled, setIsHandled] = useState(false);
 
-  /* ===== FETCH INTERESTS ===== */
   useEffect(() => {
     dispatch(fetchInterestsRequest());
   }, [dispatch]);
 
-  /* ===== TOGGLE ===== */
   const toggleInterest = (item) => {
     setLocalSelection((prev) =>
       prev.some((i) => i.id === item.id)
@@ -62,7 +53,6 @@ console.log(selectedInterests)
     );
   };
 
-  /* ===== DONE ===== */
   const handleDone = () => {
     const interestIds = localSelection.map((item) => item.id);
 
@@ -75,108 +65,91 @@ console.log(selectedInterests)
     );
   };
 
-  /* ===== SUCCESS / ERROR HANDLER ===== */
-useEffect(() => {
-  if (!updateselectedInterests || isHandled) return;
+  useEffect(() => {
+    if (!updateselectedInterests || isHandled) return;
 
-  const isSuccess = updateselectedInterests?.success === true;
+    const isSuccess = updateselectedInterests?.success === true;
 
-  const safeMessage =
-    typeof updateselectedInterests?.message === "string"
-      ? updateselectedInterests.message
-      : "Operation completed";
+    const safeMessage =
+      typeof updateselectedInterests?.message === "string"
+        ? updateselectedInterests.message
+        : "Operation completed";
 
-  setIsSubmitting(false);
-  setIsHandled(true);
+    setIsSubmitting(false);
+    setIsHandled(true);
 
-  Alert.alert(
-    isSuccess ? "Success ✅" : "Error ❌",
-    safeMessage,
-    [
+    Alert.alert(isSuccess ? "Success ✅" : "Error ❌", safeMessage, [
       {
         text: "OK",
         onPress: () => {
           if (isSuccess) {
-            dispatch({ type: CLEAR_UPDATE_INTERESTS }); // ✅ CLEAR HERE
+            dispatch({ type: CLEAR_UPDATE_INTERESTS });
             navigation.navigate("EditProfileScreen");
           }
         },
       },
-    ]
-  );
-}, [updateselectedInterests]);
+    ]);
+  }, [updateselectedInterests, isHandled, dispatch, navigation]);
 
-
-  /* Reset when screen opens again */
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
       setIsHandled(false);
     });
+
     return unsubscribe;
   }, [navigation]);
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="chevron-back" size={26} />
-        </TouchableOpacity>
+      <View style={styles.container}>
+        {/* HEADER - SAME LIKE EDIT USER LIFESTYLE SCREEN */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Icon name="chevron-back" size={26} color="#111" />
+          </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Edit Interests</Text>
+          <Text style={styles.headerTitle}>Edit Interests</Text>
 
-        <TouchableOpacity
-          onPress={handleDone}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color={PURPLE} />
-          ) : (
-            <Text style={styles.done}>DONE</Text>
+          <TouchableOpacity onPress={handleDone} disabled={isSubmitting}>
+            {isSubmitting ? (
+              <ActivityIndicator color={PURPLE} size="small" />
+            ) : (
+              <Text style={styles.done}>DONE</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* LIST */}
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {loading && interests.length === 0 && (
+            <Text style={styles.empty}>Loading interests...</Text>
           )}
-        </TouchableOpacity>
+
+          {interests.map((item) => {
+            const selectedItem = localSelection.some((i) => i.id === item.id);
+
+            return (
+              <TouchableOpacity
+                key={item.id}
+                style={[styles.row, selectedItem && styles.selectedRow]}
+                onPress={() => toggleInterest(item)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.text}>{item.name}</Text>
+
+                {selectedItem && (
+                  <Icon name="checkmark-circle" size={20} color={PURPLE} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
-
-      {/* LIST */}
-      <ScrollView>
-        {loading && interests.length === 0 && (
-          <Text style={styles.empty}>Loading interests...</Text>
-        )}
-
-        {interests.map((item) => {
-          const selectedItem = localSelection.some(
-            (i) => i.id === item.id
-          );
-
-          return (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.row,
-                selectedItem && styles.selectedRow,
-              ]}
-              onPress={() => toggleInterest(item)}
-            >
-              <Text style={styles.text}>{item.name}</Text>
-
-              {selectedItem && (
-                <Icon
-                  name="checkmark-circle"
-                  size={20}
-                  color={PURPLE}
-                />
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
     </SafeAreaView>
   );
 };
 
 export default EditUserInterestScreen;
-
-/* ===== STYLES ===== */
 
 const styles = StyleSheet.create({
   safe: {
@@ -184,37 +157,46 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+
   header: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: wp(4),
-    paddingVertical: hp(2),
+    alignItems: "center",
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
+    marginTop: 40,
   },
 
   headerTitle: {
-    fontSize: wp(4.5),
+    fontSize: 18,
     fontWeight: "600",
+    color: "#111",
   },
 
   done: {
     color: PURPLE,
     fontWeight: "700",
-    fontSize: wp(4),
+  },
+
+  scrollContent: {
+    paddingBottom: 30,
   },
 
   empty: {
     textAlign: "center",
-    marginTop: hp(5),
+    marginTop: 40,
     color: "#999",
-    fontSize: wp(3.8),
+    fontSize: 15,
   },
 
   row: {
-    paddingHorizontal: wp(5),
-    paddingVertical: hp(2),
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -227,7 +209,7 @@ const styles = StyleSheet.create({
   },
 
   text: {
-    fontSize: wp(4),
+    fontSize: 16,
     color: "#333",
   },
 });

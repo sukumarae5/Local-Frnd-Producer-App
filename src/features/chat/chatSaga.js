@@ -5,7 +5,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   CHAT_HISTORY_REQUEST,
   CHAT_LIST_REQUEST ,
-  CHAT_MARK_READ_REQUEST
+  CHAT_MARK_READ_REQUEST,
+  CHAT_FILE_UPLOAD_REQUEST
 } from "./chatType";
 
 import {
@@ -14,13 +15,16 @@ import {
   chatListSuccess,
   chatListFailed,
   chatMarkReadSuccess,
-  chatMarkReadFailed
+  chatMarkReadFailed,
+   chatFileUploadSuccess,
+  chatFileUploadFailed
 } from "./chatAction";
 
 import {
   chatHistoryApi,
   chatListApi ,
-  chatReadConversationApi
+  chatReadConversationApi,
+  chatUploadApi
 } from "../../api/userApi";
 
 
@@ -102,6 +106,47 @@ function* markConversationReadSaga(action) {
   }
 }
 
+function* uploadChatFileSaga(action) {
+  try {
+    const token = yield call(AsyncStorage.getItem, "twittoke");
+
+    const { file, receiverId, message_type, socket } = action.payload;
+
+    const formData = new FormData();
+
+    formData.append("file", {
+      uri: file.uri,
+      name: file.fileName || "file",
+      type: file.type || "application/octet-stream",
+    });
+
+    const response = yield call(
+      axios.post,
+      `${chatUploadApi}`, // ✅ create this API
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    const uploaded = response.data;
+
+    // ✅ SEND VIA SOCKET AFTER UPLOAD
+    socket.emit("chat_send", {
+      receiverId,
+      content: uploaded.file_url,
+      message_type,
+    });
+
+    yield put(chatFileUploadSuccess());
+
+  } catch (e) {
+    yield put(chatFileUploadFailed(e.message));
+  }
+}
 
 export default function* chatSaga() {
   yield takeLatest(
@@ -112,6 +157,10 @@ export default function* chatSaga() {
 yield takeLatest(
   CHAT_MARK_READ_REQUEST,
   markConversationReadSaga
+);
+yield takeLatest(
+  CHAT_FILE_UPLOAD_REQUEST,
+  uploadChatFileSaga
 );
 
 }

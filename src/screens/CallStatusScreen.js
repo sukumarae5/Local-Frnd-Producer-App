@@ -1,18 +1,15 @@
 import React, { useEffect, useRef, useContext } from 'react';
-import { View, Text, StyleSheet, Image, Animated } from 'react-native';
+import { View, Text, StyleSheet, Image, Animated, BackHandler } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  callDetailsRequest,
   callRequest,
   cancelWaitingRequest,
   femaleCancelRequest,
 } from '../features/calls/callAction';
 import { SocketContext } from '../socket/SocketProvider';
-import { useFocusEffect } from '@react-navigation/native';
 import MaskedView from '@react-native-masked-view/masked-view';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-
 import { Dimensions } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -60,7 +57,6 @@ const CallStatusScreen = ({ navigation, route }) => {
   const navigatedRef = useRef(false);
 
   const call = useSelector(state => state.calls?.call);
-  console.log(call);
   const call_type = route?.params?.call_type || 'AUDIO';
   const role = route?.params?.role || 'male';
 
@@ -76,22 +72,17 @@ const CallStatusScreen = ({ navigation, route }) => {
         useNativeDriver: true,
       }),
     );
-
     anim.start();
-
     return () => anim.stop();
   }, [rotateAnim]);
 
+  // Handle Female Incoming Call
   useEffect(() => {
     if (role !== 'female') return;
     if (!connected || !socketRef.current) return;
 
     const socket = socketRef.current;
-
     const onIncomingCall = data => {
-      // ✅ chat calls must NOT auto join
-      // if (data?.is_friend === true) return;
-
       if (navigatedRef.current) return;
       navigatedRef.current = true;
 
@@ -105,17 +96,16 @@ const CallStatusScreen = ({ navigation, route }) => {
     };
 
     socket.on('incoming_call', onIncomingCall);
-
     return () => {
       socket.off('incoming_call', onIncomingCall);
     };
   }, [role, connected]);
 
+  // Handle Accepted Call Status
   useEffect(() => {
     if (!call?.status) return;
 
     const status = call.status.toUpperCase();
-
     if (call.is_friend && status === 'ACCEPTED') {
       const screen =
         call.call_type === 'VIDEO' ? 'VideocallScreen' : 'AudiocallScreen';
@@ -132,38 +122,46 @@ const CallStatusScreen = ({ navigation, route }) => {
       ? 'connecting...'
       : call?.status || 'Connecting...';
 
+  // 3-Minute Timeout and General Cleanup Logic
+ useEffect(() => {
+  let timeoutId = null;
+
+  if (role === 'male' && call?.call_mode === "RANDOM") {
+    dispatch(callRequest({ call_type }));
+
+    timeoutId = setTimeout(() => {
+      dispatch(cancelWaitingRequest());
+      navigation.goBack();
+    }, 180000);
+  }
+
+  return () => {
+    if (timeoutId) clearTimeout(timeoutId);
+  };
+}, [dispatch, call_type, role, navigation, call]);
+
+  // Handle retry
   useEffect(() => {
     if (call?.status === 'NO_MATCH' && role === 'male') {
       const retry = setTimeout(() => {
         dispatch(callRequest({ call_type }));
       }, 2000);
-
       return () => clearTimeout(retry);
     }
-  }, [call?.status]);
+  }, [call?.status, call_type, dispatch, role]);
 
-  useEffect(() => {
-    if (role === 'male') {
-      dispatch(callRequest({ call_type }));
-    }
-  }, []);
-
+  // Handle Leaving the Page / Back Handler
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', e => {
-      if (call?.status === 'SEARCHING') {
-        if (role === 'female') {
-          dispatch(femaleCancelRequest());
-        }
-
-        if (role === 'male') {
-          dispatch(cancelWaitingRequest());
-        }
+      if (role === 'female') {
+        dispatch(femaleCancelRequest()); // For female role cancellation
+      } else {
+        dispatch(cancelWaitingRequest()); // For male role cancellation
       }
     });
 
     return unsubscribe;
-  }, [navigation, call]);
-
+  }, [navigation, role, dispatch]);
 
   /* ---------------- UI ANIMATIONS ---------------- */
   const ripple1 = useRef(new Animated.Value(0)).current;
@@ -189,7 +187,6 @@ const CallStatusScreen = ({ navigation, route }) => {
     );
 
     anim.start();
-
     return () => anim.stop();
   }, [ripple1, ripple2]);
 
@@ -239,7 +236,7 @@ const CallStatusScreen = ({ navigation, route }) => {
       style={styles.container}
     >
       <GradientHeart
-        size={wp(30)} // responsive size
+        size={wp(30)}
         style={{
           position: 'absolute',
           top: hp(20),
@@ -247,7 +244,6 @@ const CallStatusScreen = ({ navigation, route }) => {
           opacity: 0.9,
         }}
       />
-
       <GradientHeart
         size={wp(60)}
         style={{
@@ -257,21 +253,15 @@ const CallStatusScreen = ({ navigation, route }) => {
           opacity: 1,
         }}
       />
-
       <View style={{ height: 60 }} />
-
       <View style={styles.centerArea}>
         <Animated.View style={rippleStyle1} />
         <Animated.View style={rippleStyle2} />
-
         <View style={styles.dottedCircle} />
-
         <Animated.View style={styles.rotatingRing}>
           {smallAvatars.map((img, i) => {
             const angle = i * (360 / smallAvatars.length) * (Math.PI / 180);
-
             const r = DOT_RADIUS;
-
             return (
               <Image
                 key={i}
@@ -289,7 +279,6 @@ const CallStatusScreen = ({ navigation, route }) => {
             );
           })}
         </Animated.View>
-
         <View style={styles.centerCircle}>
           <Image
             source={require('../assets/girl2.jpg')}
@@ -297,22 +286,18 @@ const CallStatusScreen = ({ navigation, route }) => {
           />
         </View>
       </View>
-
       <View style={styles.tag}>
         <Text style={styles.tagText}>
           {call_type === 'VIDEO' ? 'Video Call' : 'Audio Call'}
         </Text>
       </View>
-
       <Text style={styles.searchingText}>{displayStatus}</Text>
-
       <View style={{ flex: 1 }} />
-
       <GradientHeart
         size={wp(18)}
         style={{
           position: 'absolute',
-          bottom: hp(16), // 🔥 responsive bottom
+          bottom: hp(16),
           opacity: 0.9,
         }}
       />
@@ -322,20 +307,13 @@ const CallStatusScreen = ({ navigation, route }) => {
 
 export default CallStatusScreen;
 
-/* ---------------- STYLES ---------------- */
-
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center' },
-  heartIcon: {
-    position: 'absolute',
-  },
-
   centerArea: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: hp(25), // instead of 220
+    marginTop: hp(25),
   },
-
   dottedCircle: {
     position: 'absolute',
     width: CENTER_SIZE * 1.7,
@@ -346,7 +324,6 @@ const styles = StyleSheet.create({
     borderStyle: 'dotted',
     opacity: 0.6,
   },
-
   rotatingRing: {
     position: 'absolute',
     width: CENTER_SIZE,
@@ -354,7 +331,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   smallAvatar: {
     width: SMALL_SIZE,
     height: SMALL_SIZE,
@@ -363,7 +339,6 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
     position: 'absolute',
   },
-
   centerCircle: {
     width: CENTER_SIZE + 18,
     height: CENTER_SIZE + 18,
@@ -375,13 +350,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     elevation: 10,
   },
-
   centerImage: {
     width: CENTER_SIZE,
     height: CENTER_SIZE,
     borderRadius: CENTER_SIZE / 2,
   },
-
   tag: {
     backgroundColor: '#A943FF',
     borderRadius: 12,
@@ -389,13 +362,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     marginTop: 80,
   },
-
   tagText: {
     color: '#fff',
     fontSize: 13,
     fontWeight: '600',
   },
-
   searchingText: {
     fontSize: 22,
     fontWeight: '700',

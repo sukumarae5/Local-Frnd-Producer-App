@@ -34,10 +34,17 @@ const PRIMARY = '#A020F0';
 
 const VideocallScreen = ({ route, navigation }) => {
   const { session_id, role } = route.params || {};
+
+  
   const { socketRef, connected } = useContext(SocketContext);
 
   const dispatch = useDispatch();
-
+useEffect(() => {
+  if (session_id) {
+    console.log("📡 Fetching call details...");
+    dispatch(callDetailsRequest());
+  }
+}, [session_id]);
   /* ---------------- REDUX ---------------- */
 
   const { userdata } = useSelector(state => state.user);
@@ -46,6 +53,7 @@ const VideocallScreen = ({ route, navigation }) => {
   const connectedCallDetails = useSelector(
     state => state?.calls?.connectedCallDetails,
   );
+  const call = useSelector(state => state.calls?.call);
 
   const myId = useSelector(state => state.auth?.user?.user_id);
 
@@ -67,6 +75,8 @@ const VideocallScreen = ({ route, navigation }) => {
   const [seconds, setSeconds] = useState(0);
 
   const [micOn, setMicOn] = useState(true);
+  const [otherMicOn, setOtherMicOn] = useState(true);
+
   const [cameraOn, setCameraOn] = useState(true);
   const [speakerOn, setSpeakerOn] = useState(false);
 
@@ -122,6 +132,16 @@ const VideocallScreen = ({ route, navigation }) => {
   };
 
   /* ---------------- INIT ---------------- */
+
+  useEffect(() => {
+  if (call?.status === "ACCEPTED" && call?.is_friend) {
+    console.log("🔥 FRIEND VIDEO FORCE CONNECT");
+
+    socketRef.current?.emit("video_join", {
+      session_id,
+    });
+  }
+}, [call?.status]);
 
   useEffect(() => {
     if (!connected || !socketRef.current || startedRef.current) return;
@@ -226,12 +246,21 @@ const VideocallScreen = ({ route, navigation }) => {
         socket.on('video_answer', onAnswer);
         socket.on('video_ice_candidate', onIce);
 
-        socket.on('video_call_ended', () => {
-          stopCallMedia();
+     socket.on('video_call_ended', () => {
+  if (endedRef.current) return;
 
-          setShowEndModal(true);
-        });
+  console.log("📴 Remote ended");
 
+  stopCallMedia();
+
+  disableExitRef.current = true;
+
+  setTimeout(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();  // ✅ SAFE
+    }
+  }, 100);
+});
         socket.on('video_connected', async () => {
           console.log('🚀 video_connected');
 
@@ -242,18 +271,32 @@ const VideocallScreen = ({ route, navigation }) => {
             return;
           }
 
-          let callerId = caller?.user_id;
+         let callerId = null;
+let retries = 0;
 
-          if (!callerId) {
-            const state = store.getState();
-            callerId = state.calls.connectedCallDetails?.caller?.user_id;
-          }
+while (retries < 10) {
+  if (connectedCallDetails?.caller?.user_id) {
+    callerId = connectedCallDetails.caller.user_id;
+    break;
+  }
 
-          if (!callerId) {
-            console.log('❌ Caller still not ready → abort');
-            return;
-          }
+  const state = store.getState();
+  const details = state.calls.connectedCallDetails;
 
+  if (details?.caller?.user_id) {
+    callerId = details.caller.user_id;
+    break;
+  }
+
+  console.log("⏳ Waiting for caller...");
+  await new Promise(r => setTimeout(r, 200));
+  retries++;
+}
+
+if (!callerId) {
+  console.log("❌ Caller not found → abort");
+  return;
+}
           const isCaller = String(myId) === String(callerId);
 
           console.log('👤 My ID:', myId);
@@ -381,65 +424,119 @@ const VideocallScreen = ({ route, navigation }) => {
 
   /* ---------------- LEAVE SCREEN ---------------- */
 
-  const leaveScreen = () => {
-    dispatch(clearCall());
+const leaveScreen = () => {
+  dispatch(clearCall());
 
-    const nextScreen =
-      myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs';
-
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: nextScreen }],
-      }),
+  if (navigation.canGoBack()) {
+    navigation.goBack();   // ✅ SAFE
+  } else {
+    navigation.navigate(
+      myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs'
     );
-  };
-
-  /* ---------------- EXIT CONFIRM ---------------- */
-
-  /* ---------------- EXIT CONFIRM ---------------- */
-
+  }
+};
+  
   useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', e => {
-      // ✅ FINAL HARD EXIT
-      if (isEndingCallRef.current) return;
+  const unsubscribe = navigation.addListener('beforeRemove', e => {
+    if (isEndingCallRef.current) return;
 
-      if (disableExitRef.current) {
-        navigation.dispatch(e.data.action);
-        return;
-      }
+    e.preventDefault();
 
-      e.preventDefault();
+    setShowEndModal(true);
+  });
 
-      Alert.alert('Exit from Call', 'Are you sure you want to exit the call?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Exit',
-          style: 'destructive',
-          onPress: () => {
-            setShowEndModal(true); // ✅ show rating modal
-          },
-        },
-      ]);
-    });
-
-    return unsubscribe;
-  }, [navigation]);
+  return unsubscribe;
+}, [navigation]);
   /* ---------------- AUTO CLEANUP ---------------- */
 
   useEffect(() => {
-    return () => {
-      if (!endedRef.current) {
-        socketRef.current?.emit('video_call_hangup', { session_id });
+  return () => {
+    if (!endedRef.current && !isEndingCallRef.current) {
+      console.log("🧹 Safe cleanup");
 
-        stopCallMedia();
-      }
-    };
-  }, []);
+      try {
+        socketRef.current?.emit('video_call_hangup', { session_id });
+      } catch {}
+
+      stopCallMedia();
+    }
+  };
+}, []);
+
+  useEffect(() => {
+  const socket = socketRef.current;
+  if (!socket) return;
+
+  const handleMic = ({ user_id, micOn }) => {
+    if (String(user_id) !== String(myId)) {
+      setOtherMicOn(micOn);
+    }
+  };
+
+  socket.on('mic_status_update', handleMic);
+
+  return () => {
+    socket.off('mic_status_update', handleMic);
+  };
+}, []);
+
+const endCall = (rating = 0) => {
+  if (isEndingCallRef.current) return;
+
+  isEndingCallRef.current = true;
+  disableExitRef.current = true;
+
+  console.log("📴 Ending call...");
+
+  socketRef.current?.emit('video_call_hangup', { session_id });
+
+  stopCallMedia();
+
+  dispatch(
+    submitRatingRequest({
+      session_id,
+      rated_user_id: other?.user_id,
+      rating,
+      duration: seconds,
+    }),
+  );
+
+  dispatch(clearCall());
+
+  leaveScreen();
+};
   /* ---------------- UI ---------------- */
 
   return (
     <View style={styles.container}>
+       {!otherMicOn && (
+      <View style={{
+        position: 'absolute',
+        top: 90,
+        right: 20,
+        backgroundColor: '#FF4D4F',
+        padding: 6,
+        borderRadius: 20,
+        zIndex: 20
+      }}>
+        <Ionicons name="mic-off" size={16} color="#fff" />
+      </View>
+    )}
+
+    {!micOn && (
+      <View style={{
+        position: 'absolute',
+        top: 90,
+        left: 20,
+        backgroundColor: '#FF4D4F',
+        padding: 6,
+        borderRadius: 20,
+        zIndex: 20
+      }}>
+        <Ionicons name="mic-off" size={16} color="#fff" />
+      </View>
+    )}
+
       {!connectedCallDetails ? (
         <View style={styles.waiting}>
           <Text style={{ color: 'white' }}>Loading call...</Text>
@@ -522,10 +619,22 @@ const VideocallScreen = ({ route, navigation }) => {
           icon={micOn ? 'mic' : 'mic-off'}
           onPress={() => {
             const track = localStreamRef.current?.getAudioTracks()[0];
-            if (!track) return;
+if (!track) return;
 
-            track.enabled = !track.enabled;
-            setMicOn(track.enabled);
+const newState = !track.enabled;
+
+track.enabled = newState;
+setMicOn(newState);
+
+const socket = socketRef.current;
+
+if (socket && socket.connected) {
+  socket.emit('mic_status', {
+    session_id,
+    user_id: myId,
+    micOn: newState,
+  });
+}
           }}
         />
 
@@ -558,14 +667,13 @@ const VideocallScreen = ({ route, navigation }) => {
           icon="call"
           large
           onPress={() => {
-            if (!connectedUI) {
-              stopCallMedia();
-              leaveScreen();
-              return;
-            }
+  if (!connectedUI) {
+    endCall(0);
+    return;
+  }
 
-            setShowEndModal(true);
-          }}
+  setShowEndModal(true);
+}}
         />
       </LinearGradient>
 
@@ -574,31 +682,10 @@ const VideocallScreen = ({ route, navigation }) => {
         visible={showEndModal}
         otherUser={other}
         onCancel={() => setShowEndModal(false)}
-        onConfirm={rating => {
-          if (isEndingCallRef.current) return;
-          isEndingCallRef.current = true;
-
-          disableExitRef.current = true;
-
-          setShowEndModal(false);
-
-          dispatch(
-            submitRatingRequest({
-              session_id,
-              rated_user_id: other?.user_id,
-              rating,
-              duration: seconds,
-            }),
-          );
-
-          socketRef.current?.emit('video_call_hangup', { session_id });
-
-          stopCallMedia();
-
-          dispatch(clearCall());
-
-          leaveScreen();
-        }}
+        onConfirm={(rating) => {
+  setShowEndModal(false);
+  endCall(rating);
+}}
       />
     </View>
   );

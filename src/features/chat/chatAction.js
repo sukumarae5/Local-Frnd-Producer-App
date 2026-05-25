@@ -13,7 +13,10 @@ CHAT_MARK_READ_REQUEST,
   CHAT_CLEAR,
   CHAT_SET_ACTIVE,
   CHAT_CLEAR_ACTIVE,
-  CHAT_UNREAD_INCREASE ,
+  CHAT_UNREAD_INCREASE, 
+  CHAT_FILE_UPLOAD_REQUEST,
+  CHAT_FILE_UPLOAD_SUCCESS,
+  CHAT_FILE_UPLOAD_FAILED,
 } from "./chatType";
 
 export const chatHistoryRequest = (otherUserId) => ({
@@ -68,6 +71,19 @@ export const chatMarkReadFailed = (error) => ({
   payload: error,
 });
 
+export const chatFileUploadRequest = (fileData) => ({
+  type: CHAT_FILE_UPLOAD_REQUEST,
+  payload: fileData,
+});
+
+export const chatFileUploadSuccess = () => ({
+  type: CHAT_FILE_UPLOAD_SUCCESS,
+});
+
+export const chatFileUploadFailed = (error) => ({
+  type: CHAT_FILE_UPLOAD_FAILED,
+  payload: error,
+});
 
 export const chatClear = () => ({
   type: CHAT_CLEAR,

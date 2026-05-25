@@ -6,32 +6,14 @@ import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaskedView from '@react-native-masked-view/masked-view';
 
-/* ===== ROTATING IMAGES ===== */
 const rotatingItems = [
-  {
-    id: 1,
-    src: require('../assets/boy1.jpg'),
-    type: 'image',
-    size: 40,
-    angle: 0,
-  },
+  { id: 1, src: require('../assets/boy1.jpg'), type: 'image', size: 40, angle: 0 },
   { id: 2, name: 'call', type: 'icon', size: 26, angle: 60 },
-  {
-    id: 3,
-    src: require('../assets/boy3.jpg'),
-    type: 'image',
-    size: 40,
-    angle: 150,
-  },
-  {
-    id: 4,
-    src: require('../assets/man.png'),
-    type: 'image',
-    size: 40,
-    angle: 240,
-  },
+  { id: 3, src: require('../assets/boy3.jpg'), type: 'image', size: 40, angle: 150 },
+  { id: 4, src: require('../assets/man.png'), type: 'image', size: 40, angle: 240 },
   { id: 5, name: 'location', type: 'icon', size: 26, angle: 300 },
 ];
+
 const RADIUS = 120;
 
 const OnboardScreen = ({ navigation }) => {
@@ -40,7 +22,6 @@ const OnboardScreen = ({ navigation }) => {
   const ripple2 = useRef(new Animated.Value(0)).current;
   const AnimatedGradient = Animated.createAnimatedComponent(LinearGradient);
 
-  /* ===== ROTATION ===== */
   useEffect(() => {
     Animated.loop(
       Animated.timing(rotateAnim, {
@@ -52,7 +33,6 @@ const OnboardScreen = ({ navigation }) => {
     ).start();
   }, []);
 
-  /* ===== DOUBLE RIPPLE EFFECT ===== */
   useEffect(() => {
     const animateRipple = (anim, delay) => {
       Animated.loop(
@@ -82,13 +62,16 @@ const OnboardScreen = ({ navigation }) => {
     outputRange: ['0deg', '360deg'],
   });
 
-  /* ===== RIPPLE STYLES ===== */
+  const reverseRotate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '-360deg'],
+  });
+
   const rippleStyle1 = {
     position: 'absolute',
     width: 140,
     height: 140,
     borderRadius: 85,
-
     transform: [
       {
         scale: ripple1.interpolate({
@@ -108,7 +91,6 @@ const OnboardScreen = ({ navigation }) => {
     width: 140,
     height: 140,
     borderRadius: 85,
-    // backgroundColor: 'rgba(226, 133, 251, 0.3)',
     transform: [
       {
         scale: ripple2.interpolate({
@@ -123,27 +105,18 @@ const OnboardScreen = ({ navigation }) => {
     }),
   };
 
-  const reverseRotate = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '-360deg'],
-  });
-
   return (
     <WelcomeScreenbackgroundgpage>
       <View style={styles.container}>
-        {/* LOGO */}
         <Image
           source={require('../components/BackgroundPages/main_log1.png')}
           style={styles.logo}
         />
 
-        {/* CENTER AREA */}
         <View style={styles.centerWrapper}>
           <View style={styles.orbitContainer}>
-            {/* DOTTED ORBIT */}
             <View style={styles.dottedCircle} />
 
-            {/* ROTATING ITEMS */}
             <Animated.View style={{ transform: [{ rotate }] }}>
               {rotatingItems.map(item => {
                 const rad = (item.angle * Math.PI) / 180;
@@ -162,7 +135,6 @@ const OnboardScreen = ({ navigation }) => {
                     }}
                   >
                     {item.type === 'image' ? (
-                      // ✅ IMAGE → with gradient border
                       <LinearGradient
                         colors={['#D51BF9', '#8C37F8']}
                         start={{ x: 0, y: 0 }}
@@ -181,7 +153,7 @@ const OnboardScreen = ({ navigation }) => {
                             height: item.size,
                             borderRadius: item.size / 2,
                             overflow: 'hidden',
-                            backgroundColor: '#fff', // 🔥 IMPORTANT (creates ring effect)
+                            backgroundColor: '#fff',
                           }}
                         >
                           <Animated.View
@@ -201,7 +173,6 @@ const OnboardScreen = ({ navigation }) => {
                         </View>
                       </LinearGradient>
                     ) : (
-                      // ✅ ICON → NO border, NO background
                       <Animated.View
                         style={{
                           width: actualSize,
@@ -228,16 +199,16 @@ const OnboardScreen = ({ navigation }) => {
             colors={['#D51BF9', '#8C37F8']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={[rippleStyle1]}
+            style={rippleStyle1}
           />
 
           <AnimatedGradient
             colors={['#D51BF9', '#8C37F8']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={[rippleStyle2]}
+            style={rippleStyle2}
           />
-          {/* CENTER AVATAR */}
+
           <View style={styles.gradientWrapper}>
             <LinearGradient
               colors={['#D51BF9', '#8C37F8']}
@@ -254,19 +225,14 @@ const OnboardScreen = ({ navigation }) => {
             </LinearGradient>
           </View>
         </View>
-        {/* TEXT */}
+
         <View style={styles.textContainer}>
           <Text style={styles.title}>It’s easy to find a local_frnd</Text>
           <Text style={styles.subtitle}>nearby & around you</Text>
         </View>
 
-        {/* BOTTOM PAGINATION */}
         <View style={styles.bottomWrapper}>
-          <Text style={styles.backText} onPress={() => navigation.goBack()}>
-            Back
-          </Text>
           <View style={styles.paginationWrapper}>
-            {/* ACTIVE DOT */}
             <LinearGradient
               colors={['#D51BF9', '#8C37F8']}
               start={{ x: 0, y: 0 }}
@@ -274,46 +240,41 @@ const OnboardScreen = ({ navigation }) => {
               style={styles.dotActive}
             />
 
-            {/* INACTIVE DOT */}
             <LinearGradient
               colors={['#D51BF9', '#8C37F8']}
-              style={[styles.dot, { opacity: 0.6 }]} // 👈 faded look
+              style={[styles.dot, { opacity: 0.6 }]}
             />
 
-            {/* INACTIVE DOT */}
             <LinearGradient
               colors={['#D51BF9', '#8C37F8']}
               style={[styles.dot, { opacity: 0.6 }]}
             />
           </View>
-          <MaskedView
-            maskElement={
-              <Text
-                style={[styles.nextText, { backgroundColor: 'transparent' }]}
-              >
-                Next
-              </Text>
-            }
-          >
-                  <View style={{ flex: 1, backgroundColor: '#E9C9FF' }}>
-            
-            <LinearGradient
-              colors={['#D51BF9', '#8C37F8']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
+
+          <View style={styles.nextButtonWrapper}>
+            <MaskedView
+              maskElement={
+                <Text style={[styles.nextText, { backgroundColor: 'transparent' }]}>
+                  Next
+                </Text>
+              }
             >
-              <Text
-                style={[
-                  styles.nextText,
-                  { opacity: 0 }, // 🔥 hide actual text, show gradient
-                ]}
-                onPress={() => navigation.navigate('WelcomeScreen02')}
-              >
-                Next
-              </Text>
-            </LinearGradient>
-            </View>
-          </MaskedView>
+              <View style={{ flex: 1, backgroundColor: '#E9C9FF' }}>
+                <LinearGradient
+                  colors={['#D51BF9', '#8C37F8']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Text
+                    style={[styles.nextText, { opacity: 0 }]}
+                    onPress={() => navigation.navigate('WelcomeScreen02')}
+                  >
+                    Next
+                  </Text>
+                </LinearGradient>
+              </View>
+            </MaskedView>
+          </View>
         </View>
       </View>
     </WelcomeScreenbackgroundgpage>
@@ -322,7 +283,6 @@ const OnboardScreen = ({ navigation }) => {
 
 export default OnboardScreen;
 
-/* ===== STYLES ===== */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -330,7 +290,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   logo: {
-   
     width: 120,
     height: 120,
     resizeMode: 'contain',
@@ -350,18 +309,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'absolute',
   },
-
-  dottedOrbit: {
-    position: 'absolute',
-    width: RADIUS * 2,
-    height: RADIUS * 2,
-    borderRadius: RADIUS,
-    borderWidth: 2,
-    borderColor: '#C78CFF',
-    borderStyle: 'dotted', // ⭐ THIS creates the dotted line
-    opacity: 0.8,
-  },
-
   dottedCircle: {
     width: 248,
     height: 248,
@@ -372,7 +319,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     opacity: 0.7,
   },
-
   mainAvatar: {
     width: 90,
     height: 90,
@@ -384,7 +330,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'Lexend',
-    fontStyle: 'semi-bold',
     fontSize: 20,
     fontWeight: '700',
     color: '#111',
@@ -401,23 +346,22 @@ const styles = StyleSheet.create({
     bottom: 40,
     paddingHorizontal: 30,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
-  },
-  backText: {
-    fontSize: 14,
-    color: '#999',
-    fontWeight: '600',
-  },
-  nextText: {
-    fontSize: 14,
-    color: '#9747FF',
-    fontWeight: '600',
   },
   paginationWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  nextButtonWrapper: {
+    position: 'absolute',
+    right: 30,
+  },
+  nextText: {
+    fontSize: 14,
+    color: '#9747FF',
+    fontWeight: '600',
   },
   dot: {
     width: 6,
@@ -434,17 +378,14 @@ const styles = StyleSheet.create({
     height: 130,
     borderRadius: 65,
   },
-
   gradientBorder: {
     flex: 1,
     borderRadius: 65,
-    padding: 3, // 🔥 THIS creates border thickness
+    padding: 3,
   },
-
   innerRing: {
-    flex: 1, // 🔥 IMPORTANT
+    flex: 1,
     borderRadius: 60,
-
     alignItems: 'center',
     justifyContent: 'center',
   },

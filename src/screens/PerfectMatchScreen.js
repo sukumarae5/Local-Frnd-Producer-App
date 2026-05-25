@@ -12,50 +12,59 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
-import Svg, { Defs, ClipPath, Path, Image as SvgImage } from 'react-native-svg';
-import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
-
+import Svg, {
+  Defs,
+  ClipPath,
+  Path,
+  Image as SvgImage,
+  LinearGradient,
+  Stop,
+  Text as SvgText,
+} from 'react-native-svg';
 import { callDetailsRequest } from '../features/calls/callAction';
 
 /* ---------------- HEART IMAGE ---------------- */
 
 const GradientHeartAvatar = ({ source, size = 160, border = 6 }) => {
+  return <HeartImage source={source} size={size} />;
+};
+const GradientText = ({ text, style }) => {
+  const fontSize = style?.fontSize || 24;
+
   return (
-    <LinearGradient
-      colors={['#D51BF9', '#8C37F8']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }} // matches 75deg feel
-      style={{
-        width: size + border * 2,
-        height: size + border * 2,
-        borderRadius: (size + border * 2) / 2,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <HeartImage source={source} size={size} />
-    </LinearGradient>
+    <Svg height={fontSize + 10} width="100%">
+      <Defs>
+        <LinearGradient id="textGrad" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0%" stopColor="#D51BF9" />
+          <Stop offset="100%" stopColor="#8C37F8" />
+        </LinearGradient>
+      </Defs>
+
+      <SvgText
+        fill="url(#textGrad)"
+        fontSize={fontSize}
+        fontWeight="bold"
+        x="50%"
+        y={fontSize}
+        textAnchor="middle" // 🔥 centers horizontally
+      >
+        {text}
+      </SvgText>
+    </Svg>
   );
 };
-
-const GradientText = ({ text, style }) => (
-  <MaskedView maskElement={<Text style={style}>{text}</Text>}>
-    <LinearGradient
-      colors={['#D51BF9', '#8C37F8']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      <Text style={[style, { opacity: 0 }]}>{text}</Text>
-    </LinearGradient>
-  </MaskedView>
-);
 
 const HeartImage = ({ source, size = 150 }) => (
   <Svg width={size} height={size} viewBox="0 0 100 100">
     <Defs>
+      <LinearGradient id="gradBorder" x1="0" y1="0" x2="1" y2="1">
+        <Stop offset="0%" stopColor="#D51BF9" />
+        <Stop offset="100%" stopColor="#8C37F8" />
+      </LinearGradient>
+
       <ClipPath id="clipHeart">
-        <Path d="M50 82 C20 60 10 45 10 30 A20 20 0 0 1 50 30 A20 20 0 0 1 90 30 C90 45 80 60 50 82 Z" />
+        <Path d="M50 78 C22 58 12 45 12 32 A18 18 0 0 1 50 32 A18 18 0 0 1 88 32 C88 45 78 58 50 78 Z" />
       </ClipPath>
     </Defs>
 
@@ -66,9 +75,34 @@ const HeartImage = ({ source, size = 150 }) => (
       clipPath="url(#clipHeart)"
       preserveAspectRatio="xMidYMid slice"
     />
+
+    <Path
+      d="M50 78 C22 58 12 45 12 32 A18 18 0 0 1 50 32 A18 18 0 0 1 88 32 C88 45 78 58 50 78 Z"
+      fill="none"
+      stroke="url(#gradBorder)"
+      strokeWidth="0.8"
+      strokeLinecap="round"
+    />
   </Svg>
 );
 
+const FloatingHeart = ({ size = 40, style }) => {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 100 100" style={style}>
+      <Defs>
+        <LinearGradient id={`heartGrad${size}`} x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0%" stopColor="#D51BF9" />
+          <Stop offset="100%" stopColor="#8C37F8" />
+        </LinearGradient>
+      </Defs>
+
+      <Path
+        d="M50 82 C20 60 10 45 10 30 A20 20 0 0 1 50 30 A20 20 0 0 1 90 30 C90 45 80 60 50 82 Z"
+        fill={`url(#heartGrad${size})`}
+      />
+    </Svg>
+  );
+};
 /* ---------------- MAIN ---------------- */
 
 const PerfectMatchScreen = () => {
@@ -151,6 +185,7 @@ const PerfectMatchScreen = () => {
       });
     }
   }, [count, navigated]);
+  
   /* ---------------- LOADING ---------------- */
 
   if (!caller || !connectedUser) {
@@ -169,7 +204,9 @@ const PerfectMatchScreen = () => {
     <WelcomeScreenbackgroungpage>
       <View style={styles.container}>
         <StatusBar barStyle="dark-content" />
-
+        <FloatingHeart size={50} style={styles.topHeartCenter} />
+        <FloatingHeart size={25} style={styles.topHeartLeft} />
+        <FloatingHeart size={30} style={styles.topHeartRight} />
         {/* Profiles */}
         <View style={styles.profileRow}>
           <View style={styles.profileBlock}>
@@ -178,7 +215,7 @@ const PerfectMatchScreen = () => {
           </View>
 
           <View style={styles.profileBlock}>
-            <GradientHeartAvatar source={{ uri: other?.avatar }} size={160} />{' '}
+            <GradientHeartAvatar source={{ uri: other?.avatar }} size={160} />
             <Text style={styles.name}>{other?.name}</Text>
           </View>
         </View>
@@ -186,6 +223,11 @@ const PerfectMatchScreen = () => {
         <GradientText text="💜 Perfect Match" style={styles.matchText} />
         <GradientText text="Congratulations!" style={styles.congrats} />
         {/* Countdown */}
+
+        <FloatingHeart size={25} style={styles.bottomHeartLeft} />
+        <FloatingHeart size={20} style={styles.bottomHeartRight} />
+        <FloatingHeart size={30} style={styles.bottomHeartCenter} />
+
         <Text style={styles.countdown}>Connecting in {count}...</Text>
       </View>
     </WelcomeScreenbackgroungpage>
@@ -245,5 +287,42 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontSize: 18,
     fontWeight: '600',
+  },
+  topHeartCenter: {
+    position: 'absolute',
+    top: 60,
+    alignSelf: 'center',
+  },
+
+  topHeartLeft: {
+    position: 'absolute',
+    top: 120,
+    left: 30,
+    transform: [{ rotate: '-25deg' }],
+  },
+
+  topHeartRight: {
+    position: 'absolute',
+    top: 120,
+    right: 30,
+     transform: [{ rotate: '25deg' }],
+  },
+
+  bottomHeartLeft: {
+    position: 'absolute',
+    bottom: 140,
+    left: 40,
+  },
+
+  bottomHeartRight: {
+    position: 'absolute',
+    bottom: 140,
+    right: 40,
+  },
+
+  bottomHeartCenter: {
+    position: 'absolute',
+    bottom: 60,
+    alignSelf: 'center',
   },
 });

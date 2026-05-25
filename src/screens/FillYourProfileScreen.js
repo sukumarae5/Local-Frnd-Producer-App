@@ -30,7 +30,7 @@ const FillYourProfileScreen = ({ navigation, route }) => {
 
   const { languages } = useSelector(state => state.language);
   const { states, cities } = useSelector(state => state.location);
-  const { message: apiResponse } = useSelector(state => state.user);
+const apiResponse = useSelector(state => state.user.message);
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -115,26 +115,26 @@ const FillYourProfileScreen = ({ navigation, route }) => {
     );
   };
 
-  useEffect(() => {
-    if (!apiResponse || isResponseHandled) return;
+useEffect(() => {
+  if (!apiResponse || isResponseHandled) return;
 
-    setIsResponseHandled(true);
+  setIsResponseHandled(true);
 
-    Alert.alert(
-      apiResponse.success ? 'Success ✅' : 'Error ❌',
-      apiResponse.message,
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            if (apiResponse.success) {
-              navigation.navigate('LifeStyleScreen');
-            }
-          },
+  Alert.alert(
+    apiResponse?.success ? 'Success ✅' : 'Error ❌',
+    apiResponse?.message || 'Something went wrong',
+    [
+      {
+        text: 'OK',
+        onPress: () => {
+          if (apiResponse?.success) {
+            navigation.navigate('LifeStyleScreen');
+          }
         },
-      ],
-    );
-  }, [apiResponse]);
+      },
+    ],
+  );
+}, [apiResponse]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -217,23 +217,20 @@ const FillYourProfileScreen = ({ navigation, route }) => {
               <DateTimePicker
                 value={date}
                 mode="date"
+                display={Platform.OS === 'android' ? 'default' : 'spinner'}
                 maximumDate={new Date()}
-                onChange={(event, selectedDate) => {
-  if (event.type === 'dismissed') {
-    setShowDatePicker(false);
-    return;
-  }
+              onChange={(event, selectedDate) => {
+  setShowDatePicker(false);
 
-  if (selectedDate) {
-    setShowDatePicker(false);
+  if (!selectedDate) return; // 🔥 important
 
-    const day = selectedDate.getDate().toString().padStart(2, '0');
-    const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
-    const year = selectedDate.getFullYear();
+  setDate(selectedDate);
 
-    setDob(`${day}-${month}-${year}`);
-    setDate(selectedDate); // 🔥 important
-  }
+  const day = selectedDate.getDate().toString().padStart(2, '0');
+  const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+  const year = selectedDate.getFullYear();
+
+  setDob(`${day}-${month}-${year}`);
 }}
               />
             )}

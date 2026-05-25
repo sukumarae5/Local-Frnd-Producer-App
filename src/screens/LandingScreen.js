@@ -13,47 +13,86 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import LinearGradient from 'react-native-linear-gradient';
 
 const LOGO_SIZE = 500;
+const SPLASH_TIME = 2500;
 
 const LandingScreen = ({ navigation }) => {
   const shineAnim = useRef(new Animated.Value(-LOGO_SIZE)).current;
+  const logoScale = useRef(new Animated.Value(0.9)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const loopRef = useRef(null);
 
   useEffect(() => {
+    startIntroAnimation();
     startShineEffect();
-     handleNavigation();
+    handleNavigation();
+
+    return () => {
+      loopRef.current?.stop();
+    };
   }, []);
 
+  const startIntroAnimation = () => {
+    Animated.parallel([
+      Animated.timing(logoOpacity, {
+        toValue: 1,
+        duration: 500,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.spring(logoScale, {
+        toValue: 1,
+        friction: 5,
+        tension: 60,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   const startShineEffect = () => {
-    Animated.loop(
+    shineAnim.setValue(-LOGO_SIZE);
+
+    loopRef.current = Animated.loop(
       Animated.timing(shineAnim, {
         toValue: LOGO_SIZE,
-        duration: 1800,
+        duration: 1400,
         easing: Easing.linear,
         useNativeDriver: true,
       }),
-    ).start();
+      { resetBeforeIteration: true }
+    );
+
+    loopRef.current.start();
   };
 
   const handleNavigation = async () => {
     let nextScreen = 'OnboardScreen';
-  
 
     try {
       const token = await AsyncStorage.getItem('twittoke');
       const gender = await AsyncStorage.getItem('gender');
 
-      
-      if (token && token !== 'null' && token !== '' && gender) {
+      console.log('🔑 TOKEN:', token);
+      console.log('⚧ GENDER:', gender);
+
+      if (token && token !== 'null' && token !== '') {
         try {
           const decoded = jwtDecode(token);
           const currentTime = Date.now() / 1000;
 
-          if (decoded.exp > currentTime) {
-            nextScreen =
-              gender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs';
+          if (decoded.exp && decoded.exp > currentTime) {
+            if (!gender) {
+              nextScreen = 'OnboardScreen';
+            } else if (gender.toLowerCase() === 'male') {
+              nextScreen = 'MaleHomeTabs';
+            } else if (gender.toLowerCase() === 'female') {
+              nextScreen = 'ReceiverBottomTabs';
+            }
           } else {
+            console.log('⏰ Token expired');
             await AsyncStorage.clear();
           }
         } catch (e) {
+          console.log('❌ Invalid token');
           await AsyncStorage.clear();
         }
       }
@@ -63,7 +102,7 @@ const LandingScreen = ({ navigation }) => {
 
     setTimeout(() => {
       navigation.replace(nextScreen);
-    }, 2500);
+    }, SPLASH_TIME);
   };
 
   return (
@@ -83,14 +122,20 @@ const LandingScreen = ({ navigation }) => {
       />
 
       <View style={styles.container}>
-        <View style={styles.logoBox}>
-          {/* Original logo - colors unchanged */}
+        <Animated.View
+          style={[
+            styles.logoBox,
+            {
+              opacity: logoOpacity,
+              transform: [{ scale: logoScale }],
+            },
+          ]}
+        >
           <Image
             source={require('../components/BackgroundPages/main_log1.png')}
             style={styles.logo}
           />
 
-          {/* Silver light effect clipped only inside logo */}
           <MaskedView
             style={styles.maskLayer}
             maskElement={
@@ -114,8 +159,8 @@ const LandingScreen = ({ navigation }) => {
               <LinearGradient
                 colors={[
                   'transparent',
-                  'rgba(255,255,255,0.15)',
-                  'rgba(230,230,230,0.85)',
+                  'rgba(255,255,255,0.05)',
+                  'rgba(255,255,255,0.95)',
                   'rgba(255,255,255,0.25)',
                   'transparent',
                 ]}
@@ -125,7 +170,7 @@ const LandingScreen = ({ navigation }) => {
               />
             </Animated.View>
           </MaskedView>
-        </View>
+        </Animated.View>
       </View>
     </ImageBackground>
   );
@@ -149,6 +194,7 @@ const styles = StyleSheet.create({
     height: LOGO_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
 
   logo: {
@@ -166,10 +212,10 @@ const styles = StyleSheet.create({
   },
 
   shineWrapper: {
-    width: 120,
-    height: LOGO_SIZE * 1.4,
+    width: 140,
+    height: LOGO_SIZE * 1.5,
     position: 'absolute',
-    top: -100,
+    top: -120,
   },
 
   shine: {
@@ -178,49 +224,17 @@ const styles = StyleSheet.create({
 
   leftHeart: {
     position: 'absolute',
-    top: 150, // move partially outside
+    top: 150,
     left: -40,
     resizeMode: 'contain',
-    opacity: 0.3, // 🔥 very light
+    opacity: 0.3,
   },
 
   rightHeart: {
     position: 'absolute',
-    top: 45, // move partially outside
+    top: 45,
     right: -100,
-
     resizeMode: 'contain',
     opacity: 0.3,
-  },
-  sparkle: {
-    position: 'absolute',
-    bottom: 110,
-    right: 110,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  sparkCore: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#fff',
-    shadowOpacity: 1,
-    shadowRadius: 8,
-  },
-
-  sparkLineHorizontal: {
-    position: 'absolute',
-    width: 20,
-    height: 2,
-    backgroundColor: '#FFFFFF',
-  },
-
-  sparkLineVertical: {
-    position: 'absolute',
-    height: 20,
-    width: 2,
-    backgroundColor: '#FFFFFF',
   },
 });

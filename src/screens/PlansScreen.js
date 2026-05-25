@@ -149,8 +149,8 @@ const styles = StyleSheet.create({
   },
   titleWrapper: {
     alignItems: 'center',
-    marginTop: hp(1),
-    marginBottom: hp(1),
+    // marginTop: hp(1),
+    // marginBottom: hp(1),
   },
 
   coinBox: {

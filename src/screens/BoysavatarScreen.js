@@ -9,7 +9,6 @@ import {
   StatusBar,
   Dimensions,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 
 import { useDispatch, useSelector } from 'react-redux';
@@ -19,24 +18,24 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import ContinueButton from '../components/Common/ContinueButton';
 
 const { width, height } = Dimensions.get('window');
-const ITEM_SIZE = (width - width * 0.1) / 3;
+
+const SCREEN_PADDING = 8;
+const COLUMN_GAP = 16;
+const ITEM_SIZE = (width - SCREEN_PADDING * 2 - COLUMN_GAP * 2) / 3;
 
 const BoysavatarScreen = ({ navigation }) => {
   const dispatch = useDispatch();
 
-  /* ================= REDUX ================= */
   const avatars = useSelector(state => state.avatars.avatars);
   const userState = useSelector(state => state.user);
 
   const success = userState?.success;
   const message = userState?.message;
 
-  /* ================= LOCAL STATE ================= */
   const [selectedAvatar, setSelectedAvatar] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResponseHandled, setIsResponseHandled] = useState(false);
 
-  /* ================= SUBMIT ================= */
   const handleContinue = () => {
     if (!selectedAvatar) return;
 
@@ -49,7 +48,6 @@ const BoysavatarScreen = ({ navigation }) => {
     );
   };
 
-  /* ================= HANDLE BACKEND RESPONSE ================= */
   useEffect(() => {
     if (!message || isResponseHandled) return;
 
@@ -73,15 +71,14 @@ const BoysavatarScreen = ({ navigation }) => {
     ]);
   }, [message, success, isResponseHandled, navigation]);
 
-  /* ================= RESET GUARD ================= */
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       setIsResponseHandled(false);
     });
+
     return unsubscribe;
   }, [navigation]);
 
-  /* ================= RENDER ================= */
   const renderAvatar = ({ item }) => {
     const isSelected = selectedAvatar?.avatar_id === item.avatar_id;
 
@@ -89,7 +86,10 @@ const BoysavatarScreen = ({ navigation }) => {
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={() => setSelectedAvatar(item)}
-        style={[styles.avatarWrapper, isSelected && styles.avatarSelected]}
+        style={[
+          styles.avatarWrapper,
+          isSelected && styles.avatarSelected,
+        ]}
       >
         <Image source={{ uri: item.image_url }} style={styles.avatarImage} />
       </TouchableOpacity>
@@ -98,18 +98,19 @@ const BoysavatarScreen = ({ navigation }) => {
 
   return (
     <WelcomeScreenbackgroundgpage>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
 
-      <View style={{ flex: 1 }}>
+      <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
+            activeOpacity={0.8}
             onPress={() => navigation.goBack()}
           >
-            <Icon name="chevron-back" size={26} color="#000" />
+            <Icon name="chevron-back" size={24} color="#000" />
           </TouchableOpacity>
 
-          <Text style={styles.title}>Choose your Avatar</Text>
+          <Text style={styles.title}>Select Your avatar</Text>
         </View>
 
         <FlatList
@@ -119,15 +120,14 @@ const BoysavatarScreen = ({ navigation }) => {
           numColumns={3}
           extraData={selectedAvatar}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingHorizontal: width * 0.03,
-            paddingBottom: height * 0.12, // 🔥 instead of 120
-          }}
+          columnWrapperStyle={styles.columnWrapper}
+          contentContainerStyle={styles.listContent}
         />
+
         <View style={styles.bottomFixed}>
           <ContinueButton
             disabled={!selectedAvatar}
-            loading={isSubmitting} // only needed in Boys screen
+            loading={isSubmitting}
             onPress={handleContinue}
           />
         </View>
@@ -138,22 +138,25 @@ const BoysavatarScreen = ({ navigation }) => {
 
 export default BoysavatarScreen;
 
-/* ================= STYLES ================= */
-
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: SCREEN_PADDING,
+  },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: height * 0.012,
-    marginBottom: height * 0.03,
-    paddingHorizontal: width * 0.05,
+    height: 52,
+    marginTop: height * 0.01,
+    marginBottom: 10,
   },
 
   backButton: {
-    width: width * 0.09,
-    height: width * 0.09,
+    width: 28,
+    height: 40,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
 
   title: {
@@ -163,30 +166,37 @@ const styles = StyleSheet.create({
     marginLeft: width * 0.03,
   },
 
+  listContent: {
+    paddingBottom: height * 0.14,
+  },
+
+  columnWrapper: {
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+
   avatarWrapper: {
     width: ITEM_SIZE,
     height: ITEM_SIZE,
-    margin: width * 0.015, // 🔥 responsive spacing
-    borderRadius: width * 0.03,
-    backgroundColor: '#000',
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#E8E8E8',
   },
 
   avatarSelected: {
     borderWidth: 3,
     borderColor: '#d62edc',
-    borderRadius: width * 0.03, // 🔥 match wrapper
   },
 
   avatarImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
-    borderRadius: width * 0.03,
   },
 
   bottomFixed: {
     position: 'absolute',
-    bottom: height * 0.025, // 🔥 responsive
+    bottom: height * 0.025,
     left: 0,
     right: 0,
     alignItems: 'center',

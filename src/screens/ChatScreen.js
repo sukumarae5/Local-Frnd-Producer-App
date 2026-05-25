@@ -15,14 +15,12 @@ import {
   PermissionsAndroid,
   Alert,
 } from 'react-native';
-
-import LinearGradient from 'react-native-linear-gradient';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import Voice from '@react-native-voice/voice';
 import { launchCamera } from 'react-native-image-picker';
-import DocumentPicker from '@react-native-documents/picker';
-
+import { pick } from '@react-native-documents/picker';import { chatFileUploadRequest } from "../features/chat/chatAction";
+import { Linking } from "react-native";
+import Video from "react-native-video";
 import { useDispatch, useSelector } from 'react-redux';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -100,9 +98,25 @@ const getLastSeenText = dateStr => {
   return `Last seen on ${d.toLocaleDateString()}`;
 };
 
+import MaskedView from '@react-native-masked-view/masked-view';
+import LinearGradient from 'react-native-linear-gradient';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+
 const GradientHeart = ({ size, style, opacity = 1 }) => (
   <View pointerEvents="none" style={[{ position: 'absolute', opacity }, style]}>
-    <Ionicons name="heart" size={size} color="rgba(152, 50, 248, 0.22)" />
+    <MaskedView
+      maskElement={<Ionicons name="heart" size={size} color="black" />}
+    >
+      <LinearGradient
+        colors={[
+          'rgba(255,255,255,0.5)', // 🔥 top (white)
+          'rgba(152,50,248,0.15)', // 🔥 bottom (purple/blue)
+        ]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={{ width: size, height: size }}
+      />
+    </MaskedView>
   </View>
 );
 
@@ -110,13 +124,19 @@ const HeartsBackground = () => (
   <View pointerEvents="none" style={styles.heartsLayer}>
     <GradientHeart size={100} opacity={0.9} style={{ top: 90, right: -15 }} />
     <GradientHeart size={85} opacity={0.85} style={{ top: 260, left: -25 }} />
-    <GradientHeart size={70} opacity={0.9} style={{ top: 380, right: 50 }} />
-    <GradientHeart size={45} opacity={0.9} style={{ bottom: 60, left: 90 }} />
-    <GradientHeart size={35} opacity={0.9} style={{ top: 200, right: 110 }} />
-    <GradientHeart size={60} opacity={0.75} style={{ top: 470, left: 20 }} />
-    <GradientHeart size={40} opacity={0.95} style={{ top: 310, right: 85 }} />
-    <GradientHeart size={45} opacity={0.9} style={{ bottom: 150, right: 20 }} />
-    <GradientHeart size={28} opacity={1} style={{ bottom: 120, left: 50 }} />
+    <GradientHeart size={90} opacity={0.9} style={{ top: 380, right: 50 }} />
+    {/* <GradientHeart size={45} opacity={0.9} style={{ bottom: 60, left: 90 }} /> */}
+    <GradientHeart size={100} opacity={0.75} style={{ top: 500, left: -30 }} />
+    <GradientHeart
+      size={30}
+      opacity={0.9}
+      style={{
+        position: 'absolute',
+        bottom: 100,
+        alignSelf: 'center', // 🔥 centers horizontally
+      }}
+    />
+    <GradientHeart size={80} opacity={1} style={{ bottom: 120, right: 100 }} />
   </View>
 );
 
@@ -254,17 +274,17 @@ const ChatScreen = ({ route, navigation }) => {
     return out;
   }, [messages]);
 
-  const sendMessage = () => {
-    if (!text.trim() || !userId) return;
+ const sendMessage = () => {
+  if (!text.trim() || !userId) return;
 
-    socketRef.current?.emit('chat_send', {
-      receiverId: userId,
-      content: text.trim(),
-      message_type: 'text',
-    });
+  socketRef.current?.emit('chat_send', {
+    receiverId: userId,
+    content: text.trim(),
+    message_type: 'text',
+  });
 
-    setText('');
-  };
+  setText('');
+};
 
   const startVoiceRecognition = async () => {
     try {
@@ -273,7 +293,10 @@ const ChatScreen = ({ route, navigation }) => {
       );
 
       if (!hasPermission) {
-        Alert.alert('Permission required', 'Please allow microphone permission.');
+        Alert.alert(
+          'Permission required',
+          'Please allow microphone permission.',
+        );
         return;
       }
 
@@ -293,65 +316,66 @@ const ChatScreen = ({ route, navigation }) => {
   };
 
   const openCamera = async () => {
-    try {
-      const hasPermission = await requestPermission(
-        PermissionsAndroid.PERMISSIONS.CAMERA,
-      );
+  try {
+    const hasPermission = await requestPermission(
+      PermissionsAndroid.PERMISSIONS.CAMERA,
+    );
 
-      if (!hasPermission) {
-        Alert.alert('Permission required', 'Please allow camera permission.');
-        return;
-      }
-
-      const result = await launchCamera({
-        mediaType: 'photo',
-        cameraType: 'back',
-        quality: 0.8,
-        saveToPhotos: false,
-      });
-
-      if (result?.didCancel) return;
-
-      const asset = result?.assets?.[0];
-
-      if (!asset?.uri || !userId) return;
-
-      socketRef.current?.emit('chat_send', {
-        receiverId: userId,
-        content: asset.uri,
-        message_type: 'image',
-        file_name: asset.fileName || 'camera-image.jpg',
-        file_type: asset.type || 'image/jpeg',
-      });
-    } catch (e) {
-      console.log('openCamera error:', e);
+    if (!hasPermission) {
+      Alert.alert('Permission required', 'Please allow camera permission.');
+      return;
     }
-  };
+
+    const result = await launchCamera({
+      mediaType: 'photo',
+      cameraType: 'back',
+      quality: 0.8,
+      saveToPhotos: false,
+    });
+
+    if (result?.didCancel) return;
+
+    const asset = result?.assets?.[0];
+
+    if (!asset?.uri || !userId) return;
+
+    dispatch(chatFileUploadRequest({
+      file: asset,
+      receiverId: userId,
+      message_type: "image",
+      socket: socketRef.current
+    }));
+
+  } catch (e) {
+    console.log('openCamera error:', e);
+  }
+};
 
 const openFileManager = async () => {
   try {
-    const result = await DocumentPicker.pick({
-      allowMultiSelection: false,
+    const result = await pick({
+      type: ['*/*'], 
     });
 
     const file = result[0];
 
     if (!file?.uri || !userId) return;
 
-    socketRef.current?.emit('chat_send', {
+    dispatch(chatFileUploadRequest({
+      file: {
+        uri: file.uri,
+        fileName: file.name,
+        type: file.type || "application/octet-stream",
+      },
       receiverId: userId,
-      content: file.uri,
-      message_type: 'file',
-      file_name: file.name,
-      file_type: file.type,
-      file_size: file.size,
-    });
+      message_type: "file",
+      socket: socketRef.current
+    }));
+
   } catch (err) {
-    if (DocumentPicker.isCancel(err)) return;
-    console.log('File error:', err);
+    console.log("File error:", err);
   }
 };
-
   const startRecording = async () => {
     try {
       if (!audioRecorderRef.current?.startRecorder) {
@@ -381,11 +405,16 @@ const openFileManager = async () => {
 
       if (!path || !userId) return;
 
-      socketRef.current?.emit('chat_send', {
-        receiverId: userId,
-        content: path,
-        message_type: 'audio',
-      });
+      dispatch(chatFileUploadRequest({
+  file: {
+    uri: path,
+    fileName: "voice.mp3",
+    type: "audio/mpeg",
+  },
+  receiverId: userId,
+  message_type: "audio",
+  socket: socketRef.current
+}));
     } catch (e) {
       console.log('stopRecording error:', e);
       setIsRecording(false);
@@ -394,7 +423,7 @@ const openFileManager = async () => {
 
   const startFriendCall = type => {
     if (!userId) return;
-
+    console.log('📞 CALL TYPE:', type);
     dispatch({
       type: 'OUTGOING_CALL_STARTED',
       payload: {
@@ -412,8 +441,49 @@ const openFileManager = async () => {
       }),
     );
 
-    navigation.navigate('CallStatusScreen');
+    navigation.navigate('CallStatusScreen', {
+      call_type: type,
+    });
   };
+
+  const renderContent = (item) => {
+  switch (item.message_type) {
+
+    case "image":
+      return (
+        <Image
+          source={{ uri: item.content }}
+          style={{ width: 200, height: 200, borderRadius: 10 }}
+        />
+      );
+
+    case "video":
+      return (
+        <Video
+          source={{ uri: item.content }}
+          style={{ width: 220, height: 200 }}
+          controls
+        />
+      );
+
+    case "audio":
+      return (
+        <TouchableOpacity onPress={() => Linking.openURL(item.content)}>
+          <Text>▶️ Play Audio</Text>
+        </TouchableOpacity>
+      );
+
+    case "file":
+      return (
+        <TouchableOpacity onPress={() => Linking.openURL(item.content)}>
+          <Text>📎 Open File</Text>
+        </TouchableOpacity>
+      );
+
+    default:
+      return <Text>{item.content}</Text>;
+  }
+};
 
   const renderItem = ({ item }) => {
     if (item.type === 'date') {
@@ -433,19 +503,15 @@ const openFileManager = async () => {
         })
       : '';
 
-    const getMessageLabel = () => {
-      if (item.message_type === 'audio') return '🎤 Voice message';
-      if (item.message_type === 'image') return '📷 Camera image';
-      if (item.message_type === 'file') return `📎 ${item.file_name || 'File'}`;
-      return item.content;
-    };
+   
 
     return (
-      <View style={[styles.bubble, isMe ? styles.myBubble : styles.otherBubble]}>
-        <Text style={[styles.msgText, isMe && styles.myMsgText]}>
-          {getMessageLabel()}
-        </Text>
-
+      <View
+        style={[styles.bubble, isMe ? styles.myBubble : styles.otherBubble]}
+      >
+       <View>
+  {renderContent(item)}
+</View>
         <View style={styles.metaRow}>
           {!!time && (
             <Text style={[styles.timeText, isMe && styles.myTimeText]}>
@@ -463,7 +529,9 @@ const openFileManager = async () => {
                   : 'checkmark'
               }
               size={14}
-              color={item.is_read ? '#34B7F1' : item.delivered ? '#999' : '#ddd'}
+              color={
+                item.is_read ? '#34B7F1' : item.delivered ? '#999' : '#ddd'
+              }
             />
           )}
         </View>
@@ -505,7 +573,12 @@ const openFileManager = async () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
-        <View style={styles.container}>
+        <LinearGradient
+          colors={['#fdf2fa', '#fdf2fa', '#b470f3']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={{ flex: 1 }}
+        >
           <HeartsBackground />
 
           <LinearGradient
@@ -528,7 +601,10 @@ const openFileManager = async () => {
 
             <View style={styles.profileBox}>
               {avatarUri ? (
-                <Image source={{ uri: avatarUri }} style={styles.headerAvatar} />
+                <Image
+                  source={{ uri: avatarUri }}
+                  style={styles.headerAvatar}
+                />
               ) : (
                 <View style={styles.headerPlaceholder}>
                   <Text style={styles.headerPlaceholderText}>
@@ -580,15 +656,15 @@ const openFileManager = async () => {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
-            onContentSizeChange={() =>
-              flatRef.current?.scrollToEnd({ animated: true })
-            }
+            // onContentSizeChange={() =>
+            //   flatRef.current?.scrollToEnd({ animated: true })
+            // }
           />
 
           <View
             style={[
               styles.bottomWrap,
-              { paddingBottom: Platform.OS === 'ios' ? insets.bottom : 4 },
+              { paddingBottom: Platform.OS === 'ios' ? insets.bottom : 0 },
             ]}
           >
             <View style={styles.inputPill}>
@@ -610,8 +686,10 @@ const openFileManager = async () => {
               <TouchableOpacity
                 style={styles.smallIconBtn}
                 activeOpacity={0.7}
-                onPress={openFileManager}
-              >
+onPress={() => {
+  console.log("📎 pressed");
+  openFileManager();
+}}              >
                 <Ionicons name="attach-outline" size={28} color="#C026F8" />
               </TouchableOpacity>
 
@@ -654,7 +732,7 @@ const openFileManager = async () => {
               </TouchableOpacity>
             )}
           </View>
-        </View>
+        </LinearGradient>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -807,7 +885,7 @@ const styles = StyleSheet.create({
   bottomWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: isSmall ? 8 : 12,
+    paddingHorizontal: isSmall ? 7 : 10,
     paddingTop: 6,
     backgroundColor: '#FCE6F6',
   },
@@ -823,6 +901,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E6E6E6',
     elevation: 2,
+    
   },
   leftIcon: {
     width: 30,

@@ -118,10 +118,24 @@ const WelcomeScreen02 = ({ navigation }) => {
 
       console.log('🟢 Token valid, auto login now');
 
+      const step = await AsyncStorage.getItem('onboarding_step');
+
+      if (!gender) {
+        navigation.replace('SelectYourCountryScreen');
+        return;
+      }
+
+      if (step) {
+        navigation.replace('SelectYourCountryScreen');
+        return;
+      }
+
       if (gender === 'Male') {
         navigation.replace('MaleHomeTabs');
+      } else if (gender === 'Female') {
+        navigation.replace('FemaleHomeTabs');
       } else {
-        navigation.replace('ReceiverBottomTabs');
+        navigation.replace('SelectYourCountryScreen');
       }
     } catch (error) {
       console.log('❌ Auto login error:', error);
@@ -355,7 +369,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   logo: {
-    
     width: 120,
     height: 120,
     resizeMode: 'contain',

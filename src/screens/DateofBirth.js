@@ -161,8 +161,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#2a072aff",
     borderWidth: 3,
     borderColor: "#f896f8ff",
-
-    // ✨ Glow / Shadow
     shadowColor: "#f896f8ff",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,

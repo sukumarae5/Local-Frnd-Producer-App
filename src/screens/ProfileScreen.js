@@ -27,8 +27,8 @@ const GradientHeart = ({ size = 140, style }) => {
     >
       <LinearGradient
         colors={[
-          'rgba(255,255,255,0.5)', // top
-          'rgba(152,50,248,0.15)', // bottom
+          'rgba(255,255,255,0.5)', 
+          'rgba(152,50,248,0.15)', 
         ]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }} // 180deg
@@ -57,7 +57,12 @@ const ProfileScreen = () => {
     <WelcomeScreenbackgroungpage>
       <View style={styles.container}>
         {/* ================= TOP PURPLE SECTION ================= */}
-        <View style={styles.topBg}>
+       <LinearGradient
+  colors={['#F3D1FF', '#E9C9FF', '#F8D4F4']}
+  start={{ x: 0, y: 0 }}
+  end={{ x: 0, y: 1 }}
+  style={styles.topBg}
+>
           {/* HEART BACKGROUND */}
           <GradientHeart size={140} style={styles.leftHeart} />
           <GradientHeart size={220} style={styles.rightHeart} />
@@ -120,8 +125,7 @@ const ProfileScreen = () => {
               fill="#FFFFFF"
             />
           </Svg>
-        </View>
-
+        </LinearGradient>
         {/* ================= CONTENT ================= */}
         <View style={styles.content}>
           <View style={styles.listBox}>
@@ -184,11 +188,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  topBg: {
-    height: 300,
-    backgroundColor: '#F3D1FF',
-    paddingTop: 10, // 🔥 replaces SafeArea
-  },
+ topBg: {
+  height: 300,
+  paddingTop: 10,
+  overflow: 'hidden', // 👈 important for curve + hearts
+},
 
   leftHeart: {
     position: 'absolute',
@@ -293,3 +297,4 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 });
+

@@ -242,7 +242,7 @@ export default RecentsCallHistoryScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: Platform.OS === "ios" ? 50 : 25,
+    // paddingTop: Platform.OS === "ios" ? 50 : 25,
     paddingHorizontal: width * 0.05,
   },
 

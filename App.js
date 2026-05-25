@@ -53,19 +53,19 @@ import EndCallConfirmModal from './src/screens/EndCallConfirmationScreen';
 import NotificationScreen from './src/screens/NotificationScreen';
 import HelpCenterScreen from './src/screens/HelpCenterScreen';
 import ReciverWalletScreen from './src/screens/ReciverWalletScreen';
-import StoryViewer from "./src/screens/StoryViewer"
-import PaymentScreen from "./src/screens/PaymentScreen"
-import ProcessingScreen from "./src/screens/ProcessingScreen"
-import PaymentSuccessScreen from "./src/screens/PaymentSuccessScreen"
-
+import StoryViewer from './src/screens/StoryViewer';
+import PaymentScreen from './src/screens/PaymentScreen';
+import ProcessingScreen from './src/screens/ProcessingScreen';
+import PaymentSuccessScreen from './src/screens/PaymentSuccessScreen';
+import MyProfileScreen from './src/screens/MyProfileScreen';
 
 /*
 IMPORTANT
 If you really navigate to IncomingCallScreen,
 import it here also.
 */
-import { useContext } from "react";
-import { SocketContext } from "./src/socket/SocketProvider";
+import { useContext } from 'react';
+import { SocketContext } from './src/socket/SocketProvider';
 import IncomingCallScreen from './src/screens/IncomingCallScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { restoreLogin } from './src/features/Auth/authAction';
@@ -75,9 +75,8 @@ import { useNavigationContainerRef } from '@react-navigation/native';
 
 const Stack = createNativeStackNavigator();
 
-function MainNavigator({ navigationRef, isNavReady  }) {
-
- const { socketRef } = useContext(SocketContext);
+function MainNavigator({ navigationRef, isNavReady }) {
+  const { socketRef } = useContext(SocketContext);
   const call = useSelector(state => state.calls?.call);
   const token = useSelector(state => state.auth?.token);
   const dispatch = useDispatch();
@@ -86,9 +85,9 @@ function MainNavigator({ navigationRef, isNavReady  }) {
     const init = async () => {
       const token = await AsyncStorage.getItem('twittoke');
       const userId = await AsyncStorage.getItem('user_id');
-      const gender = await AsyncStorage.getItem("gender");
+      const gender = await AsyncStorage.getItem('gender');
 
-      console.log('🔑 APP TOKEN:', token,userId,gender);
+      console.log('🔑 APP TOKEN:', token, userId, gender);
 
       if (token) {
         dispatch(
@@ -104,103 +103,128 @@ function MainNavigator({ navigationRef, isNavReady  }) {
 
     init();
   }, []);
- useCallHandler(navigationRef,isNavReady );
-
+  useCallHandler(navigationRef, isNavReady);
 
   return (
     <Stack.Navigator
       // initialRouteName={token ? 'ReceiverBottomTabs' : 'Landing'}
-     initialRouteName="Landing"
+      initialRouteName="Landing"
       screenOptions={{ headerShown: false }}
     >
       <Stack.Screen name="Landing" component={LandingScreen} />
+      <Stack.Screen name="OnboardScreen" component={OnboardScreen} />
+      <Stack.Screen name="WelcomeScreen02" component={WelcomeScreen02} />
+      <Stack.Screen name="WelcomeScreen03" component={WelcomeScreen03} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Phone" component={PhoneScreen} />
       <Stack.Screen name="Otp" component={OtpScreen} />
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="DateofBirth" component={DobGenderScreen} />
-      <Stack.Screen name="GenderScreen" component={GenderScreen} />
-      <Stack.Screen name="UserScreen" component={UserScreen} />
-      <Stack.Screen name="LocationScreen" component={LocationScreen} />
-      <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
-      <Stack.Screen name="PlanScreen" component={PlanScreen} />
-      <Stack.Screen name="UplodePhotoScreen" component={UplodePhotoScreen} />
-      <Stack.Screen name="VideocallScreen" component={VideocallScreen} />
-      <Stack.Screen name="AudiocallScreen" component={AudiocallScreen} />
-      <Stack.Screen name="OnboardScreen" component={OnboardScreen} />
-      <Stack.Screen name="GirlsavatarScreen" component={GirlsavatarScreen} />
-      <Stack.Screen name="BoysavatarScreen" component={BoysavatarScreen} />
-      <Stack.Screen name="ChoosePlanScreen" component={ChoosePlanScreen} />
-      <Stack.Screen name="LanguageScreen" component={LanguageScreen} />
-      <Stack.Screen name="ReciverHomeScreen" component={ReciverHomeScreen} />
-      <Stack.Screen name="WelcomeScreen02" component={WelcomeScreen02} />
-      <Stack.Screen name="WelcomeScreen03" component={WelcomeScreen03} />
       <Stack.Screen
         name="SelectYourCountryScreen"
         component={SelectYourCountryScreen}
-      />
-      <Stack.Screen name="InterestScreen" component={InterestScreen} />
-      <Stack.Screen
-        name="SelectYourIdealMatchScreen"
-        component={SelectYourIdealMatchScreen}
       />
       <Stack.Screen
         name="FillYourProfileScreen"
         component={FillYourProfileScreen}
       />
       <Stack.Screen name="LifeStyleScreen" component={LifeStyleScreen} />
+      <Stack.Screen name="InterestScreen" component={InterestScreen} />
+      <Stack.Screen name="GenderScreen" component={GenderScreen} />
+      <Stack.Screen name="GirlsavatarScreen" component={GirlsavatarScreen} />
+      <Stack.Screen name="BoysavatarScreen" component={BoysavatarScreen} />
       <Stack.Screen
         name="AddYourPhotosScreen"
         component={AddYourPhotosScreen}
       />
       <Stack.Screen
+        name="SelectYourIdealMatchScreen"
+        component={SelectYourIdealMatchScreen}
+      />
+
+      <Stack.Screen name="MaleHomeTabs" component={MaleHomeTabs} />
+      <Stack.Screen name="ReceiverBottomTabs" component={ReceiverBottomTabs} />
+      <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
+      <Stack.Screen name="MyProfileScreen" component={MyProfileScreen} />
+      <Stack.Screen name="MessagesScreen" component={MessagesScreen} />
+      <Stack.Screen name="ChatScreen" component={ChatScreen} />
+      <Stack.Screen
         name="RecentsCallHistoryScreen"
         component={RecentsCallHistoryScreen}
       />
-      <Stack.Screen name="MessagesScreen" component={MessagesScreen} />
-      <Stack.Screen name="MaleHomeTabs" component={MaleHomeTabs} />
-      <Stack.Screen name="ReceiverBottomTabs" component={ReceiverBottomTabs} />
-      <Stack.Screen name="AboutScreen" component={AboutScreen} />
-      <Stack.Screen name="ChatScreen" component={ChatScreen} />
+      <Stack.Screen
+        name="FriendRequestsScreen"
+        component={FriendRequestsScreen}
+      />
+      <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+      <Stack.Screen name="PlanScreen" component={PlanScreen} />
+      <Stack.Screen name="ChoosePlanScreen" component={ChoosePlanScreen} />
+      <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
+      <Stack.Screen name="ProcessingScreen" component={ProcessingScreen} />
+      <Stack.Screen
+        name="PaymentSuccessScreen"
+        component={PaymentSuccessScreen}
+      />
+
       <Stack.Screen name="StoriesScreen" component={StoriesScreen} />
+      <Stack.Screen name="StoryViewer" component={StoryViewer} />
+      <Stack.Screen name="UplodePhotoScreen" component={UplodePhotoScreen} />
+      <Stack.Screen name="VideocallScreen" component={VideocallScreen} />
+      <Stack.Screen name="AudiocallScreen" component={AudiocallScreen} />
       <Stack.Screen name="CallStatusScreen" component={CallStatusScreen} />
+      <Stack.Screen name="PerfectMatchScreen" component={PerfectMatchScreen} />
+      <Stack.Screen name="IncomingCallScreen" component={IncomingCallScreen} />
+
       <Stack.Screen
         name="EndCallConfirmModal"
         component={EndCallConfirmModal}
       />
-      <Stack.Screen name="PerfectMatchScreen" component={PerfectMatchScreen} />
+      <Stack.Screen name="AboutScreen" component={AboutScreen} />
+      <Stack.Screen name="ReciverHomeScreen" component={ReciverHomeScreen} />
+      <Stack.Screen
+        name="ReciverWalletScreen"
+        component={ReciverWalletScreen}
+      />
       <Stack.Screen name="SettingScreen" component={SettingScreen} />
       <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
-      <Stack.Screen name="EditUserInterestScreen"component={EditUserInterestScreen} />
-      <Stack.Screen name="EditUserLifestyleScreen"component={EditUserLifestyleScreen}/>
-      <Stack.Screen name="EditUserGeneralInfoScreen" component={EditUserGeneralInfoScreen}/>
-      <Stack.Screen name="NotificationScreen"component={NotificationScreen}/>
-      <Stack.Screen name="FriendRequestsScreen" component={FriendRequestsScreen}/>
-      <Stack.Screen name="IncomingCallScreen" component={IncomingCallScreen}/>
-      <Stack.Screen name="HelpCenterScreen" component={HelpCenterScreen}/>
-      <Stack.Screen name="ReciverWalletScreen" component={ReciverWalletScreen}/>
-      <Stack.Screen name="ProcessingScreen" component={ProcessingScreen} />      
-      <Stack.Screen name="StoryViewer" component={StoryViewer} />      
-      <Stack.Screen name="PaymentScreen" component={PaymentScreen} />      
-      <Stack.Screen name="PaymentSuccessScreen" component={PaymentSuccessScreen} />      
-      
-      
-      </Stack.Navigator>
+      <Stack.Screen
+        name="EditUserInterestScreen"
+        component={EditUserInterestScreen}
+      />
+      <Stack.Screen
+        name="EditUserLifestyleScreen"
+        component={EditUserLifestyleScreen}
+      />
+      <Stack.Screen
+        name="EditUserGeneralInfoScreen"
+        component={EditUserGeneralInfoScreen}
+      />
+      <Stack.Screen name="HelpCenterScreen" component={HelpCenterScreen} />
+
+      {/* <Stack.Screen name="DateofBirth" component={DobGenderScreen} />
+      <Stack.Screen name="UserScreen" component={UserScreen} />
+      <Stack.Screen name="LocationScreen" component={LocationScreen} />
+      <Stack.Screen name="LanguageScreen" component={LanguageScreen} /> */}
+    </Stack.Navigator>
   );
 }
 
 export default function App() {
-
   const navigationRef = useNavigationContainerRef();
-const [isNavReady, setIsNavReady] = useState(false);
+  const [isNavReady, setIsNavReady] = useState(false);
   return (
     <Provider store={store}>
       <SocketProvider>
-        <NavigationContainer ref={navigationRef}  onReady={() => {
-    console.log("✅ NAVIGATION READY");
-    setIsNavReady(true);
-  }}>
-          <MainNavigator navigationRef={navigationRef} isNavReady={isNavReady}/>
+        <NavigationContainer
+          ref={navigationRef}
+          onReady={() => {
+            console.log('✅ NAVIGATION READY');
+            setIsNavReady(true);
+          }}
+        >
+          <MainNavigator
+            navigationRef={navigationRef}
+            isNavReady={isNavReady}
+          />
           <GlobalIncomingCall navigationRef={navigationRef} />
         </NavigationContainer>
       </SocketProvider>

@@ -1,16 +1,16 @@
 // src/navigation/ReceiverHomeTabs.js
 
-import React from "react";
-import { View } from "react-native";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import Ionicons from "react-native-vector-icons/Ionicons";
-import LinearGradient from "react-native-linear-gradient";
-
-import ReciverHomeScreen from "../screens/ReciverHomeScreen";
-import RecentsCallHistoryScreen from "../screens/RecentsCallHistoryScreen";
-import ProfileScreen from "../screens/ProfileScreen";
-import { Dimensions } from "react-native";
-const { width } = Dimensions.get("window");
+import React from 'react';
+import { View } from 'react-native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import LinearGradient from 'react-native-linear-gradient';
+import MessagesScreen from '../screens/MessagesScreen';
+import ReciverHomeScreen from '../screens/ReciverHomeScreen';
+import RecentsCallHistoryScreen from '../screens/RecentsCallHistoryScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import { Dimensions } from 'react-native';
+const { width } = Dimensions.get('window');
 
 const Tab = createBottomTabNavigator();
 
@@ -19,9 +19,9 @@ const TabIcon = ({ focused, name }) => {
   if (!focused) {
     return (
       <Ionicons
-        name={name}        // outline icon
-        size={30}
-        color="#D51BF9"   // purple outline like screenshot
+        name={name} // outline icon
+        size={25}
+        color="#D51BF9" // purple outline like screenshot
       />
     );
   }
@@ -29,15 +29,15 @@ const TabIcon = ({ focused, name }) => {
   // ---------------- Active (gradient background + border) ----------------
   return (
     <LinearGradient
-      colors={["#D51BF9", "#8C37F8"]}
+      colors={['#D51BF9', '#8C37F8']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={{
         width: 40,
         height: 40,
         borderRadius: 20,
-        justifyContent: "center",
-        alignItems: "center",
+        justifyContent: 'center',
+        alignItems: 'center',
       }}
     >
       <View
@@ -45,21 +45,21 @@ const TabIcon = ({ focused, name }) => {
           width: 36,
           height: 36,
           borderRadius: 18,
-          backgroundColor: "#ffffff",
-          justifyContent: "center",
-          alignItems: "center",
+          backgroundColor: '#ffffff',
+          justifyContent: 'center',
+          alignItems: 'center',
         }}
       >
         <LinearGradient
-          colors={["#D51BF9", "#8C37F8"]}
+          colors={['#D51BF9', '#8C37F8']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
             width: 30,
             height: 30,
             borderRadius: 20,
-            justifyContent: "center",
-            alignItems: "center",
+            justifyContent: 'center',
+            alignItems: 'center',
           }}
         >
           <Ionicons name={name} size={20} color="#fff" />
@@ -72,93 +72,57 @@ const TabIcon = ({ focused, name }) => {
 const ReceiverBottomTabs = () => {
   return (
     <Tab.Navigator
-//       screenOptions={{
-//         headerShown: false,
-//         tabBarShowLabel: false,
-//  tabBarStyle: {
-//   position: "fixed",
-//   left: 40,
-//   right: 40,
-//   bottom: 20,
-//   height: 60,
-//   borderRadius: 30,
-//   backgroundColor: "#ffffff",
-//   borderTopWidth: 0,
-//   elevation: 8,
-// },
+      screenOptions={{
+        headerShown: false,
+        tabBarShowLabel: false,
 
-// tabBarItemStyle: {
-//   justifyContent: "center",
-//   alignItems: "center",
-//   paddingTop: 10,
-// },
-//       }}
+        tabBarStyle: {
+          position: 'absolute',
+          left: 20,
+          right: 20,
 
-screenOptions={{
-  headerShown: false,
-  tabBarShowLabel: false,
+          height: 60,
+          borderRadius: 20,
+          backgroundColor: '#ffffff',
+          borderTopWidth: 0,
+          elevation: 8,
+        },
 
-  tabBarStyle: {
-  position: "absolute",
-  left: 40,
-  right: 40,
-  
-  height: 60,
-  borderRadius: 20,
-  backgroundColor: "#ffffff",
-  borderTopWidth: 0,
-  elevation: 8,
-},
+        tabBarItemStyle: {
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingTop: 10,
+        },
 
-  tabBarItemStyle: {
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: 10,
-  },
-
-  sceneContainerStyle: {
-  paddingBottom: 100,
-},
-
-  // ✅ ONLY ADDED THIS
-  tabBarBackground: () => (
-    <View style={{ flex: 1, justifyContent: "center" }}>
-      <View
-        style={{
-          position: "absolute",
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          width: "100%",
-          height: "100%",
-          paddingHorizontal: 90,
-        }}
-      >
-        {[1, 2, 3].map((_, index) => (
-          <View
-            key={index}
-            style={{
-              width: 1,
-              height: 25,
-              backgroundColor: "#E5E5E5",
-            }}
-          />
-        ))}
-      </View>
-    </View>
-  ),
-}}
+        // ✅ ONLY ADDED THIS
+        tabBarBackground: () => (
+          <View style={{ flex: 1, justifyContent: 'center' }}>
+            <View
+              style={{
+                position: 'absolute',
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                width: '100%',
+                height: '100%',
+                paddingHorizontal: 90,
+              }}
+            >
+              {[1, 2, 3].map((_, index) => (
+                <View
+                  key={index}
+                  style={{
+                    width: 1,
+                    height: 25,
+                    backgroundColor: '#E5E5E5',
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+        ),
+      }}
     >
-      {/* <Tab.Screen
-        name="Home"
-        component={ReciverHomeScreen}
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused} name="heart-outline" />
-          ),
-        }}
-      /> */}
-
       <Tab.Screen
         name="Home"
         component={ReciverHomeScreen}
@@ -171,10 +135,10 @@ screenOptions={{
 
       <Tab.Screen
         name="Call"
-        component={ReciverHomeScreen}
+        component={MessagesScreen}
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon focused={focused} name="notifications-outline" />
+            <TabIcon focused={focused} name="chatbubbles-outline" />
           ),
         }}
       />

@@ -9,6 +9,7 @@ import {
   Animated,
   Image,
   Alert,
+  Easing,
 } from 'react-native';
 import { RTCIceCandidate, RTCView } from 'react-native-webrtc';
 import LinearGradient from 'react-native-linear-gradient';
@@ -16,7 +17,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { mediaDevices, MediaStream } from 'react-native-webrtc';
 import { CommonActions } from '@react-navigation/native';
 import InCallManager from 'react-native-incall-manager';
-
+import MaskedView from '@react-native-masked-view/masked-view';
 import { useDispatch, useSelector } from 'react-redux';
 import { clearCall, callDetailsRequest } from '../features/calls/callAction';
 import { otherUserFetchRequest } from '../features/Otherusers/otherUserActions';
@@ -49,7 +50,8 @@ const AudiocallScreen = ({ route, navigation }) => {
 
   const other =
     String(caller?.user_id) === String(myId) ? connectedUser : caller;
-
+  console.log(other);
+  console.log(me);
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
   const pendingIceRef = useRef([]);
@@ -61,9 +63,12 @@ const AudiocallScreen = ({ route, navigation }) => {
   const hasStartedRef = useRef(false);
   const disableExitRef = useRef(false);
   const remoteEndedRef = useRef(false);
+  const ripple1 = useRef(new Animated.Value(0)).current;
+  const ripple2 = useRef(new Animated.Value(0)).current;
 
   const [connectedUI, setConnectedUI] = useState(false);
   const [micOn, setMicOn] = useState(true);
+  const [otherMicOn, setOtherMicOn] = useState(true);
   const [speakerOn, setSpeakerOn] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [iceState, setIceState] = useState('new');
@@ -80,6 +85,30 @@ const AudiocallScreen = ({ route, navigation }) => {
 
     return res === PermissionsAndroid.RESULTS.GRANTED;
   };
+
+  useEffect(() => {
+    const animate = (anim, delay) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 2000,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 0,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ]),
+      ).start();
+    };
+
+    animate(ripple1, 0);
+    animate(ripple2, 800);
+  }, []);
 
   useEffect(() => {
     if (session_id) {
@@ -379,12 +408,34 @@ const AudiocallScreen = ({ route, navigation }) => {
 
   /* ================= CONTROLS ================= */
 
+  // const toggleMic = () => {
+  //   const track = localStreamRef.current?.getAudioTracks()[0];
+  //   if (!track) return;
+
+  //   track.enabled = !track.enabled;
+  //   setMicOn(track.enabled);
+  // };
+
   const toggleMic = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
     if (!track) return;
 
-    track.enabled = !track.enabled;
-    setMicOn(track.enabled);
+    const newState = !track.enabled;
+
+    track.enabled = newState;
+    setMicOn(newState);
+
+    const socket = socketRef.current;
+
+    if (socket && socket.connected) {
+      socket.emit('mic_status', {
+        session_id,
+        user_id: myId,
+        micOn: newState,
+      });
+    } else {
+      console.log('⚠️ Socket not connected, mic state not sent');
+    }
   };
 
   const toggleSpeaker = () => {
@@ -474,14 +525,92 @@ const AudiocallScreen = ({ route, navigation }) => {
       }
     };
   }, []);
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
 
+    const handleMic = ({ user_id, micOn }) => {
+      if (String(user_id) !== String(myId)) {
+        setOtherMicOn(micOn);
+      }
+    };
+
+    socket.on('mic_status_update', handleMic);
+
+    return () => {
+      socket.off('mic_status_update', handleMic);
+    };
+  }, []);
   /* ================= UI ================= */
+  const getRippleStyle = anim => ({
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(226,133,251,0.25)',
+    transform: [
+      {
+        scale: anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, 1.6],
+        }),
+      },
+    ],
+    opacity: anim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.6, 0],
+    }),
+  });
 
   return (
     <LinearGradient
-      colors={['#E9C9FF', '#F4C9F2', '#FFD1E8']}
+      colors={['#e2b9fd', '#f19ced', '#FFD1E8']}
       style={styles.container}
     >
+      <View style={styles.topheats} pointerEvents="none">
+        {/* LEFT BIG */}
+        <MaskedView
+          style={styles.heartMask}
+          maskElement={<Ionicons name="heart" style={styles.heartIcon} />}
+        >
+          <LinearGradient
+            colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']}
+            style={styles.heartGradient}
+          />
+        </MaskedView>
+
+        {/* TOP RIGHT SMALL */}
+        <MaskedView
+          style={styles.heartMaskTopRight}
+          maskElement={<Ionicons name="heart" style={styles.heartIconTiny} />}
+        >
+          <LinearGradient
+            colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']}
+            style={styles.heartGradient}
+          />
+        </MaskedView>
+        {/* LEFT SMALL */}
+        <MaskedView
+          style={styles.heartMaskSmall}
+          maskElement={<Ionicons name="heart" style={styles.heartIconSmall} />}
+        >
+          <LinearGradient
+            colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']}
+            style={styles.heartGradient}
+          />
+        </MaskedView>
+
+        {/* RIGHT */}
+        <MaskedView
+          style={styles.heartMaskRight}
+          maskElement={<Ionicons name="heart" style={styles.heartIcon} />}
+        >
+          <LinearGradient
+            colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']}
+            style={styles.heartGradient}
+          />
+        </MaskedView>
+      </View>
       <View style={styles.timePill}>
         <Text style={styles.timeText}>
           {connectedUI
@@ -496,9 +625,28 @@ const AudiocallScreen = ({ route, navigation }) => {
       {connectedCallDetails?.connected && me && other && (
         <View style={styles.usersRow}>
           <View style={styles.userCard}>
-            <Image source={{ uri: me.avatar }} style={styles.avatar} />
+            <View style={styles.avatarWrapper}>
+              {/* RIPPLE */}
+              <Animated.View style={getRippleStyle(ripple1)} />
+              <Animated.View style={getRippleStyle(ripple2)} />
+
+              {/* GRADIENT BORDER */}
+              <LinearGradient
+                colors={['#c084fc', '#e879f9', '#f472b6']}
+                style={styles.gradientRing}
+              >
+                <Image source={{ uri: me.avatar }} style={styles.avatar} />
+              </LinearGradient>
+
+              {!micOn && (
+                <View style={styles.muteIcon}>
+                  <Ionicons name="mic-off" size={16} color="#fff" />
+                </View>
+              )}
+            </View>
+
             <Text style={styles.userName}>{me.name}</Text>
-            <Text style={styles.desc}>{me.about || 'No bio available'}</Text>
+            <Text style={styles.desc}>{me.bio || 'No bio available'}</Text>
           </View>
 
           <TouchableOpacity
@@ -508,9 +656,27 @@ const AudiocallScreen = ({ route, navigation }) => {
               navigation.navigate('AboutScreen');
             }}
           >
-            <Image source={{ uri: other.avatar }} style={styles.avatar} />
+            <View style={styles.avatarWrapper}>
+              {/* RIPPLE */}
+              <Animated.View style={getRippleStyle(ripple1)} />
+              <Animated.View style={getRippleStyle(ripple2)} />
+
+              {/* GRADIENT BORDER */}
+              <LinearGradient
+                colors={['#c084fc', '#e879f9', '#f472b6']}
+                style={styles.gradientRing}
+              >
+                <Image source={{ uri: other.avatar }} style={styles.avatar} />
+              </LinearGradient>
+
+              {!otherMicOn && (
+                <View style={styles.muteIcon}>
+                  <Ionicons name="mic-off" size={16} color="#fff" />
+                </View>
+              )}
+            </View>
             <Text style={styles.userName}>{other.name}</Text>
-            <Text style={styles.desc}>{other.about || 'No bio available'}</Text>
+            <Text style={styles.desc}>{other.bio || 'No bio available'}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -624,11 +790,62 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     zIndex: 10,
   },
+  heartMask: {
+    position: 'absolute',
+    top: 420,
+    left: -50,
+    width: 220,
+    height: 220,
+    opacity: 0.5,
+  },
 
-  leftheart: { marginTop: 500, left: -110 },
-  leftheart1: { marginTop: 150, left: -40 },
-  rightheart: { marginTop: 460, left: 40 },
+  heartMaskSmall: {
+    position: 'absolute',
+    top: 120,
+    left: 20,
+    width: 100,
+    height: 100,
+    opacity: 0.4,
+  },
 
+  heartMaskRight: {
+    position: 'absolute',
+    top: 320,
+    right: -10,
+    width: 130,
+    height: 230,
+    opacity: 0.5,
+  },
+
+  // ✅ NEW (4th heart)
+  heartMaskTopRight: {
+    position: 'absolute',
+    top: 80,
+    right: 20,
+    width: 80,
+    height: 100,
+    opacity: 0.35,
+  },
+
+  // ICON SIZES
+  heartIcon: {
+    fontSize: 200,
+    color: 'black',
+  },
+
+  heartIconSmall: {
+    fontSize: 70,
+    color: 'black',
+  },
+
+  heartIconTiny: {
+    fontSize: 80,
+    color: 'black',
+  },
+
+  heartGradient: {
+    flex: 1,
+  },
   timePill: {
     backgroundColor: '#fb6b7c',
     paddingHorizontal: 20,
@@ -721,5 +938,31 @@ const styles = StyleSheet.create({
     bottom: 10,
     fontSize: 11,
     color: '#555',
+  },
+  gradientRing: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 4,
+  },
+
+  avatarWrapper: {
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  muteIcon: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#FF4D4F',
+    borderRadius: 12,
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
   },
 });

@@ -93,65 +93,77 @@ const OtpScreen = ({ route, navigation }) => {
     dispatch(userOtpRequest({ mobile_number, otp: otpString }));
   };
 
-  useEffect(() => {
-    if (!Otp) return;
+  // ✅ ONLY SHOWING UPDATED PARTS — rest remains same
 
-    if (Otp.success === false) {
-      Alert.alert('Invalid OTP', Otp.message || 'Try again');
-      return;
-    }
+useEffect(() => {
+  if (!Otp) return;
 
-    if (!Otp.success) return;
+  if (Otp.success === false) {
+    Alert.alert('Invalid OTP', Otp.message || 'Try again');
+    return;
+  }
 
-    const handleSuccess = async () => {
-      try {
-        console.log('✅ OTP VERIFIED SUCCESSFULLY');
+  if (!Otp.success) return;
 
-        // 1️⃣ Save auth data
-        await AsyncStorage.setItem('twittoke', Otp.token ?? '');
-        await AsyncStorage.setItem('user_id', String(Otp.user?.user_id ?? ''));
-        await AsyncStorage.setItem('gender', Otp.user?.gender ?? '');
+  const handleSuccess = async () => {
+    try {
+      console.log('✅ OTP VERIFIED SUCCESSFULLY');
 
-        // 2️⃣ Confirm token is really stored
-        const savedToken = await AsyncStorage.getItem('twittoke');
-        console.log('🔑 TOKEN IN STORAGE:', savedToken);
+      // 1️⃣ Save auth data
+      await AsyncStorage.setItem('twittoke', Otp.token ?? '');
+      await AsyncStorage.setItem('user_id', String(Otp.user?.user_id ?? ''));
 
-        if (!savedToken) {
-          console.log('❌ TOKEN NOT SAVED — STOPPING SOCKET CONNECT');
-          Alert.alert('Error', 'Login failed. Please try again.');
-          return;
-        }
+      const gender = Otp.user?.gender ?? '';
+      await AsyncStorage.setItem('gender', gender);
 
-        // 3️⃣ Connect socket AFTER login (VERY IMPORTANT)
-        console.log('🔌 Connecting socket after login...');
-
-        // 4️⃣ Navigate to correct home screen
-        if (mode === 'login') {
-          navigation.reset({
-            index: 0,
-            routes: [
-              {
-                name:
-                  Otp.user.gender === 'Male'
-                    ? 'MaleHomeTabs'
-                    : 'ReceiverBottomTabs',
-              },
-            ],
-          });
-        } else {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'SelectYourCountryScreen' }],
-          });
-        }
-      } catch (err) {
-        console.error('❌ OTP FLOW ERROR:', err);
-        Alert.alert('Error', 'Something went wrong');
+      // 🟡 Save onboarding state if gender missing
+      if (!gender) {
+        await AsyncStorage.setItem('onboarding_step', 'start');
+      } else {
+        await AsyncStorage.removeItem('onboarding_step');
       }
-    };
 
-    handleSuccess();
-  }, [Otp]);
+      // 2️⃣ Confirm token
+      const savedToken = await AsyncStorage.getItem('twittoke');
+      console.log('🔑 TOKEN IN STORAGE:', savedToken);
+
+      if (!savedToken) {
+        Alert.alert('Error', 'Login failed. Please try again.');
+        return;
+      }
+
+      // 3️⃣ Navigation Logic (🔥 FIXED)
+      const normalizedGender = gender?.toLowerCase();
+
+      let routeName = '';
+
+      if (mode === 'login') {
+        if (normalizedGender === 'male') {
+          routeName = 'MaleHomeTabs';
+        } else if (normalizedGender === 'female') {
+          routeName = 'ReceiverBottomTabs';
+        } else {
+          // ❗ NULL / EMPTY → START REGISTRATION
+          routeName = 'SelectYourCountryScreen';
+        }
+      } else {
+        // register flow always goes to onboarding
+        routeName = 'SelectYourCountryScreen';
+      }
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: routeName }],
+      });
+
+    } catch (err) {
+      console.error('❌ OTP FLOW ERROR:', err);
+      Alert.alert('Error', 'Something went wrong');
+    }
+  };
+
+  handleSuccess();
+}, [Otp]);
   const handleResend = () => {
     if (!canResend) return;
 

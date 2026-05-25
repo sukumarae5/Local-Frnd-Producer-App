@@ -237,8 +237,7 @@ export default MessagesScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: Platform.OS === 'ios' ? 50 : 25,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
 
   headerContainer: {
