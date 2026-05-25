@@ -290,6 +290,7 @@ case CHAT_MESSAGE_ADD: {
           return {
             ...msg,
             is_read: 1,
+            delivered: 1,
             read_at: msg.read_at || new Date().toISOString(),
           };
         }

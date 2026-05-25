@@ -16,27 +16,30 @@ const IncomingCallScreen = ({ route, navigation }) => {
   const { session_id, call_type } = route.params;
   const { socketRef } = useContext(SocketContext);
 
-  const accept = () => {
-    socketRef.current.emit("call_accept", { session_id });
-  };
-// const accept = () => {
-//   socketRef.current.emit("call_accept", { session_id });
+  // ✅ REPLACE accept function
 
-//   navigation.dispatch(
-//     CommonActions.navigate({
-//       name: "CallStatusScreen",
-//       params: {
-//         session_id,
-//         call_type,
-//         role: "receiver",
-//       },
-//     })
-//   );
-// };
+// ✅ REPLACE accept function
+const accept = () => {
+  socketRef.current.emit("call_accept", { session_id });
+  
+  // ✅ Use navigate instead of replace — replace may not be available on modal stacks
+  navigation.dispatch(
+    CommonActions.navigate({
+      name: "CallStatusScreen",
+      params: {
+        call_type,
+        role: "friend_receiver",
+        session_id,
+      },
+    })
+  );
+};
 
-  const reject = () => {
-    socketRef.current.emit("call_reject", { session_id });
-  };
+// ✅ ALSO FIX reject — navigate back after rejecting
+const reject = () => {
+  socketRef.current.emit("call_reject", { session_id });
+  navigation.goBack();  // ✅ dismiss the incoming call screen
+};
 
   return (
     <LinearGradient

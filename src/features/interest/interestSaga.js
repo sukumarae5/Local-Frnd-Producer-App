@@ -9,7 +9,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { selectinterest, yourinterest } from "../../api/userApi";
 import { fetchInterestsFailure, fetchInterestsSuccess, selectInterestsFailure, selectInterestsSuccess, updateselectinterestsfailure, updateselectinterestssuccess } from "./interestActions";
-import { USER_DATA_REQUEST } from "../user/userType";
 
 function* fetchInterests() {
   try {

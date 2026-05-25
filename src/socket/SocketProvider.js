@@ -108,32 +108,7 @@ const SocketProvider = ({ children }) => {
         });
       });
 
-      // socket.on('chat_read_all_update', ({ conversationId }) => {
-      //   const state = store.getState();
-
-      //   const conversations = state.chat.conversations;
-
-      //   const updated = {};
-
-      //   for (const uid in conversations) {
-      //     updated[uid] = conversations[uid].map(m => {
-      //       const msg = m.message ?? m;
-
-      //       return {
-      //         ...msg,
-      //         is_read: 1,
-      //       };
-      //     });
-      //   }
-
-      //   dispatch({
-      //     type: 'CHAT_MARK_READ_SUCCESS',
-      //     payload: {
-      //       otherUserId: state.chat.activeUser,
-      //     },
-      //   });
-      // });
-
+      
       socket.on('chat_read_all_update', ({ otherUserId }) => {
         dispatch({
           type: 'CHAT_MARK_READ_SUCCESS',
@@ -147,20 +122,22 @@ const SocketProvider = ({ children }) => {
         const isFriend = data.call_mode === 'FRIEND';
 
         // ✅ FRIEND → SHOW UI
-        if (isFriend) {
-          dispatch(
-            incomingCallRinging({
-              session_id: data.session_id,
-              call_type: data.call_type,
-              direction: 'INCOMING',
-              from_user: data.from,
-              is_friend: true,
-              status: 'RINGING',
-              call_mode: 'FRIEND',
-            }),
-          );
-          return;
-        }
+       if (isFriend) {
+    dispatch(
+      incomingCallRinging({
+        session_id: data.session_id,
+        call_type: data.call_type,
+        direction: 'INCOMING',
+        from_user: data.from,
+        is_friend: true,
+        status: 'RINGING',
+        call_mode: 'FRIEND',
+        caller_id: data.caller_id,      // ✅ ADD
+        receiver_id: data.receiver_id,  // ✅ ADD
+      }),
+    );
+    return;
+  }
 
         // RANDOM / DIRECT → AUTO ACCEPT
         socket.emit('call_accept', {
@@ -169,21 +146,19 @@ const SocketProvider = ({ children }) => {
 
         // 🔥 IMPORTANT: update redux immediately
         dispatch(
-          incomingCallAccept({
-            session_id: data.session_id,
-            call_type: data.call_type,
-            status: 'ACCEPTED',
-            is_friend: false,
-            direction: 'INCOMING',
-            call_mode: data.call_mode || 'RANDOM',
-          }),
-        );
+    incomingCallAccept({
+      session_id: data.session_id,
+      call_type: data.call_type,
+      status: 'ACCEPTED',
+      is_friend: false,
+      direction: 'INCOMING',
+      call_mode: data.call_mode || 'RANDOM',
+      caller_id: data.caller_id,      // ✅ ADD
+      receiver_id: data.receiver_id,  // ✅ ADD
+    }),
+  );
       });
 
-      // socket.on("call_accepted", (data) => {
-      //   console.log("CALL ACCEPTED EVENT:", data);
-      //   dispatch(incomingCallAccept(data));
-      // });
       socket.on("call_accepted", (data) => {
   console.log("✅ CALL ACCEPTED SOCKET:", data);
 
@@ -194,7 +169,7 @@ const SocketProvider = ({ children }) => {
       call_type: data.call_type,
       is_friend: data.is_friend,
        caller_id: data.caller_id,
-      // direction: isCaller ? "OUTGOING" : "INCOMING",
+       receiver_id: data.receiver_id,
       call_mode: data.is_friend ? "FRIEND" : "RANDOM",
     })
   );
@@ -203,11 +178,14 @@ const SocketProvider = ({ children }) => {
       socket.on('call_accepted', data => {
         dispatch(
           incomingCallAccept({
-            session_id: data.session_id,
-            call_type: data.call_type,
-            status: 'ACCEPTED',
-            is_friend: data.is_friend || false,
-          }),
+      session_id: data.session_id,
+      call_type: data.call_type,
+      status: "ACCEPTED",
+      is_friend: data.is_friend,
+      caller_id: data.caller_id,      // ✅ already there
+      receiver_id: data.receiver_id,  // ✅ ADD THIS
+      call_mode: data.is_friend ? "FRIEND" : "RANDOM",
+    })
         );
       });
       socket.on('call_rejected', data => {

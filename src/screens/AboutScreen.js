@@ -27,7 +27,7 @@ const AboutScreen = ({ navigation }) => {
   const profileData = useSelector((s) => s.otherUsers.profile);
   const friendStatus = useSelector((s) => s.friends.friendStatus);
   const incoming = useSelector((s) => s.friends.incoming);
-
+console.log("profileData in AboutScreen:", profileData);
   const profile = profileData?.profile || profileData || {};
   const user = profile.user || null;
 

@@ -70,7 +70,7 @@ const TrainersCallPage = ({ navigation }) => {
 
   const { userdata } = useSelector(state => state.user);
   const users = useSelector(state => state.calls.searchingFemales || []);
-
+console.log("🔥 TrainersCallPage users:", users);
   const imageUrl = userdata?.images?.profile_image
     ? { uri: userdata.images.profile_image }
     : require('../assets/boy1.jpg');
@@ -217,7 +217,7 @@ const TrainersCallPage = ({ navigation }) => {
 
     navigation.navigate('CallStatusScreen', {
       call_type: item.type,
-      role: 'caller',
+      role: 'male',
     });
   };
 
@@ -370,7 +370,7 @@ const TrainersCallPage = ({ navigation }) => {
                     </View>
                   </View>
 
-                  <Text style={styles.userText}>User #{item.user_id}</Text>
+                  <Text style={styles.userText}> {item.name}</Text>
                 </TouchableOpacity>
               </Animated.View>
             );

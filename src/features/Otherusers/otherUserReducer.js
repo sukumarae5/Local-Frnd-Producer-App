@@ -23,7 +23,7 @@ export default function otherUserReducer(state = initialState, action) {
       return {
         ...state,
         loading: false,
-        profile: action.payload.profile,
+        profile: action.payload,
       };
 
     case OTHER_USER_FETCH_FAILURE:

@@ -27,18 +27,41 @@ export default function callReducer(state = initialState, action) {
       };
 
     case T.CALL_SUCCESS:
-    case T.FEMALE_SEARCH_SUCCESS:
-    case T.DIRECT_CALL_SUCCESS:
-      return {
+  return {
+    ...state,
+    loading: false,
+    call: {
+      ...action.payload,
+      is_friend: false,
+      call_mode: action.payload.call_mode || "RANDOM",
+      caller_id: action.payload.caller_id,     // ✅ ADD
+      receiver_id: action.payload.receiver_id,  // ✅ ADD
+    },
+  };
+// ✅ REPLACE DIRECT_CALL_SUCCESS case
+case T.DIRECT_CALL_SUCCESS:
+  return {
     ...state,
     loading: false,
     call: {
       ...action.payload,
       is_friend: false,
       call_mode: "DIRECT",
+      caller_id: action.payload.caller_id,      // ✅ ADD
+      receiver_id: action.payload.receiver_id,  // ✅ ADD
     },
   };
-
+case T.FEMALE_SEARCH_SUCCESS:
+  return {
+    ...state,
+    loading: false,
+    call: {
+      session_id: action.payload.session_id,
+      status: action.payload.status || "SEARCHING",
+      caller_id: action.payload.caller_id,     // ✅ ADD
+      receiver_id: action.payload.receiver_id,  // ✅ ADD
+    }
+  };
     case T.FEMALE_CANCEL_SUCCESS:
   return {
     ...state,
@@ -124,8 +147,8 @@ export default function callReducer(state = initialState, action) {
           call_mode: action.payload.call_mode,
         },
       };
-
- case T.INCOMING_CALL_ACCEPT:
+// ✅ Already correct in your reducer — just verify it looks like this:
+case T.INCOMING_CALL_ACCEPT:
   return {
     ...state,
     call: {
@@ -134,9 +157,9 @@ export default function callReducer(state = initialState, action) {
       status: "ACCEPTED",
       is_friend: action.payload.is_friend || false,
       direction: action.payload.direction || "INCOMING",
-            caller_id: action.payload.caller_id, // ✅ ADD THIS
-
-      call_mode: action.payload.call_mode || (action.payload.is_friend ? "FRIEND" : "RANDOM"),
+      caller_id: action.payload.caller_id,      // ✅ must be here
+      receiver_id: action.payload.receiver_id,  // ✅ must be here
+      call_mode: action.payload.call_mode || "RANDOM",
     },
     incomingCall: null,
   };
