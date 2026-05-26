@@ -1,4 +1,4 @@
-// hooks/useCallHandler.js
+// ✅ REPLACE the full useCallHandler.js
 
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
@@ -8,102 +8,68 @@ import store from "../reduxStore/store";
 export default function useCallHandler(navigationRef, isNavReady) {
 
   const call = useSelector(state => state.calls.call);
-console.log("📞 useCallHandler - Current Call State:", call);
-const myId = store.getState().auth?.user?.user_id;
-useEffect(() => {
 
-  if (!call?.status || !isNavReady) return;
+  useEffect(() => {
+    if (!call?.status || !isNavReady) return;
 
-  const status = call.status.toUpperCase();
+    const status = call.status.toUpperCase();
 
-  console.log("🔥 CALL HANDLER:", call);
+    console.log("🔥 CALL HANDLER:", call);
 
-// if (
-//   callManager.currentSession &&
-//   !callManager.isSameSession(call.session_id)
-// ) {
-//   console.log("⚠️ New session detected, resetting...");
-//   callManager.reset(); // you must implement this
-// }
-
-if (
-  callManager.currentSession &&
-  callManager.currentSession !== call.session_id
-) {
-  console.log("🔄 New session → reset");
-
-  callManager.reset();
-}
-
-  callManager.setSession(call.session_id);
-
-  // =============================
-  // 🎲 RANDOM + DIRECT FLOW
-  // =============================
-  // if (!call.is_friend) {
-
-  //   if (status === "ACCEPTED" && call.call_mode !== "FRIEND") {
-
-  //     console.log("➡️ PERFECT MATCH SCREEN");
-
-  //     callManager.safeNavigate(navigationRef, "PerfectMatchScreen", {
-  //       session_id: call.session_id,
-  //       call_type: call.call_type,
-  //     });
-
-  //     return;
-  //   }
-  // }
-
-  if (!call.is_friend) {
-  if (status === "ACCEPTED") {
-
-    if (callManager.lastNavigatedSession === call.session_id) {
-      return; // ✅ PREVENT DUPLICATE NAVIGATION
+    if (
+      callManager.currentSession &&
+      callManager.currentSession !== call.session_id
+    ) {
+      console.log("🔄 New session → reset");
+      callManager.reset();
     }
 
-    callManager.lastNavigatedSession = call.session_id;
+    callManager.setSession(call.session_id);
 
-    callManager.safeNavigate(navigationRef, "PerfectMatchScreen", {
-      session_id: call.session_id,
-      call_type: call.call_type,
-    });
+    // =============================
+    // 🎲 RANDOM + DIRECT FLOW
+    // =============================
+    if (!call.is_friend) {
+      if (status === "ACCEPTED") {
+        if (callManager.lastNavigatedSession === call.session_id) return;
+        callManager.lastNavigatedSession = call.session_id;
 
-    return;
-  }
-}
+        callManager.safeNavigate(navigationRef, "PerfectMatchScreen", {
+          session_id: call.session_id,
+          call_type: call.call_type,
+        });
 
-  // =============================
-  // 👥 FRIEND FLOW
-  // =============================
-  if (call.is_friend) {
-
-    if (status === "ACCEPTED") {
-
-      console.log("➡️ FRIEND CALL SCREEN");
-
-      const screen =
-        call.call_type === "VIDEO"
-          ? "VideocallScreen"
-          : "AudiocallScreen";
-
-      callManager.safeNavigate(navigationRef, screen, {
-        session_id: call.session_id,
-        // role:
-        //   call.direction === "OUTGOING"
-        //     ? "caller"
-        //     : "receiver",
-
-        role:
-  String(call.caller_id) === String(call.my_id)
-    ? "caller"
-    : "receiver",
-      });
-
-      return;
+        return;
+      }
     }
-  }
 
-}, [call, isNavReady]);
+    // =============================
+    // 👥 FRIEND FLOW
+    // =============================
+    if (call.is_friend) {
+      if (status === "ACCEPTED") {
+        if (callManager.lastNavigatedSession === call.session_id) return;
+        callManager.lastNavigatedSession = call.session_id;
 
+        console.log("➡️ FRIEND CALL SCREEN");
+
+        // ✅ Get myId from store correctly
+        const myId = store.getState().user?.userdata?.user?.user_id;
+
+        const screen =
+          call.call_type === "VIDEO"
+            ? "VideocallScreen"
+            : "AudiocallScreen";
+
+        callManager.safeNavigate(navigationRef, screen, {
+          session_id: call.session_id,
+          caller_id: call.caller_id,      // ✅ pass correctly
+          receiver_id: call.receiver_id,  // ✅ pass correctly
+        });
+
+        return;
+      }
+    }
+
+  }, [call, isNavReady]);
 }

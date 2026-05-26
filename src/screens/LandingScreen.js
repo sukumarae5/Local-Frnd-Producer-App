@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import MaskedView from '@react-native-masked-view/masked-view';
 import LinearGradient from 'react-native-linear-gradient';
+import { InteractionManager } from 'react-native';
 
 const LOGO_SIZE = 500;
 const SPLASH_TIME = 2500;
@@ -24,7 +25,7 @@ const LandingScreen = ({ navigation }) => {
   useEffect(() => {
     startIntroAnimation();
     startShineEffect();
-    handleNavigation();
+    // handleNavigation();
 
     return () => {
       loopRef.current?.stop();
@@ -45,7 +46,9 @@ const LandingScreen = ({ navigation }) => {
         tension: 60,
         useNativeDriver: true,
       }),
-    ]).start();
+    ]).start(() => {
+      handleNavigation(); // ✅ call AFTER animation finishes
+    });
   };
 
   const startShineEffect = () => {
@@ -58,7 +61,7 @@ const LandingScreen = ({ navigation }) => {
         easing: Easing.linear,
         useNativeDriver: true,
       }),
-      { resetBeforeIteration: true }
+      { resetBeforeIteration: true },
     );
 
     loopRef.current.start();
@@ -70,9 +73,6 @@ const LandingScreen = ({ navigation }) => {
     try {
       const token = await AsyncStorage.getItem('twittoke');
       const gender = await AsyncStorage.getItem('gender');
-
-      console.log('🔑 TOKEN:', token);
-      console.log('⚧ GENDER:', gender);
 
       if (token && token !== 'null' && token !== '') {
         try {
@@ -88,21 +88,21 @@ const LandingScreen = ({ navigation }) => {
               nextScreen = 'ReceiverBottomTabs';
             }
           } else {
-            console.log('⏰ Token expired');
             await AsyncStorage.clear();
           }
         } catch (e) {
-          console.log('❌ Invalid token');
           await AsyncStorage.clear();
         }
       }
-    } catch (error) {
-      console.log('Auth Error:', error);
-    }
+    } catch (error) {}
 
-    setTimeout(() => {
+    // ✅ ADD DELAY HERE
+    await new Promise(resolve => setTimeout(resolve, SPLASH_TIME));
+
+    // ✅ SMOOTH NAVIGATION
+    InteractionManager.runAfterInteractions(() => {
       navigation.replace(nextScreen);
-    }, SPLASH_TIME);
+    });
   };
 
   return (
@@ -149,10 +149,7 @@ const LandingScreen = ({ navigation }) => {
               style={[
                 styles.shineWrapper,
                 {
-                  transform: [
-                    { translateX: shineAnim },
-                    { rotate: '18deg' },
-                  ],
+                  transform: [{ translateX: shineAnim }, { rotate: '18deg' }],
                 },
               ]}
             >

@@ -33,7 +33,7 @@ import store from '../reduxStore/store';
 const PRIMARY = '#A020F0';
 
 const VideocallScreen = ({ route, navigation }) => {
-  const { session_id, role } = route.params || {};
+  const { session_id, caller_id: routeCallerId } = route.params;
 
   
   const { socketRef, connected } = useContext(SocketContext);
@@ -55,14 +55,16 @@ useEffect(() => {
   );
   const call = useSelector(state => state.calls?.call);
 
-  const myId = useSelector(state => state.auth?.user?.user_id);
+  const myId = useSelector(state => state.user.userdata?.user?.user_id);
 
   const caller = connectedCallDetails?.caller;
   const connectedUser = connectedCallDetails?.connected_user;
 
-  const other =
-    String(caller?.user_id) === String(myId) ? connectedUser : caller;
+   const iAmCaller = String(myId) === String(routeCallerId);
 
+  // ✅ Correct role assignment
+  const me = iAmCaller ? caller : connectedUser;
+  const other = iAmCaller ? connectedUser : caller;
   /* ---------------- STATE ---------------- */
 
   const [localStream, setLocalStream] = useState(null);
@@ -131,17 +133,6 @@ useEffect(() => {
     );
   };
 
-  /* ---------------- INIT ---------------- */
-
-  useEffect(() => {
-  if (call?.status === "ACCEPTED" && call?.is_friend) {
-    console.log("🔥 FRIEND VIDEO FORCE CONNECT");
-
-    socketRef.current?.emit("video_join", {
-      session_id,
-    });
-  }
-}, [call?.status]);
 
   useEffect(() => {
     if (!connected || !socketRef.current || startedRef.current) return;
@@ -261,66 +252,40 @@ useEffect(() => {
     }
   }, 100);
 });
-        socket.on('video_connected', async () => {
-          console.log('🚀 video_connected');
+       socket.on('video_connected', async () => {
+  console.log('🚀 video_connected');
 
-          onConnected();
+  onConnected();
 
-          if (!pcRef.current) {
-            console.log('❌ PC not ready');
-            return;
-          }
-
-         let callerId = null;
-let retries = 0;
-
-while (retries < 10) {
-  if (connectedCallDetails?.caller?.user_id) {
-    callerId = connectedCallDetails.caller.user_id;
-    break;
+  if (!pcRef.current) {
+    console.log('❌ PC not ready');
+    return;
   }
 
-  const state = store.getState();
-  const details = state.calls.connectedCallDetails;
+  // ✅ Use routeCallerId directly — remove the entire while retry loop
+  const isCaller = String(myId) === String(routeCallerId);
 
-  if (details?.caller?.user_id) {
-    callerId = details.caller.user_id;
-    break;
+  console.log('👤 My ID:', myId);
+  console.log('📞 Route Caller ID:', routeCallerId);
+  console.log('🎯 Am I caller?', isCaller);
+
+  if (!isCaller) {
+    console.log('🙋 Receiver');
+    return;
   }
 
-  console.log("⏳ Waiting for caller...");
-  await new Promise(r => setTimeout(r, 200));
-  retries++;
-}
+  try {
+    console.log('📞 Caller → creating offer');
+    await new Promise(r => setTimeout(r, 300));
 
-if (!callerId) {
-  console.log("❌ Caller not found → abort");
-  return;
-}
-          const isCaller = String(myId) === String(callerId);
+    const offer = await pcRef.current.createOffer();
+    await pcRef.current.setLocalDescription(offer);
+    socket.emit('video_offer', { session_id, offer });
 
-          console.log('👤 My ID:', myId);
-          console.log('📞 Caller ID:', callerId);
-          console.log('🎯 Am I caller?', isCaller);
-
-          if (!isCaller) {
-            console.log('🙋 Receiver');
-            return;
-          }
-
-          try {
-            console.log('📞 Caller → creating offer');
-
-            await new Promise(r => setTimeout(r, 300));
-
-            const offer = await pcRef.current.createOffer();
-            await pcRef.current.setLocalDescription(offer);
-
-            socket.emit('video_offer', { session_id, offer });
-          } catch (err) {
-            console.log('❌ OFFER ERROR:', err);
-          }
-        });
+  } catch (err) {
+    console.log('❌ OFFER ERROR:', err);
+  }
+});
 
         socket.emit('video_join', { session_id });
       } catch (err) {
@@ -424,16 +389,19 @@ if (!callerId) {
 
   /* ---------------- LEAVE SCREEN ---------------- */
 
+// ✅ REPLACE leaveScreen in VideocallScreen
 const leaveScreen = () => {
   dispatch(clearCall());
 
-  if (navigation.canGoBack()) {
-    navigation.goBack();   // ✅ SAFE
-  } else {
-    navigation.navigate(
-      myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs'
-    );
-  }
+  const nextScreen =
+    myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs';
+
+  navigation.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [{ name: nextScreen }],
+    }),
+  );
 };
   
   useEffect(() => {

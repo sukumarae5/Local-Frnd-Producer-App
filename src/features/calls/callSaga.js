@@ -60,18 +60,26 @@ console.log("Male Call Response:", res);
 function* femaleSearchSaga(action) {
   try {
     const token = yield call(AsyncStorage.getItem, "twittoke");
-console.log("Female Search Saga Payload:", action.payload);
-    
-const gender = yield call(AsyncStorage.getItem, "gender");
-      console.log("gender", gender);
-const res = yield call(
+
+    const res = yield call(
       axios.post,
       female_search,
       action.payload,
       { headers: { Authorization: `Bearer ${token}` } }
     );
-console.log("Female Search Response:", res);
-    yield put(femaleSearchSuccess(res.data));
+
+    // ✅ If instantly matched, treat like call success
+    if (res.data.status === "ACCEPTED") {
+      yield put(callSuccess({
+        session_id: res.data.session_id,
+        call_type: action.payload.call_type,
+        status: "ACCEPTED",
+        call_mode: "RANDOM"
+      }));
+    } else {
+      yield put(femaleSearchSuccess(res.data));
+    }
+
   } catch (e) {
     yield put(femaleSearchFailed(e.message));
   }

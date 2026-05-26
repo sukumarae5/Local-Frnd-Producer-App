@@ -2,9 +2,11 @@ import React, { useEffect, useRef, useContext } from 'react';
 import { View, Text, StyleSheet, Image, Animated, BackHandler } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import {
+  callDetailsRequest,
   callRequest,
   cancelWaitingRequest,
   femaleCancelRequest,
+  clearCall, 
 } from '../features/calls/callAction';
 import { SocketContext } from '../socket/SocketProvider';
 import MaskedView from '@react-native-masked-view/masked-view';
@@ -77,45 +79,143 @@ const CallStatusScreen = ({ navigation, route }) => {
   }, [rotateAnim]);
 
   // Handle Female Incoming Call
-  useEffect(() => {
-    if (role !== 'female') return;
-    if (!connected || !socketRef.current) return;
+ 
+useEffect(() => {
+  if (role !== 'female') return;
+  if (!connected || !socketRef.current) return;
 
-    const socket = socketRef.current;
-    const onIncomingCall = data => {
-      if (navigatedRef.current) return;
-      navigatedRef.current = true;
+  const socket = socketRef.current;
 
-      const screen =
-        data.call_type === 'VIDEO' ? 'VideocallScreen' : 'AudiocallScreen';
+  const onIncomingCall = data => {
+    if (navigatedRef.current) return;
+    navigatedRef.current = true;
 
+    dispatch(callDetailsRequest());
+
+    const screen =
+      data.call_type === 'VIDEO' ? 'VideocallScreen' : 'AudiocallScreen';
+
+    setTimeout(() => {
       navigation.replace(screen, {
         session_id: data.session_id,
-        role: 'receiver',
+        caller_id: data.caller_id,    // ✅ ADD
+        receiver_id: data.receiver_id, // ✅ ADD
       });
-    };
+    }, 800);
+  };
 
-    socket.on('incoming_call', onIncomingCall);
-    return () => {
-      socket.off('incoming_call', onIncomingCall);
-    };
-  }, [role, connected]);
+  socket.on('incoming_call', onIncomingCall);
+  return () => socket.off('incoming_call', onIncomingCall);
+}, [role, connected]);
 
-  // Handle Accepted Call Status
   useEffect(() => {
-    if (!call?.status) return;
+  if (!connected || !socketRef.current) return;
 
-    const status = call.status.toUpperCase();
-    if (call.is_friend && status === 'ACCEPTED') {
-      const screen =
-        call.call_type === 'VIDEO' ? 'VideocallScreen' : 'AudiocallScreen';
+  const socket = socketRef.current;
 
+  const onCallAccepted = ({ 
+    session_id, 
+    call_type: accepted_call_type, 
+    call_mode,
+    caller_id,    // ✅ who called first
+    receiver_id   // ✅ who joined
+  }) => {
+    if (navigatedRef.current) return;
+    navigatedRef.current = true;
+
+    dispatch(callDetailsRequest());
+
+    const screen =
+      accepted_call_type === 'VIDEO' ? 'VideocallScreen' : 'AudiocallScreen';
+
+    setTimeout(() => {
+      navigation.replace(screen, {
+        session_id,
+        caller_id,    // ✅ pass to call screen
+        receiver_id,  // ✅ pass to call screen
+      });
+    }, 800);
+  };
+
+  socket.on('call_accepted', onCallAccepted);
+  return () => socket.off('call_accepted', onCallAccepted);
+}, [connected, role]);
+  // Handle Accepted Call Status
+  // ✅ ADD THIS — handles friend_caller role timeout
+// ✅ ADD this effect — handles call_timeout for friend caller
+useEffect(() => {
+  if (role !== 'friend_caller') return;
+  if (!connected || !socketRef.current) return;
+
+  const socket = socketRef.current;
+
+  const onCallTimeout = () => {
+    if (navigatedRef.current) return;
+    dispatch(clearCall());
+    navigation.goBack();
+  };
+
+  const onCallRejected = () => {
+    if (navigatedRef.current) return;
+    dispatch(clearCall());
+    navigation.goBack();
+  };
+
+  socket.on('call_timeout', onCallTimeout);
+  socket.on('call_rejected', onCallRejected);
+
+  return () => {
+    socket.off('call_timeout', onCallTimeout);
+    socket.off('call_rejected', onCallRejected);
+  };
+}, [role, connected]);
+
+
+// ✅ ADD this effect — friend_receiver just waits, useCallHandler navigates them
+useEffect(() => {
+  if (role !== 'friend_receiver') return;
+  if (!connected || !socketRef.current) return;
+
+  const socket = socketRef.current;
+
+  // If call ends before connecting
+  const onCallEnded = () => {
+    dispatch(clearCall());
+    navigation.goBack();
+  };
+
+  socket.on('audio_call_ended', onCallEnded);
+  socket.on('video_call_ended', onCallEnded);
+
+  return () => {
+    socket.off('audio_call_ended', onCallEnded);
+    socket.off('video_call_ended', onCallEnded);
+  };
+}, [role, connected]);
+  // Handle Accepted Call Status — replace your existing one
+useEffect(() => {
+  if (!call?.status) return;
+
+  const status = call.status.toUpperCase();
+
+  if (status === 'ACCEPTED') {
+    if (navigatedRef.current) return;
+    navigatedRef.current = true;
+
+    dispatch(callDetailsRequest());
+
+    const screen =
+      call.call_type === 'VIDEO' ? 'VideocallScreen' : 'AudiocallScreen';
+
+    setTimeout(() => {
       navigation.replace(screen, {
         session_id: call.session_id,
-        role: 'receiver',
+        caller_id: call.caller_id,    // ✅ CRITICAL — pass caller_id
+        receiver_id: call.receiver_id, // ✅ pass receiver_id
       });
-    }
-  }, [call?.status]);
+    }, 800);
+  }
+}, [call?.status, call?.session_id]);
 
   const displayStatus =
     call?.status === 'NO_MATCH'
@@ -150,19 +250,22 @@ const CallStatusScreen = ({ navigation, route }) => {
     }
   }, [call?.status, call_type, dispatch, role]);
 
-  // Handle Leaving the Page / Back Handler
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', e => {
-      if (role === 'female') {
-        dispatch(femaleCancelRequest()); // For female role cancellation
-      } else {
-        dispatch(cancelWaitingRequest()); // For male role cancellation
-      }
-    });
-
-    return unsubscribe;
-  }, [navigation, role, dispatch]);
-
+useEffect(() => {
+  const unsubscribe = navigation.addListener('beforeRemove', e => {
+    if (role === 'female') {
+      dispatch(femaleCancelRequest());
+    } else if (role === 'friend_caller') {
+      dispatch(clearCall());
+    } else if (role === 'friend_receiver') {
+      // ✅ Receiver cancelled before connecting — emit reject
+      socketRef.current?.emit('call_reject', { session_id: route?.params?.session_id });
+      dispatch(clearCall());
+    } else {
+      dispatch(cancelWaitingRequest());
+    }
+  });
+  return unsubscribe;
+}, [navigation, role, dispatch]); 
   /* ---------------- UI ANIMATIONS ---------------- */
   const ripple1 = useRef(new Animated.Value(0)).current;
   const ripple2 = useRef(new Animated.Value(0)).current;

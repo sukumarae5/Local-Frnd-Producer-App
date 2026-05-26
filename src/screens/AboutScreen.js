@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,23 +8,23 @@ import {
   Dimensions,
   StyleSheet,
   StatusBar,
-} from "react-native";
+} from 'react-native';
 
-import Svg, { Path } from "react-native-svg";
-import { useDispatch, useSelector } from "react-redux";
-import Icon from "react-native-vector-icons/Ionicons";
+import Svg, { Path } from 'react-native-svg';
+import { useDispatch, useSelector } from 'react-redux';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 import {
   friendRequest,
   friendAcceptRequest,
   friendStatusRequest,
-} from "../features/friend/friendAction";
+} from '../features/friend/friendAction';
 
-import { otherUserFetchRequest } from "../features/Otherusers/otherUserActions";
+import { otherUserFetchRequest } from '../features/Otherusers/otherUserActions';
 
-const { width } = Dimensions.get("window");
+const { width } = Dimensions.get('window');
 
-const HEADER_HEIGHT = 440;
+const HEADER_HEIGHT = 450;
 const CURVE_HEIGHT = 105;
 
 const AboutScreen = ({ navigation, route }) => {
@@ -70,7 +70,7 @@ const AboutScreen = ({ navigation, route }) => {
   }, [friendStatus[profileUserId]?.state, profileUserId]);
 
   const getAge = dob => {
-    if (!dob) return "";
+    if (!dob) return '';
 
     const birthDate = new Date(dob);
     const today = new Date();
@@ -85,11 +85,11 @@ const AboutScreen = ({ navigation, route }) => {
     return age;
   };
 
-  const name = user?.name || "User";
+  const name = user?.name || 'User';
   const username = user?.username;
-  const gender = user?.gender || "Single";
-  const age = getAge(user?.date_of_birth) || "23";
-  const language = profile?.language?.native_name || "English";
+  const gender = user?.gender || 'Single';
+  const age = getAge(user?.date_of_birth) || '23';
+  const language = profile?.language?.native_name || 'English';
 
   const locationText = [
     location?.city?.name || location?.city,
@@ -97,25 +97,30 @@ const AboutScreen = ({ navigation, route }) => {
     location?.country?.name || location?.country,
   ]
     .filter(Boolean)
-    .join(", ");
+    .join(', ');
 
   const avatarSource = images?.avatar
     ? { uri: images.avatar }
     : images?.profile_image
     ? { uri: images.profile_image }
-    : require("../assets/boy1.jpg");
+    : require('../assets/boy1.jpg');
 
   const currentStatus = profileUserId
     ? friendStatus[profileUserId]?.state
     : null;
 
-  const isFollowing = currentStatus === "FRIEND";
-  const isPending = currentStatus === "PENDING_SENT" || localPending;
-  const isReceived = currentStatus === "PENDING_RECEIVED";
+  const isFollowing = currentStatus === 'FRIEND';
+  const isPending = currentStatus === 'PENDING_SENT' || localPending;
+  const isReceived = currentStatus === 'PENDING_RECEIVED';
 
   const renderFollowingText = () => {
-    if (isMyProfile) return null;
-
+if (isMyProfile) {
+    return (
+      <View style={styles.myProfileBadge}>
+        <Text style={styles.myProfileText}>My Profile</Text>
+      </View>
+    );
+  }
     if (isFollowing) {
       return (
         <View style={styles.followingTextOnly}>
@@ -157,9 +162,9 @@ const AboutScreen = ({ navigation, route }) => {
       return (
         <TouchableOpacity
           style={styles.floatingActionBtn}
-          onPress={() => navigation.navigate("EditProfileScreen")}
+          onPress={() => navigation.navigate('EditProfileScreen')}
         >
-          <Icon name="create-outline" size={30} color="#fff" />
+          <Icon name="create-outline" size={20} color="#fff" />
         </TouchableOpacity>
       );
     }
@@ -176,7 +181,7 @@ const AboutScreen = ({ navigation, route }) => {
             dispatch(friendRequest(profileUserId));
           }}
         >
-          <Icon name="heart" size={31} color="#fff" />
+          <Icon name="heart" size={20} color="#fff" />
         </TouchableOpacity>
       );
     }
@@ -211,7 +216,7 @@ const AboutScreen = ({ navigation, route }) => {
               style={styles.backBtn}
               onPress={() => navigation.goBack()}
             >
-              <Icon name="chevron-back" size={26} color="#111" />
+              <Icon name="chevron-back" size={25} color="#111" />
             </TouchableOpacity>
 
             <View style={styles.overlayPanel}>
@@ -220,7 +225,7 @@ const AboutScreen = ({ navigation, route }) => {
               <View style={styles.distanceRow}>
                 <Icon name="location-outline" size={12} color="#d300ff" />
                 <Text style={styles.distanceText}>
-                  {locationText || "Unknown location"}
+                  {locationText || 'Unknown location'}
                 </Text>
               </View>
 
@@ -231,13 +236,11 @@ const AboutScreen = ({ navigation, route }) => {
 
             <Svg width={width} height={CURVE_HEIGHT} style={styles.curveSvg}>
               <Path
-                d={`M0 62 C ${width * 0.26} 5, ${
-                  width * 0.48
-                } 30, ${width * 0.63} 50 C ${
-                  width * 0.82
-                } 78, ${width * 0.95} 38, ${
-                  width
-                } 8 L ${width} ${CURVE_HEIGHT} L 0 ${CURVE_HEIGHT} Z`}
+                d={`M0 72 C ${width * 0.26} 10, ${width * 0.48} 40, ${
+                  width * 0.63
+                } 55 C ${width * 0.82} 80, ${
+                  width * 0.95
+                } 40, ${width} 10 L ${width} ${CURVE_HEIGHT} L 0 ${CURVE_HEIGHT} Z`}
                 fill="#fff"
               />
             </Svg>
@@ -261,7 +264,7 @@ const AboutScreen = ({ navigation, route }) => {
             <View style={styles.chip}>
               <Icon name="location-outline" size={12} color="#444" />
               <Text style={styles.chipText}>
-                {locationText || "Berlin, United Kingdom"}
+                {locationText || 'Berlin, United Kingdom'}
               </Text>
             </View>
 
@@ -279,9 +282,9 @@ const AboutScreen = ({ navigation, route }) => {
           </View>
 
           <Text style={styles.bioText}>
-            {typeof user.bio === "string" && user.bio.trim()
+            {typeof user.bio === 'string' && user.bio.trim()
               ? user.bio
-              : "No bio available"}
+              : 'No bio available'}
           </Text>
 
           <Text style={styles.sectionTitle}>Life Style</Text>
@@ -293,8 +296,8 @@ const AboutScreen = ({ navigation, route }) => {
                   <Icon name="leaf-outline" size={12} color="#444" />
                   <Text style={styles.chipText}>
                     {l?.name ||
-                      `${l?.category?.name || ""} ${
-                        l?.subcategory?.name || ""
+                      `${l?.category?.name || ''} :${
+                        l?.subcategory?.name || ''
                       }`}
                   </Text>
                 </View>
@@ -310,7 +313,7 @@ const AboutScreen = ({ navigation, route }) => {
             {interests.length ? (
               interests.map((item, index) => (
                 <View key={index} style={styles.chip}>
-                  <Text style={styles.chipTextNoIcon}>{item?.name || ""}</Text>
+                  <Text style={styles.chipTextNoIcon}>{item?.name || ''}</Text>
                 </View>
               ))
             ) : (
@@ -347,224 +350,244 @@ export default AboutScreen;
 const styles = StyleSheet.create({
   main: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
   },
 
   center: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   headerWrap: {
-    width: "100%",
+    width: '100%',
     height: HEADER_HEIGHT,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
+    position: 'relative',
   },
 
   bgImage: {
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '100%',
   },
 
   imageStyle: {
-    resizeMode: "cover",
+    resizeMode: 'cover',
   },
 
   backBtn: {
-    position: "absolute",
+    position: 'absolute',
     top: 46,
     left: 15,
     zIndex: 50,
     width: 36,
     height: 36,
     borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.88)",
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.88)',
   },
 
   overlayPanel: {
-    position: "absolute",
+    position: 'absolute',
     left: 0,
     right: 0,
-    height: 130,
-    paddingLeft: 25,
-    paddingTop: 20,
-    top: 265,
-    backgroundColor: "rgba(55,55,55,0.70)",
-    borderRadius: 26,
+    height: 150,
+    top:270 ,
+
+    backgroundColor: 'rgba(0,0,0,0.35)', // 👈 darker glass
+    borderTopLeftRadius: 30, // ✅ only top
+    borderTopRightRadius: 30,
+    paddingLeft: 20,
+    paddingTop: 10,
+
     zIndex: 8,
   },
 
   nameText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 19,
-    fontWeight: "700",
-    textTransform: "lowercase",
+    fontWeight: '700',
+    textTransform: 'lowercase',
   },
 
   distanceRow: {
     marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 
   distanceText: {
-    color: "#f4f4f4",
+    color: '#f4f4f4',
     fontSize: 11,
     marginLeft: 4,
-    fontWeight: "500",
+    fontWeight: '500',
   },
 
   followingTextOnly: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    backgroundColor: '#e6f4ff',
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#4da3ff',
+  },
+
+  followingOnlyText: {
+    color: '#1e88e5',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  acceptBtn: {
+    marginTop: 10,
+    backgroundColor: '#7e00ff',
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 18,
+    alignSelf: 'flex-start',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  acceptText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  myProfileBadge: {
   marginTop: 10,
-  alignSelf: "flex-start",
-  backgroundColor: "#e6f4ff",
+  alignSelf: 'flex-start',
+  backgroundColor: '#eae0f1',
   paddingHorizontal: 16,
   paddingVertical: 7,
   borderRadius: 18,
   borderWidth: 1,
-  borderColor: "#4da3ff",
+  borderColor: '#6e14b8',
 },
 
- followingOnlyText: {
-  color: "#1e88e5",
+myProfileText: {
+  color: '#6e14b8',
   fontSize: 12,
-  fontWeight: "700",
+  fontWeight: '700',
 },
-
- acceptBtn: {
-  marginTop: 10,
-  backgroundColor: "#7e00ff",
-  paddingHorizontal: 16,
-  paddingVertical: 7,
-  borderRadius: 18,
-  alignSelf: "flex-start",
-  justifyContent: "center",
-  alignItems: "center",
-},
-
-  acceptText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
-  },
 
   floatingActionBtn: {
-    position: "absolute",
-    right: 18,
+    position: 'absolute',
+    right: 50,
     bottom: 102,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    marginBottom:40,
-    backgroundColor: "#c72cff",
-    borderWidth: 3,
-    borderColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginBottom: 60,
+    backgroundColor: '#c72cff',
+    borderWidth: 2,
+    borderColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 40,
     elevation: 14,
-    shadowColor: "#c72cff",
+    shadowColor: '#c72cff',
     shadowOffset: {
       width: 0,
       height: 6,
-      
     },
     shadowOpacity: 0.45,
     shadowRadius: 10,
   },
 
   curveSvg: {
-    position: "absolute",
-    bottom: -2,
+    position: 'absolute',
+    bottom: 0,
     left: 0,
-    zIndex: 20,
+    zIndex: 40,
   },
 
   container: {
     paddingHorizontal: 18,
-    paddingTop: 22,
-    marginTop: -5,
-    paddingBottom: 35,
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    zIndex: 100,
+    paddingTop: 0,
+    marginTop: -40, // 👈 PERFECT value for your curve
+    paddingBottom: 0,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    zIndex: 40,
   },
 
   sectionTitle: {
     fontSize: 18,
-    color: "#111",
-    fontWeight: "700",
+    color: '#111',
+    fontWeight: '700',
     marginTop: 14,
     marginBottom: 12,
     marginLeft: 2,
   },
 
   tagRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
   },
 
   chip: {
     minHeight: 28,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: 12, // 👈 smaller curve
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 16,
-    backgroundColor: "#ffeaf4",
+    backgroundColor: '#ffeaf4',
     marginRight: 8,
     marginBottom: 10,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     maxWidth: width - 36,
   },
 
   chipText: {
     fontSize: 11,
-    color: "#444",
-    marginLeft: 4,
-    fontWeight: "500",
+    color: '#444',
+    marginLeft: 3,
+    fontWeight: '500',
   },
 
   chipTextNoIcon: {
     fontSize: 11,
-    color: "#444",
-    fontWeight: "500",
+    color: '#444',
+    fontWeight: '500',
   },
 
   bioText: {
     marginTop: 3,
     fontSize: 13,
-    color: "#444",
+    color: '#444',
     lineHeight: 22,
-    fontWeight: "400",
+    fontWeight: '400',
   },
 
   galleryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
 
   galleryItem: {
-    width: "48%",
+    width: '48%',
     height: 125,
     borderRadius: 18,
     marginBottom: 12,
-    overflow: "hidden",
-    backgroundColor: "#f2f2f2",
+    overflow: 'hidden',
+    backgroundColor: '#f2f2f2',
   },
 
   galleryImage: {
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '100%',
   },
 
   empty: {
-    color: "#777",
+    color: '#777',
     fontSize: 13,
     marginBottom: 10,
   },

@@ -213,6 +213,8 @@ const ChatScreen = ({ route, navigation }) => {
     });
   }, [conversationId, socketRef]);
 
+  
+
   useEffect(() => {
     if (!userId) return;
     dispatch(chatUnreadClear(userId));
@@ -237,6 +239,23 @@ const ChatScreen = ({ route, navigation }) => {
     flatRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
+
+  useEffect(() => {
+  flatRef.current?.scrollToEnd({ animated: true });
+}, [messages]);
+
+// ✅ ADD THIS HERE
+useEffect(() => {
+  if (!messages.length || !myId) return;
+
+  messages.forEach(msg => {
+    if (Number(msg.sender_id) !== Number(myId)) {
+      socketRef.current?.emit("chat_read", {
+        messageId: msg.message_id
+      });
+    }
+  });
+}, [messages]);
   const messagesWithDate = useMemo(() => {
     const map = new Map();
 
@@ -442,8 +461,10 @@ const openFileManager = async () => {
     );
 
     navigation.navigate('CallStatusScreen', {
-      call_type: type,
-    });
+    call_type: type,
+    role: 'friend_caller',
+    friend_id: userId,
+  });
   };
 
   const renderContent = (item) => {

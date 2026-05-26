@@ -58,7 +58,6 @@ const ReciverWalletScreen = ({ navigation }) => {
 
           {/* HERO SECTION */}
           <View style={styles.heroSection}>
-            <Text style={styles.appName}>Lokal Frnd</Text>
 
             <Text style={styles.title}>Lokal Frnd Wallet</Text>
 
@@ -288,13 +287,6 @@ const styles = StyleSheet.create({
     marginBottom: scale(22),
   },
 
-  appName: {
-    marginTop: scale(8),
-    fontSize: scale(17),
-    fontWeight: '700',
-    color: '#FF4FB8',
-    letterSpacing: 0.5,
-  },
 
   title: {
     marginTop: scale(5),

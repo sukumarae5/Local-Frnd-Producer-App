@@ -170,21 +170,20 @@ const PerfectMatchScreen = () => {
       });
     }
   }, [count]);
-  useEffect(() => {
-    if (count === 0 && !navigated) {
-      setNavigated(true);
+ useEffect(() => {
+  if (count === 0 && !navigated) {
+    setNavigated(true);
 
-      const screen =
-        call_type === 'VIDEO' ? 'VideocallScreen' : 'AudiocallScreen';
+    const screen =
+      call_type === 'VIDEO' ? 'VideocallScreen' : 'AudiocallScreen';
 
-      const isCaller = String(caller?.user_id) === String(myId);
-
-      navigation.replace(screen, {
-        session_id,
-        role: isCaller ? 'caller' : 'receiver',
-      });
-    }
-  }, [count, navigated]);
+    // ✅ Pass caller_id from connectedCallDetails
+    navigation.replace(screen, {
+      session_id,
+      caller_id: caller?.user_id,  // ✅ ADD
+    });
+  }
+}, [count, navigated]);
   
   /* ---------------- LOADING ---------------- */
 

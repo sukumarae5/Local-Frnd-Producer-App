@@ -66,7 +66,7 @@ const MessagesScreen = ({ navigation }) => {
 
       setCallingId(item.user_id);
 
-      await dispatch(
+      dispatch(
         friendCallRequest({
           friend_id: item.user_id,
           call_type: type,
@@ -75,10 +75,12 @@ const MessagesScreen = ({ navigation }) => {
 
       setCallingId(null);
 
-      navigation.navigate('CallStatusScreen', {
-        call_type: type,
-        friend: item,
-      });
+         navigation.navigate('CallStatusScreen', {
+      call_type: type,
+      role: 'friend_caller',
+      friend_id: item.user_id,
+    });
+
     },
     [dispatch, navigation, callingId],
   );
