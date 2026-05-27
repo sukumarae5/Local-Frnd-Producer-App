@@ -50,7 +50,7 @@ const LifeStyleScreen = ({ navigation }) => {
     options = [],
   } = useSelector(state => state.lifestyle);
 
-  const apiResponse = useSelector(state => state.user.message);
+const apiResponse = useSelector(state => state.user.userDataResponse);
 
   useEffect(() => {
     const showEvent =

@@ -354,9 +354,10 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    fontSize: wp(4.5),
-    fontWeight: "600",
-  },
+  fontSize: wp(4.5),
+  fontWeight: "600",
+  color: "#000", // ✅ ADD
+},
 
   done: {
     color: PURPLE,

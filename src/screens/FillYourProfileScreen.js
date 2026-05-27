@@ -30,7 +30,7 @@ const FillYourProfileScreen = ({ navigation, route }) => {
 
   const { languages } = useSelector(state => state.language);
   const { states, cities } = useSelector(state => state.location);
-const apiResponse = useSelector(state => state.user.message);
+const apiResponse = useSelector(state => state.user.userDataResponse);
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');

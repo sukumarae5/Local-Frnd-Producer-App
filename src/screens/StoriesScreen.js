@@ -222,6 +222,7 @@ const styles = StyleSheet.create({
   },
 
   storyName: {
-    marginTop: 5
-  }
+  marginTop: 5,
+  color: "#000" 
+}
 });
