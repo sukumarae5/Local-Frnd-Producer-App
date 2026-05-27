@@ -247,23 +247,23 @@ const styles = StyleSheet.create({
   },
 
   headerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
   },
 
   headerTitle: {
     fontSize: 22,
-    fontWeight: "700",
+    fontWeight: '700',
     marginLeft: 12,
+    color: '#000', // ✅ ADD
   },
-
   searchBox: {
     height: 40,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
     borderRadius: 25,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     marginBottom: 15,
   },
@@ -272,11 +272,12 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     fontSize: 14,
+    color: '#000', 
   },
 
   row: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 12,
   },
 
@@ -291,15 +292,15 @@ const styles = StyleSheet.create({
   },
 
   onlineDot: {
-    position: "absolute",
+    position: 'absolute',
     right: 2,
     bottom: 2,
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: "#31D158",
+    backgroundColor: '#31D158',
     borderWidth: 2,
-    borderColor: "#fff",
+    borderColor: '#fff',
   },
 
   centerPart: {
@@ -308,22 +309,23 @@ const styles = StyleSheet.create({
 
   name: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: '700',
+    color: '#000', // ✅ ADD
   },
 
   subtitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 4,
   },
 
   subtitle: {
     fontSize: 13,
-    color: "#8E8E8E",
+    color: '#8E8E8E',
   },
 
   callSection: {
-    flexDirection: "row",
+    flexDirection: 'row',
   },
 
   callBtn: {

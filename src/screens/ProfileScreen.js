@@ -186,8 +186,9 @@ export default ProfileScreen;
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
+  flex: 1,
+  backgroundColor: '#fff', // ✅ ADD
+},
  topBg: {
   height: 300,
   paddingTop: 10,
@@ -218,11 +219,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
 
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginLeft: 10,
-  },
+ headerTitle: {
+  fontSize: 20,
+  fontWeight: '600',
+  marginLeft: 10,
+  color: '#000', // ✅ ADD
+},
 
   avatarWrap: {
     alignItems: 'center',
@@ -263,9 +265,10 @@ const styles = StyleSheet.create({
   },
 
   username: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
+  fontSize: 20,
+  fontWeight: '700',
+  color: '#000', // ✅ ADD
+},
 
   content: {
     flex: 1,
@@ -287,9 +290,10 @@ const styles = StyleSheet.create({
   },
 
   itemTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
+  fontSize: 14,
+  fontWeight: '500',
+  color: '#000', // ✅ ADD
+},
 
   itemSub: {
     fontSize: 11,

@@ -162,7 +162,7 @@ const MessagesScreen = ({ navigation }) => {
   return (
     <WelcomeScreenbackgroungpage>
       <View style={styles.container}>
-        <StatusBar barStyle="dark-content" />
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
         {/* HEADER */}
         <View style={styles.headerContainer}>
@@ -249,11 +249,11 @@ const styles = StyleSheet.create({
   },
 
   headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    marginLeft: 12,
-  },
-
+  fontSize: 22,
+  fontWeight: '700',
+  marginLeft: 12,
+  color: '#000', // ✅ ADD
+},
   searchRow: {
     marginBottom: 14,
   },
@@ -331,9 +331,10 @@ const styles = StyleSheet.create({
   },
 
   name: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
+  fontSize: 16,
+  fontWeight: '700',
+  color: '#000', // ✅ ADD
+},
 
   last: {
     fontSize: 13,

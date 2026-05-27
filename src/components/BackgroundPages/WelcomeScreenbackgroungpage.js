@@ -6,10 +6,9 @@ const { width, height } = Dimensions.get("window");
 
 const WelcomeScreenbackgroungpage = ({ children }) => {
   return (
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+      <SafeAreaView style={{ flex: 1 , backgroundColor: '#ffffff'}}  edges={['top', 'bottom']}>
     <View style={styles.wrapper}>
 
-      {/* TOP BG IMAGE */}
       <Image
         source={require("./Bg.png")}
         style={styles.topBg}
@@ -37,10 +36,11 @@ export default WelcomeScreenbackgroungpage;
 
 const styles = StyleSheet.create({
   wrapper: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-  },
+  flex: 1,
+  width: "100%",
+  height: "100%",
+  backgroundColor: '#ffffff', // ✅ ADD THIS (MOST IMPORTANT)
+},
 
   topBg: {
     position: "absolute",

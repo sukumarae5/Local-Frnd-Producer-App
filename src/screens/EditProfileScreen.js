@@ -598,7 +598,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(4),
     paddingVertical: hp(2),
   },
-  headerTitle: { fontSize: wp(5), fontWeight: '600', marginLeft: wp(2) },
+headerTitle: { 
+  fontSize: wp(5), 
+  fontWeight: '600', 
+  marginLeft: wp(2),
+  color: '#000', // ✅ ADD
+},
   avatarSection: { alignItems: 'center', marginVertical: hp(3) },
   avatarRing: {
     width: wp(30),
@@ -643,8 +648,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#eee',
   },
-  input: { flex: 1, fontSize: wp(4) },
-  genderRow: { flexDirection: 'row', marginTop: hp(1) },
+input: { 
+  flex: 1, 
+  fontSize: wp(4),
+  color: '#000', // ✅ ADD
+},  genderRow: { flexDirection: 'row', marginTop: hp(1) },
   genderItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -675,7 +683,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
-  accordionTitle: { fontSize: wp(4), fontWeight: '600' },
+  accordionTitle: { fontSize: wp(4), fontWeight: '600' ,color: '#000', // ✅ ADD
+},
   accordionArrow: {
     width: wp(6),
     height: wp(6),

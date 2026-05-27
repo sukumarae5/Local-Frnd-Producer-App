@@ -128,7 +128,7 @@ const EditUserLifestyleScreen = () => {
       {/* ===== HEADER ===== */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="chevron-back" size={26} />
+          <Icon name="chevron-back" size={26} color="#000" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Edit Lifestyle</Text>
@@ -143,7 +143,8 @@ const EditUserLifestyleScreen = () => {
       </View>
 
       {/* ===== CONTENT ===== */}
-      <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+      <ScrollView style={{ backgroundColor: "#fff" }}
+      contentContainerStyle={{ paddingBottom: 30 }}>
         {data.map((category) => {
           const relatedOptions = options.filter(
             (o) => o.category_id === category.id
@@ -171,7 +172,7 @@ const EditUserLifestyleScreen = () => {
                 </Text>
 
                 {relatedOptions.length > 0 && (
-                  <Icon name="chevron-down" size={18} />
+                  <Icon name="chevron-down" size={18} color="#333" />
                 )}
               </TouchableOpacity>
 
@@ -234,10 +235,11 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
     marginTop: 40,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
+ headerTitle: {
+  fontSize: 18,
+  fontWeight: "600",
+  color: "#000", // ✅ ADD
+},
   doneText: {
     color: PURPLE,
     fontWeight: "700",

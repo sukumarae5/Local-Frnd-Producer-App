@@ -225,6 +225,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginLeft: 10,
+    color: '#000', // ✅ ADD
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -283,7 +284,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 13,
-    color: '#777',
+    color: '#555',
     marginTop: 3,
   },
   time: {
@@ -321,6 +322,6 @@ const styles = StyleSheet.create({
   empty: {
     textAlign: 'center',
     marginTop: 40,
-    color: '#777',
+    color: '#666',
   },
 });

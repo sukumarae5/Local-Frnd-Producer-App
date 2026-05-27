@@ -122,7 +122,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: "700",
-    marginBottom: 20
+    marginBottom: 20,
+    color: '#000' // ✅ ADD
   },
 
   card: {
@@ -132,13 +133,17 @@ const styles = StyleSheet.create({
     marginBottom: 20
   },
 
-  plan: { fontSize: 16 },
+  plan: { 
+  fontSize: 16,
+  color: "#000", // ✅ ADD
+},
 
   amount: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginTop: 5
-  },
+  fontSize: 22,
+  fontWeight: "bold",
+  marginTop: 5,
+  color: "#000", // ✅ ADD
+},
 
   payBtn: {
     marginTop: 20,

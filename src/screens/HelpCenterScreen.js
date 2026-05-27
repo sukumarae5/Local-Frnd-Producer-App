@@ -201,7 +201,7 @@ const Input = ({ placeholder, value, onChangeText }) => {
 /* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1,backgroundColor: '#fff', },
 
   header: {
     flexDirection: 'row',
@@ -215,6 +215,7 @@ const styles = StyleSheet.create({
     fontSize: scale(18),
     fontWeight: '600',
     marginLeft: scale(10),
+     color: '#000',
   },
 
   tabRow: {
@@ -233,6 +234,7 @@ const styles = StyleSheet.create({
 
   activeTabText: {
     fontWeight: '600',
+     color: '#000',
   },
 
   tabUnderline: {
@@ -279,6 +281,7 @@ const styles = StyleSheet.create({
   question: {
     fontSize: scale(14),
     fontWeight: '500',
+     color: '#000',
   },
   textAreaWrapper: {
     borderRadius: scale(18),
@@ -316,6 +319,7 @@ const styles = StyleSheet.create({
     height: scale(110),
     padding: scale(12),
     textAlignVertical: 'top',
+      color: '#000',
   },
 
   bottomFixed: {

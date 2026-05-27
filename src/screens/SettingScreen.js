@@ -139,6 +139,7 @@ export default SettingScreen;
 const styles = StyleSheet.create({
   container: {
   flex: 1,
+  
 },
 
 scrollContainer: {
@@ -158,6 +159,7 @@ headerTitle: {
   fontSize: 20,
   fontWeight: "600",
   marginLeft: 10,
+  color: '#000', // ✅ ADD
 },
 
   /* LIST */
@@ -188,6 +190,7 @@ headerTitle: {
     flex: 1,
     fontSize: 14,
     fontWeight: "500",
+    color: '#000', // ✅ ADD
   },
 
   /* LOGOUT ROW */
@@ -214,6 +217,7 @@ headerTitle: {
     flex: 1,
     fontSize: 14,
     fontWeight: "500",
+    color: '#000', // ✅ ADD
   },
 
   /* MODAL */
@@ -246,6 +250,7 @@ headerTitle: {
     fontSize: 18,
     fontWeight: "700",
     marginBottom: 6,
+    color: '#000', // ✅ ADD
   },
 
   modalSub: {

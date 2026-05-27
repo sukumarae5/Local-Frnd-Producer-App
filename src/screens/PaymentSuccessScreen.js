@@ -1,10 +1,5 @@
-import React from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet
-} from "react-native";
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 const PaymentSuccessScreen = ({ navigation }) => {
   return (
@@ -19,7 +14,13 @@ const PaymentSuccessScreen = ({ navigation }) => {
 
       <TouchableOpacity
         style={styles.btn}
-        onPress={() => navigation.navigate("Home")}
+        activeOpacity={0.8}
+        onPress={() =>
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Home' }],
+          })
+        }
       >
         <Text style={styles.btnText}>Go to Home</Text>
       </TouchableOpacity>
@@ -32,39 +33,41 @@ export default PaymentSuccessScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff"
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
 
   icon: {
-    fontSize: 60
+    fontSize: 60,
+    color: '#9333EA', // ✅ optional branding
   },
 
   title: {
     fontSize: 22,
-    fontWeight: "bold",
-    marginTop: 10
+    fontWeight: 'bold',
+    marginTop: 10,
+    color: '#000', // ✅ ADD
   },
 
   subtitle: {
     marginTop: 10,
-    color: "#555",
-    textAlign: "center",
-    paddingHorizontal: 20
+    color: '#555',
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
 
   btn: {
     marginTop: 25,
-    backgroundColor: "#9333EA",
+    backgroundColor: '#9333EA',
     padding: 14,
     borderRadius: 10,
     width: 180,
-    alignItems: "center"
+    alignItems: 'center',
   },
 
   btnText: {
-    color: "#fff",
-    fontWeight: "bold"
-  }
+    color: '#fff',
+    fontWeight: 'bold',
+  },
 });

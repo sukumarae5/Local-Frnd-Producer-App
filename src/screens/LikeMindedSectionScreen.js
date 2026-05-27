@@ -151,11 +151,12 @@ export default LikeMindedSection;
 const styles = StyleSheet.create({
 
   sectionLabel: {
-    fontSize: wp(5),
-    fontWeight: "700",
-    paddingTop: hp(2),
-    paddingHorizontal: wp(4),
-  },
+  fontSize: wp(5),
+  fontWeight: "700",
+  paddingTop: hp(2),
+  paddingHorizontal: wp(4),
+  color: "#000", // ✅ FIX
+},
 
   card: {
     width: wp(36),
@@ -246,8 +247,9 @@ const styles = StyleSheet.create({
     borderRadius: wp(6),
   },
 
-  nameText: {
-    fontSize: wp(3.5),
-    fontWeight: "600",
-  },
+ nameText: {
+  fontSize: wp(3.5),
+  fontWeight: "600",
+  color: "#000", // ✅ FIX
+},
 });

@@ -482,19 +482,19 @@ const openFileManager = async () => {
     case "audio":
       return (
         <TouchableOpacity onPress={() => Linking.openURL(item.content)}>
-          <Text>▶️ Play Audio</Text>
+          <Text style={{ color: '#222' }}>▶️ Play Audio</Text>
         </TouchableOpacity>
       );
 
     case "file":
       return (
         <TouchableOpacity onPress={() => Linking.openURL(item.content)}>
-          <Text>📎 Open File</Text>
+          <Text style={{ color: '#222' }}>📎 Open File</Text>
         </TouchableOpacity>
       );
 
     default:
-      return <Text>{item.content}</Text>;
+  return <Text style={{ color: '#222' }}>{item.content}</Text>;
   }
 };
 
