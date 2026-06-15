@@ -6,7 +6,8 @@ import {
   CREATE_ORDER_FAILURE,
   VERIFY_PAYMENT_REQUEST,
   VERIFY_PAYMENT_SUCCESS,
-  VERIFY_PAYMENT_FAILURE
+  VERIFY_PAYMENT_FAILURE,
+  RESET_PURCHASE
 } from "./purchaseType";
 
 /* =============================
@@ -43,4 +44,8 @@ export const verifyPaymentSuccess = (data) => ({
 export const verifyPaymentFailure = (error) => ({
   type: VERIFY_PAYMENT_FAILURE,
   payload: error
+});
+
+export const resetPurchase = () => ({
+  type: RESET_PURCHASE,
 });

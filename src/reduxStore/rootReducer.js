@@ -20,6 +20,8 @@ import statusReducer from"../features/Status/statusReducer"
 import coinReducer from"../features/conis/coinReducer"
 import offersReducer from"../features/Offers/offersReducer"
 import purchaseReducer from "../features/purchase/purchaseReducer"
+import withdrawReducer from "../features/withdraw/withdrawReducer"
+
 
 const rootReducer = combineReducers({
   auth:authReducer,
@@ -42,7 +44,8 @@ const rootReducer = combineReducers({
   status:statusReducer,
   coins:coinReducer,
   offers:offersReducer,
-  purchase:purchaseReducer
+  purchase:purchaseReducer,
+  withdraw:withdrawReducer
 
 });
 

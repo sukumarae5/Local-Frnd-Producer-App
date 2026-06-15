@@ -18,8 +18,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import HomeHeader from '../components/HomeHeader';
 import { getCoinsRequest } from '../features/conis/coinActions';
 import OffersSectionScreen from './OffersSectionScreen';
-import coinImg from '../assets/coin1.png';
-import { createOrderRequest } from '../features/purchase/purchaseActions';
+import { createOrderRequest,resetPurchase   } from '../features/purchase/purchaseActions';
 
 const { width, height } = Dimensions.get('window');
 const wp = val => (width * val) / 100;
@@ -27,12 +26,17 @@ const hp = val => (height * val) / 100;
 const isSmallDevice = width < 360;
 
 export default function PlanScreen() {
+
+  const [isCreatingOrder, setIsCreatingOrder] = React.useState(false);
+const [selectedPackage, setSelectedPackage] = React.useState(null);
+
   const dispatch = useDispatch();
   const navigation = useNavigation();
 
   const { userdata } = useSelector(state => state.user);
   const coins = useSelector(state => state.coins?.coins || []);
   const unread = useSelector(state => state.notification?.unread || 0);
+const { order, loading } = useSelector(state => state.purchase);
 
   const profilePhotoURL = userdata?.images?.profile_image;
 
@@ -44,15 +48,24 @@ export default function PlanScreen() {
     dispatch(getCoinsRequest());
   }, [dispatch]);
 
-  const handleClaim = item => {
-    // 🔥 1. Call create order
-    dispatch(createOrderRequest(item.id));
+useEffect(() => {
+  if (order?.order_id && isCreatingOrder) {
+    setIsCreatingOrder(false);
 
-    // 🔥 2. Navigate to processing screen
-    navigation.navigate('ProcessingScreen', {
-      package: item,
+    navigation.navigate("PaymentScreen", {
+      order,
+      package: selectedPackage,
     });
-  };
+  }
+}, [order, isCreatingOrder]); // ✅ add this
+
+const handleClaim = item => {
+  setSelectedPackage(item);
+  setIsCreatingOrder(true);
+
+  dispatch(resetPurchase());
+  dispatch(createOrderRequest(item.id));
+};
 
   const renderItem = ({ item }) => (
     <TouchableOpacity activeOpacity={0.9} style={styles.cardWrapper}>

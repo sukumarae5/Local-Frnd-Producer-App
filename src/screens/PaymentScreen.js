@@ -10,7 +10,7 @@ import {
 import LinearGradient from "react-native-linear-gradient";
 import RazorpayCheckout from "react-native-razorpay";
 import { useDispatch, useSelector } from "react-redux";
-import { verifyPaymentRequest } from "../features/purchase/purchaseActions";
+import { verifyPaymentRequest, resetPurchase  } from "../features/purchase/purchaseActions";
 
 const PaymentScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
@@ -24,15 +24,9 @@ const PaymentScreen = ({ route, navigation }) => {
   /* =============================
      HANDLE SUCCESS / FAILURE
   ============================= */
-  useEffect(() => {
-    if (paymentSuccess) {
-      navigation.replace("PaymentSuccessScreen");
-    }
-
-    if (error) {
-      Alert.alert("Payment Failed", error);
-    }
-  }, [paymentSuccess, error]);
+const handleRetry = () => {
+  handlePayment();
+};
 
   /* =============================
      RAZORPAY
@@ -55,7 +49,7 @@ const PaymentScreen = ({ route, navigation }) => {
     RazorpayCheckout.open(options)
       .then((data) => {
         console.log("✅ PAYMENT SUCCESS:", data);
-
+  navigation.replace("PaymentSuccessScreen");
         dispatch(
           verifyPaymentRequest({
             razorpay_order_id: data.razorpay_order_id,
@@ -66,13 +60,16 @@ const PaymentScreen = ({ route, navigation }) => {
         );
       })
       .catch((err) => {
-        console.log("❌ PAYMENT FAILED:", err);
+  console.log("❌ PAYMENT FAILED:", err);
 
-        Alert.alert(
-          "Payment Failed",
-          err?.description || "Something went wrong"
-        );
-      });
+  // Ignore user cancel (very important)
+  if (err?.code === 0) return;
+
+  Alert.alert(
+    "Payment Failed",
+    err?.description || "Something went wrong"
+  );
+});
   };
 
   return (
@@ -85,20 +82,34 @@ const PaymentScreen = ({ route, navigation }) => {
       </View>
 
       {/* 🔥 LOADING STATE */}
-      {loading ? (
-        <ActivityIndicator size="large" color="#9333EA" />
-      ) : (
-        <LinearGradient
-          colors={["#7C3AED", "#D946EF"]}
-          style={styles.payBtn}
-        >
-          <TouchableOpacity onPress={handlePayment}>
-            <Text style={styles.payText}>
-              PAY ₹ {order.amount / 100}
-            </Text>
-          </TouchableOpacity>
-        </LinearGradient>
-      )}
+    {/* LOADING */}
+{loading ? (
+  <ActivityIndicator size="large" color="#9333EA" />
+) : (
+  <>
+    {/* PAY BUTTON */}
+    <LinearGradient
+      colors={["#7C3AED", "#D946EF"]}
+      style={styles.payBtn}
+    >
+      <TouchableOpacity onPress={handlePayment}>
+        <Text style={styles.payText}>
+          PAY ₹ {order.amount / 100}
+        </Text>
+      </TouchableOpacity>
+    </LinearGradient>
+
+    {/* RETRY BUTTON (only on error) */}
+    {error && (
+      <TouchableOpacity
+        style={styles.retryBtn}
+        onPress={handleRetry}
+      >
+        <Text style={styles.retryText}>Retry Payment</Text>
+      </TouchableOpacity>
+    )}
+  </>
+)}
 
       {/* 🔥 FAILED UI */}
       {error && (
@@ -162,5 +173,18 @@ const styles = StyleSheet.create({
     marginTop: 20,
     color: "red",
     textAlign: "center"
-  }
+  },
+  retryBtn: {
+  marginTop: 15,
+  padding: 12,
+  borderRadius: 10,
+  borderWidth: 1,
+  borderColor: "#9333EA",
+  alignItems: "center",
+},
+
+retryText: {
+  color: "#9333EA",
+  fontWeight: "700",
+},
 });

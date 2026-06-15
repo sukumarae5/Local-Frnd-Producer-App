@@ -1,7 +1,11 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useDispatch } from 'react-redux';
+import { resetPurchase } from '../features/purchase/purchaseActions';
 
 const PaymentSuccessScreen = ({ navigation }) => {
+  const dispatch = useDispatch();
+
   return (
     <View style={styles.container}>
       <Text style={styles.icon}>🎉</Text>
@@ -15,12 +19,21 @@ const PaymentSuccessScreen = ({ navigation }) => {
       <TouchableOpacity
         style={styles.btn}
         activeOpacity={0.8}
-        onPress={() =>
+        onPress={() => {
+          dispatch(resetPurchase()); // ✅ clear everything
+
           navigation.reset({
             index: 0,
-            routes: [{ name: 'Home' }],
-          })
-        }
+            routes: [
+              {
+                name: 'MaleHomeTabs', // ✅ your tab navigator name
+                state: {
+                  routes: [{ name: 'Home' }], // open Home tab inside it
+                },
+              },
+            ],
+          });
+        }}
       >
         <Text style={styles.btnText}>Go to Home</Text>
       </TouchableOpacity>

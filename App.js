@@ -51,9 +51,8 @@ import HelpCenterScreen from './src/screens/HelpCenterScreen';
 import ReciverWalletScreen from './src/screens/ReciverWalletScreen';
 import StoryViewer from './src/screens/StoryViewer';
 import PaymentScreen from './src/screens/PaymentScreen';
-import ProcessingScreen from './src/screens/ProcessingScreen';
 import PaymentSuccessScreen from './src/screens/PaymentSuccessScreen';
-
+import WithdrawFormScreen from './src/screens/WithdrawFormScreen';
 /*
 IMPORTANT
 If you really navigate to IncomingCallScreen,
@@ -153,7 +152,6 @@ function MainNavigator({ navigationRef, isNavReady }) {
       <Stack.Screen name="PlanScreen" component={PlanScreen} />
       <Stack.Screen name="ChoosePlanScreen" component={ChoosePlanScreen} />
       <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
-      <Stack.Screen name="ProcessingScreen" component={ProcessingScreen} />
       <Stack.Screen
         name="PaymentSuccessScreen"
         component={PaymentSuccessScreen}
@@ -178,6 +176,7 @@ function MainNavigator({ navigationRef, isNavReady }) {
         name="ReciverWalletScreen"
         component={ReciverWalletScreen}
       />
+      <Stack.Screen name="WithdrawFormScreen" component={WithdrawFormScreen} /> 
       <Stack.Screen name="SettingScreen" component={SettingScreen} />
       <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
       <Stack.Screen

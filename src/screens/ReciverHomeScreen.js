@@ -97,7 +97,7 @@ const ReciverHomeScreen = ({ navigation }) => {
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            paddingBottom: scale(90), // 🔥 tab-safe spacing
+            paddingBottom: scale(90), 
           }}
         />
       </View>

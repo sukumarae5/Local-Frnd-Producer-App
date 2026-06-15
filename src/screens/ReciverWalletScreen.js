@@ -28,6 +28,8 @@ const ReciverWalletScreen = ({ navigation }) => {
   const rings = userdata?.user?.rings_balance ?? 0;
   const avatar = userdata?.images?.avatar || userdata?.images?.profile_image;
   const money = rings * 1.2;
+const MIN_WITHDRAW = 10;
+const canWithdraw = rings >= MIN_WITHDRAW;
 
   useEffect(() => {
     dispatch(userDatarequest());
@@ -203,10 +205,16 @@ const ReciverWalletScreen = ({ navigation }) => {
           </View>
 
           {/* WITHDRAW BUTTON */}
-          <TouchableOpacity
-            activeOpacity={0.9}
-            style={styles.withdrawButton}
-          >
+         <TouchableOpacity
+  disabled={!canWithdraw}
+  onPress={() => navigation.navigate("WithdrawFormScreen",{
+    rings: rings,
+  })}
+  style={[
+    styles.withdrawButton,
+    { opacity: canWithdraw ? 1 : 0.5 }
+  ]}
+>
             <LinearGradient
               colors={['#FF4FB8', '#8B5CF6']}
               start={{ x: 0, y: 0 }}
@@ -224,7 +232,11 @@ const ReciverWalletScreen = ({ navigation }) => {
               </Text>
             </LinearGradient>
           </TouchableOpacity>
-
+{!canWithdraw && (
+  <Text style={{ textAlign: "center", marginTop: 10 }}>
+    Minimum 10 rupees rings required
+  </Text>
+)}
           {/* INFO CARD */}
           <View style={styles.infoCard}>
             <Icon

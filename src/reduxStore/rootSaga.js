@@ -20,6 +20,7 @@ import statusSaga from "../features/Status/statusSaga"
 import watchCoins from"../features/conis/coinSaga"
 import offersSaga from"../features/Offers/offersSaga"
 import  watchPurchase  from "../features/purchase/purchaseSaga";
+import {watchWithdraw}  from "../features/withdraw/withdrawSaga";
 
 
 export default function* rootSaga() {
@@ -44,7 +45,8 @@ export default function* rootSaga() {
         statusSaga(),
         watchCoins(),
         offersSaga(),
-        watchPurchase()
+        watchPurchase(),
+        watchWithdraw()
 
   ]);
 }

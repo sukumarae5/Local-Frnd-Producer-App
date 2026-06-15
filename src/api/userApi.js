@@ -72,3 +72,8 @@ export const offersapi=`${MAIN_BASE_URL}/api/offers`
 
 
 export const purchaseApi = `${MAIN_BASE_URL}/api/purchase`;
+
+
+export const withdrawCreateApi = `${MAIN_BASE_URL}/api/withdraw/create`;
+export const withdrawHistoryApi = `${MAIN_BASE_URL}/api/withdraw/history`;
+

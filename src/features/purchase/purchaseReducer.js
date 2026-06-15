@@ -6,24 +6,22 @@ import {
   CREATE_ORDER_FAILURE,
   VERIFY_PAYMENT_REQUEST,
   VERIFY_PAYMENT_SUCCESS,
-  VERIFY_PAYMENT_FAILURE
+  VERIFY_PAYMENT_FAILURE,
+  RESET_PURCHASE
 } from "./purchaseType";
 
 const initialState = {
   loading: false,
   order: null,
-  paymentSuccess: null,
+  paymentSuccess: false,
   error: null
 };
 
 const purchaseReducer = (state = initialState, action) => {
-  console.log("PURCHASE ACTION:", action);
-
   switch (action.type) {
 
-    /* CREATE ORDER */
     case CREATE_ORDER_REQUEST:
-      return { ...state, loading: true };
+      return { ...state, loading: true, error: null };
 
     case CREATE_ORDER_SUCCESS:
       return {
@@ -39,7 +37,6 @@ const purchaseReducer = (state = initialState, action) => {
         error: action.payload
       };
 
-    /* VERIFY PAYMENT */
     case VERIFY_PAYMENT_REQUEST:
       return { ...state, loading: true };
 
@@ -47,15 +44,20 @@ const purchaseReducer = (state = initialState, action) => {
       return {
         ...state,
         loading: false,
-        paymentSuccess: action.payload
+        paymentSuccess: true, // ✅ ALWAYS BOOLEAN
+        error: null
       };
 
     case VERIFY_PAYMENT_FAILURE:
       return {
         ...state,
         loading: false,
-        error: action.payload
+        error: action.payload,
+        paymentSuccess: false
       };
+
+    case RESET_PURCHASE:
+      return initialState; // ✅ FULL RESET
 
     default:
       return state;
