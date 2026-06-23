@@ -15,7 +15,7 @@ import {
   PermissionsAndroid,
   Alert,
 } from 'react-native';
-import AudioRecorderPlayer from 'react-native-audio-recorder-player';
+import { NitroSound } from 'react-native-nitro-sound';
 import Voice from '@react-native-voice/voice';
 import { launchCamera } from 'react-native-image-picker';
 import { pick } from '@react-native-documents/picker';import { chatFileUploadRequest } from "../features/chat/chatAction";
@@ -38,19 +38,11 @@ const { width } = Dimensions.get('window');
 const isSmall = width < 360;
 
 const createAudioRecorder = () => {
-  const Recorder = AudioRecorderPlayer?.default || AudioRecorderPlayer;
-
-  if (Recorder?.startRecorder) return Recorder;
-
   try {
-    return new Recorder();
+    return new NitroSound();
   } catch (e) {
-    try {
-      return Recorder();
-    } catch (err) {
-      console.log('AudioRecorderPlayer init error:', err);
-      return null;
-    }
+    console.log('NitroSound init error:', e);
+    return null;
   }
 };
 

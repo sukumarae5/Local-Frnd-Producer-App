@@ -27,6 +27,15 @@ import EndCallConfirmModal from '../screens/EndCallConfirmationScreen';
 import { SocketContext } from '../socket/SocketProvider';
 import { createPC } from '../utils/webrtc';
 import callManager from '../utils/callManager';
+import { NativeEventEmitter, NativeModules } from 'react-native';
+import { ToastAndroid } from 'react-native';
+
+const showToast = msg => {
+  if (Platform.OS === 'android') {
+    ToastAndroid.show(msg, ToastAndroid.SHORT);
+  }
+};
+
 const PRIMARY = '#A020F0';
 
 const AudiocallScreen = ({ route, navigation }) => {
@@ -36,26 +45,58 @@ const AudiocallScreen = ({ route, navigation }) => {
   const { socketRef, connected } = useContext(SocketContext);
   const dispatch = useDispatch();
   const { userdata } = useSelector(state => state.user); // ✅ ADD THIS
-  const myGender = userdata?.user?.gender; // ❌ NOT IN YOUR UPDATED CODE
-
+  const myGender = useSelector(state => state.auth?.user?.gender);
   const myId = useSelector(state => state.user.userdata?.user?.user_id);
   const connectedCallDetails = useSelector(
     state => state?.calls?.connectedCallDetails,
   );
+  // In AudiocallScreen.js — both handleEndCall AND call_ended handler
+  // make sure call_type comes from route params properly
 
+  // ✅ ADD this at the top of AudiocallScreen component
+  const callType = route?.params?.call_type || 'AUDIO';
   const caller = connectedCallDetails?.caller;
   const connectedUser = connectedCallDetails?.connected_user;
 
   // ✅ Use routeCallerId to determine roles immediately without waiting for API
-  const iAmCaller = String(myId) === String(routeCallerId);
 
-  // ✅ Correct role assignment
-  const me = iAmCaller ? caller : connectedUser;
-  const other = iAmCaller ? connectedUser : caller;
+  const [me, setMe] = useState(null);
+  const [other, setOther] = useState(null);
+
+  useEffect(() => {
+    const caller = connectedCallDetails?.caller;
+    const connectedUser = connectedCallDetails?.connected_user;
+
+    if (!caller || !connectedUser || !myId) return;
+
+    let myData = null;
+    let otherData = null;
+
+    // ✅ UNIVERSAL LOGIC
+    if (String(myId) === String(caller.user_id)) {
+      myData = caller;
+      otherData = connectedUser;
+    } else {
+      myData = connectedUser;
+      otherData = caller;
+    }
+
+    console.log('🔥 FINAL ME:', myData);
+    console.log('🔥 FINAL OTHER:', otherData);
+
+    setMe(myData);
+    setOther(otherData);
+  }, [connectedCallDetails, myId]);
 
   console.log(other);
   console.log(me);
-
+  console.log('🧠 myId:', myId);
+  console.log('🧠 routeCallerId:', routeCallerId);
+  console.log('🧠 caller:', caller);
+  console.log('🧠 connectedUser:', connectedUser);
+  console.log('🧠 me:', me);
+  console.log('🧠 other:', other);
+  const incallEmitter = new NativeEventEmitter();
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
   const pendingIceRef = useRef([]);
@@ -67,6 +108,7 @@ const AudiocallScreen = ({ route, navigation }) => {
   const hasStartedRef = useRef(false);
   const disableExitRef = useRef(false);
   const remoteEndedRef = useRef(false);
+  const forceExitRef = useRef(false);
   const isInitialMountRef = useRef(true);
   const connectedRef = useRef(false); // ✅ ADD with other refs
 
@@ -78,10 +120,12 @@ const AudiocallScreen = ({ route, navigation }) => {
   const [otherMicOn, setOtherMicOn] = useState(true);
   const [speakerOn, setSpeakerOn] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  const [audioDevice, setAudioDevice] = useState('earpiece');
+  // values: 'earpiece' | 'speaker' | 'headset' | 'bluetooth'
   const [iceState, setIceState] = useState('new');
   const [remoteStream, setRemoteStream] = useState(null);
   const [showEndModal, setShowEndModal] = useState(false);
-  /* ================= PERMISSION ================= */
+  const otherRef = useRef(null);
 
   const requestPermission = async () => {
     if (Platform.OS !== 'android') return true;
@@ -92,6 +136,9 @@ const AudiocallScreen = ({ route, navigation }) => {
 
     return res === PermissionsAndroid.RESULTS.GRANTED;
   };
+  useEffect(() => {
+    otherRef.current = other;
+  }, [other]);
 
   useEffect(() => {
     const animate = (anim, delay) => {
@@ -144,8 +191,11 @@ const AudiocallScreen = ({ route, navigation }) => {
       // ✅ START AUDIO ENGINE
       InCallManager.start({ media: 'audio' });
 
-      InCallManager.setForceSpeakerphoneOn(true);
-      InCallManager.setSpeakerphoneOn(true);
+      setAudioDevice('earpiece');
+      setSpeakerOn(false);
+      // ❌ DO NOT FORCE SPEAKER HERE
+      InCallManager.setForceSpeakerphoneOn(false);
+      InCallManager.setSpeakerphoneOn(false);
       InCallManager.setMicrophoneMute(false);
 
       pcRef.current = createPC({
@@ -166,14 +216,6 @@ const AudiocallScreen = ({ route, navigation }) => {
           }
 
           setRemoteStream(stream);
-
-          setTimeout(() => {
-            InCallManager.stop(); // reset
-            InCallManager.start({ media: 'audio' });
-
-            InCallManager.setForceSpeakerphoneOn(true);
-            InCallManager.setSpeakerphoneOn(true);
-          }, 500);
         },
       });
 
@@ -202,18 +244,54 @@ const AudiocallScreen = ({ route, navigation }) => {
       socket.on('audio_answer', onAnswer);
       socket.on('audio_ice_candidate', onIce);
       // ✅ FIND this inside start() and REPLACE
-      socket.on('audio_call_ended', () => {
-        console.log('📴 CALL ENDED RECEIVED');
-        remoteEndedRef.current = true;
-        stopCallMedia();
+      // ============ VERIFY call_ended socket handler has fromCall: true ============
+      socket.on('call_ended', data => {
+        const endedBy = data?.endedBy;
 
-        // ✅ connectedRef.current is a ref — always current inside closure
-        if (connectedRef.current) {
-          setShowEndModal(true);
-        } else {
-          dispatch(clearCall());
-          leaveScreen();
-        }
+        if (String(endedBy) === String(myId)) return;
+
+        const otherUser = otherRef.current;
+        const otherName = otherUser?.name || 'User';
+
+        showToast(`${otherName} ended the call`);
+
+        forceExitRef.current = true;
+        remoteEndedRef.current = true;
+        disableExitRef.current = true;
+        manualExitRef.current = true;
+
+        stopCallMedia();
+        dispatch(clearCall());
+        callManager.reset();
+
+        setTimeout(() => {
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 1,
+              routes: [
+                {
+                  name:
+                    myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs',
+                },
+                {
+                  name: 'CallStatusScreen',
+                  params: {
+                    showRating: true,
+                    fromCall: true, // ✅ THIS IS THE KEY
+                    otherUser: {
+                      user_id: otherUser?.user_id,
+                      name: otherUser?.name,
+                      avatar: otherUser?.avatar,
+                    },
+                    session_id,
+                    role: myGender === 'Male' ? 'Male' : 'female',
+                    call_type: callType,
+                  },
+                },
+              ],
+            }),
+          );
+        }, 800);
       });
       socket.on('audio_connected', async () => {
         console.log('🚀 audio_connected');
@@ -267,23 +345,43 @@ const AudiocallScreen = ({ route, navigation }) => {
   /* ================= SIGNALING ================= */
 
   useEffect(() => {
-    if (!remoteStream) return;
+    const subscription = incallEmitter.addListener(
+      'onAudioDeviceChanged',
+      data => {
+        console.log('🎧 AUDIO DEVICE:', data);
 
-    console.log('🔊 PLAYING REMOTE AUDIO');
+        const device = data.audioDevice;
 
-    const audioTrack = remoteStream.getAudioTracks()[0];
+        if (device === 'WIRED_HEADSET' || device === 'BLUETOOTH') {
+          console.log('🎧 Headphone/Bluetooth CONNECTED');
 
-    if (audioTrack) {
-      audioTrack.enabled = true;
-    }
+          // ✅ FORCE SWITCH
+          setAudioDevice(device === 'BLUETOOTH' ? 'bluetooth' : 'headset');
+          setSpeakerOn(false);
 
-    setTimeout(() => {
-      InCallManager.start({ media: 'audio' }); // 🔥 restart audio engine
-      InCallManager.setForceSpeakerphoneOn(true);
-      InCallManager.setSpeakerphoneOn(true);
-      InCallManager.setMicrophoneMute(false);
-    }, 1000); // increase delay
-  }, [remoteStream]);
+          // 🔥 HARD OVERRIDE
+          setTimeout(() => {
+            InCallManager.setForceSpeakerphoneOn(false);
+            InCallManager.setSpeakerphoneOn(false);
+          }, 100);
+        } else if (device === 'SPEAKER') {
+          setAudioDevice('speaker');
+        } else {
+          console.log('📞 Back to EARPIECE');
+
+          setAudioDevice('earpiece');
+          setSpeakerOn(false);
+
+          InCallManager.setForceSpeakerphoneOn(false);
+          InCallManager.setSpeakerphoneOn(false);
+        }
+      },
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   const flushIce = async () => {
     if (!pcRef.current || endedRef.current) return;
@@ -374,14 +472,11 @@ const AudiocallScreen = ({ route, navigation }) => {
     }
 
     setTimeout(() => {
-      console.log('🔊 AUDIO FIX AFTER CONNECT');
-
       InCallManager.setMicrophoneMute(false);
-      InCallManager.setForceSpeakerphoneOn(true);
-      InCallManager.setSpeakerphoneOn(true);
     }, 500);
-    setSpeakerOn(true); // 🔥 IMPORTANT
 
+    // ❌ DO NOT AUTO ENABLE SPEAKER
+    setSpeakerOn(false);
     dispatch(callDetailsRequest());
 
     timerRef.current = setInterval(() => {
@@ -412,13 +507,25 @@ const AudiocallScreen = ({ route, navigation }) => {
   };
 
   const toggleSpeaker = () => {
+    // ❌ Block if headset/bluetooth connected
+    if (audioDevice === 'headset' || audioDevice === 'bluetooth') {
+      console.log('❌ Cannot enable speaker while headset connected');
+      return;
+    }
+
     const newVal = !speakerOn;
-    console.log('🔊 Speaker:', newVal ? 'ON' : 'OFF');
+
+    console.log('🔊 Toggle Speaker:', newVal);
 
     setSpeakerOn(newVal);
+    setAudioDevice(newVal ? 'speaker' : 'earpiece');
 
-    InCallManager.setForceSpeakerphoneOn(newVal);
-    InCallManager.setSpeakerphoneOn(newVal);
+    // 🔥 RESET FIRST (VERY IMPORTANT)
+    InCallManager.setForceSpeakerphoneOn(false);
+
+    setTimeout(() => {
+      InCallManager.setSpeakerphoneOn(newVal);
+    }, 150);
   };
 
   /* ================= STOP CALL ================= */
@@ -430,7 +537,7 @@ const AudiocallScreen = ({ route, navigation }) => {
 
     clearInterval(timerRef.current);
 
-    // InCallManager.stop();
+    InCallManager.stop();
 
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     pcRef.current?.close();
@@ -452,14 +559,68 @@ const AudiocallScreen = ({ route, navigation }) => {
     );
   };
 
+  // ============ REPLACE handleEndCall ============
+  // ============ VERIFY handleEndCall has fromCall: true ============
+  const handleEndCall = () => {
+    if (isExitingRef.current) return;
+    isExitingRef.current = true;
+    manualExitRef.current = true;
+
+    const otherUser = otherRef.current;
+
+    socketRef.current?.emit('call_end', {
+      session_id,
+      user_id: myId,
+      name: me?.name,
+    });
+
+    stopCallMedia();
+    callManager.reset();
+    dispatch(clearCall());
+
+    showToast('You ended the call');
+
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 1,
+        routes: [
+          {
+            name: myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs',
+          },
+          {
+            name: 'CallStatusScreen',
+            params: {
+              showRating: true,
+              fromCall: true, // ✅ THIS IS THE KEY
+              otherUser: {
+                user_id: otherUser?.user_id,
+                name: otherUser?.name,
+                avatar: otherUser?.avatar,
+              },
+              session_id,
+              role: myGender === 'Male' ? 'Male' : 'female',
+              call_type: callType,
+            },
+          },
+        ],
+      }),
+    );
+  };
+
   /* ================= EXIT CONFIRM ================= */
   const beforeRemoveRef = useRef(null);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', e => {
-      // ✅ HARD STOP (FINAL FIX)
-      if (disableExitRef.current) {
-        navigation.dispatch(e.data.action); // ✅ allow navigation
+      // ✅ HARD EXIT → NEVER SHOW ALERT
+      if (forceExitRef.current) {
+        navigation.dispatch(e.data.action);
+        return;
+      }
+
+      // ✅ REMOTE END → NO ALERT
+      if (remoteEndedRef.current || disableExitRef.current) {
+        navigation.dispatch(e.data.action);
         return;
       }
 
@@ -467,10 +628,12 @@ const AudiocallScreen = ({ route, navigation }) => {
         navigation.dispatch(e.data.action);
         return;
       }
+
       if (!connectedRef.current) {
         navigation.dispatch(e.data.action);
         return;
       }
+
       e.preventDefault();
 
       Alert.alert('Exit from Call', 'Are you sure you want to exit the call?', [
@@ -478,9 +641,7 @@ const AudiocallScreen = ({ route, navigation }) => {
         {
           text: 'Exit',
           style: 'destructive',
-          onPress: () => {
-            setShowEndModal(true);
-          },
+          onPress: handleEndCall,
         },
       ]);
     });
@@ -628,6 +789,8 @@ const AudiocallScreen = ({ route, navigation }) => {
           <TouchableOpacity
             style={styles.userCard}
             onPress={() => {
+              if (!other?.user_id) return;
+
               dispatch(otherUserFetchRequest(other.user_id));
               navigation.navigate('AboutScreen');
             }}
@@ -656,14 +819,11 @@ const AudiocallScreen = ({ route, navigation }) => {
           </TouchableOpacity>
         </View>
       )}
-
       <View style={styles.controls}>
         <TouchableOpacity
           style={[
             styles.circleBtn,
-            {
-              backgroundColor: speakerOn ? PRIMARY : '#fff',
-            },
+            { backgroundColor: speakerOn ? PRIMARY : '#fff' },
           ]}
           onPress={toggleSpeaker}
         >
@@ -677,14 +837,12 @@ const AudiocallScreen = ({ route, navigation }) => {
         <TouchableOpacity
           style={[
             styles.circleBtn,
-            {
-              backgroundColor: micOn ? PRIMARY : '#fff',
-            },
+            { backgroundColor: micOn ? PRIMARY : '#fff' },
           ]}
           onPress={toggleMic}
         >
           <Ionicons
-            name={micOn ? 'mic' : 'mic-off'} // 🔥 icon change
+            name={micOn ? 'mic' : 'mic-off'}
             size={24}
             color={micOn ? '#fff' : PRIMARY}
           />
@@ -693,7 +851,14 @@ const AudiocallScreen = ({ route, navigation }) => {
         <TouchableOpacity
           style={styles.endBtn}
           onPress={() => {
-            setShowEndModal(true); // ✅ show rating modal first
+            Alert.alert(
+              'End Call?',
+              'Are you sure you want to exit the call?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Exit', style: 'destructive', onPress: handleEndCall },
+              ],
+            );
           }}
         >
           <Ionicons name="call" size={22} color="#8f0a0a" />
@@ -707,40 +872,6 @@ const AudiocallScreen = ({ route, navigation }) => {
           style={{ width: 1, height: 1 }} // hidden but required
         />
       )}
-
-      <EndCallConfirmModal
-        visible={showEndModal}
-        otherUser={other}
-        onCancel={() => setShowEndModal(false)}
-        onConfirm={rating => {
-          if (isExitingRef.current) return;
-          isExitingRef.current = true;
-          disableExitRef.current = true;
-          manualExitRef.current = true;
-
-          setShowEndModal(false);
-
-          // remove listener also (extra safe)
-          dispatch(
-            submitRatingRequest({
-              session_id,
-              rater_id: myId,
-              rated_user_id: other?.user_id,
-              rating,
-            }),
-          );
-
-          if (!remoteEndedRef.current) {
-            socketRef.current?.emit('audio_call_hangup', { session_id });
-          }
-          stopCallMedia();
-
-          callManager.reset();
-          dispatch(clearCall());
-
-          leaveScreen();
-        }}
-      />
     </LinearGradient>
   );
 };
