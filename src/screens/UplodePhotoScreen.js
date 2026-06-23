@@ -10,12 +10,11 @@ import {
   Alert,
   PermissionsAndroid,
 } from "react-native";
-// import { PermissionsAndroid } from "react-native";
 
 import LinearGradient from "react-native-linear-gradient";
 import { launchCamera, launchImageLibrary } from "react-native-image-picker";
 import { useNavigation } from "@react-navigation/native";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { userpostphotorequest } from "../features/photo/photoAction";
 
 const { width } = Dimensions.get("window");
@@ -25,8 +24,11 @@ const UplodePhotoScreen = () => {
   const navigation = useNavigation();
 
   const [photo, setPhoto] = useState(null);
-  
 
+  // ✅ GET GENDER FROM REDUX
+  const gender = useSelector((state) => state.auth?.user?.gender);
+
+  // ================= PERMISSION =================
   const requestCameraPermission = async () => {
     try {
       const granted = await PermissionsAndroid.request(
@@ -46,6 +48,7 @@ const UplodePhotoScreen = () => {
     }
   };
 
+  // ================= CAMERA =================
   const openCamera = async () => {
     const permitted = await requestCameraPermission();
     if (!permitted) {
@@ -60,25 +63,29 @@ const UplodePhotoScreen = () => {
       },
       (response) => {
         if (response.didCancel || response.errorCode) return;
+
         if (response.assets?.length > 0) {
-          setPhoto(response.assets[0]); // ✅ FIX
+          setPhoto(response.assets[0]);
         }
       }
     );
   };
 
+  // ================= GALLERY =================
   const openGallery = () => {
     launchImageLibrary(
-      { mediaType: "photo", quality: 0.7 }, // ✅ FIX (no base64)
+      { mediaType: "photo", quality: 0.7 },
       (response) => {
         if (response.didCancel || response.errorMessage) return;
+
         if (response.assets?.length > 0) {
-          setPhoto(response.assets[0]); // ✅ FIX
+          setPhoto(response.assets[0]);
         }
       }
     );
   };
 
+  // ================= SELECT OPTION =================
   const openSelectOption = () => {
     Alert.alert(
       "Select Option",
@@ -92,7 +99,20 @@ const UplodePhotoScreen = () => {
     );
   };
 
-  // ======= FIXED UPLOAD FUNCTION (MULTER SAFE) =======
+  // ================= NAVIGATION BASED ON GENDER =================
+  const navigateBasedOnGender = () => {
+    console.log("Gender:", gender);
+
+    if (gender === "Male") {
+      navigation.replace("MaleHomeTabs");
+    } else if (gender === "Female") {
+      navigation.replace("ReceiverBottomTabs");
+    } else {
+      navigation.replace("Home"); // fallback
+    }
+  };
+
+  // ================= UPLOAD PHOTO =================
   const handlesendphoto = () => {
     if (!photo) {
       Alert.alert("Please select an image first");
@@ -112,7 +132,8 @@ const UplodePhotoScreen = () => {
 
     dispatch(
       userpostphotorequest(formData, () => {
-        navigation.navigate("Home");
+        // ✅ Navigate based on gender after upload
+        navigateBasedOnGender();
       })
     );
   };
@@ -120,6 +141,8 @@ const UplodePhotoScreen = () => {
   return (
     <LinearGradient colors={["#4a0f4aff", "#2f0738ff"]} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        
+        {/* BACK BUTTON */}
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backBtn}
@@ -129,6 +152,7 @@ const UplodePhotoScreen = () => {
 
         <Text style={styles.title}>Profile Setup (2/2)</Text>
 
+        {/* PHOTO SELECT */}
         <TouchableOpacity
           style={styles.photoCircle}
           onPress={openSelectOption}
@@ -148,21 +172,25 @@ const UplodePhotoScreen = () => {
         </TouchableOpacity>
 
         <Text style={styles.smileText}>Show us your smile!</Text>
+
         <Text style={styles.coinText}>
           Upload now and instantly get{" "}
           <Text style={styles.boldCoin}>50 Coins! 💰</Text>
         </Text>
 
+        {/* UPLOAD BUTTON */}
         <TouchableOpacity style={styles.uploadBtn} onPress={handlesendphoto}>
           <Text style={styles.uploadBtnText}>Upload Photo (+50 Coins)</Text>
         </TouchableOpacity>
 
+        {/* SKIP BUTTON */}
         <TouchableOpacity
           style={{ marginTop: 15 }}
-          onPress={() => navigation.navigate("Home")}
+          onPress={navigateBasedOnGender}
         >
           <Text style={styles.skipText}>Skip for now</Text>
         </TouchableOpacity>
+
       </ScrollView>
     </LinearGradient>
   );
@@ -170,7 +198,7 @@ const UplodePhotoScreen = () => {
 
 export default UplodePhotoScreen;
 
-/* ===================== STYLES ===================== */
+// ================= STYLES =================
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
