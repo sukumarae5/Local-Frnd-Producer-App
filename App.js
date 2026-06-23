@@ -87,7 +87,9 @@ function MainNavigator({ navigationRef, isNavReady }) {
         dispatch(
           restoreLogin({
             token: token,
-            user: { user_id: userId }, // minimal user
+            user: { user_id: userId,
+               gender: gender || null,
+             }, // minimal user
           }),
         );
       }

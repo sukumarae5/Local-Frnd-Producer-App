@@ -22,7 +22,7 @@ const offersReducer = (state = initialState, action) => {
       return {
         ...state,
         loading: false,
-        offers: action.payload,
+        offers: action.payload.offers,
       };
 
     case GET_OFFERS_FAILURE:

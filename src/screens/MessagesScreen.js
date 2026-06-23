@@ -19,10 +19,13 @@ import { chatListRequest } from '../features/chat/chatAction';
 import { friendCallRequest } from '../features/calls/callAction';
 import { useFocusEffect } from '@react-navigation/native';
 import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
+import { useContext, useEffect } from 'react';
+import { SocketContext } from '../socket/SocketProvider';
+
 
 const MessagesScreen = ({ navigation }) => {
   const dispatch = useDispatch();
-
+const { socketRef } = useContext(SocketContext);
   const chatList = useSelector(state => state.chat.chatList) ?? [];
   const unread = useSelector(state => state.chat.unread) ?? {};
   const userdata = useSelector(state => state.user.userdata);
@@ -36,6 +39,35 @@ const MessagesScreen = ({ navigation }) => {
       dispatch(chatListRequest());
     }, [dispatch]),
   );
+useEffect(() => {
+  const socket = socketRef.current;
+  if (!socket) return;
+
+  let timeout;
+
+  const refreshChatList = () => {
+    console.log('📩 Real-time chat update');
+
+    // ✅ debounce to avoid multiple API calls
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      dispatch(chatListRequest());
+    }, 500);
+  };
+
+  // ✅ correct events
+  socket.on('chat_receive', refreshChatList);
+  socket.on('chat_read_update', refreshChatList);
+  socket.on('chat_read_all_update', refreshChatList);
+  socket.on('friend_accept', refreshChatList);
+
+  return () => {
+    socket.off('chat_receive', refreshChatList);
+    socket.off('chat_read_update', refreshChatList);
+    socket.off('chat_read_all_update', refreshChatList);
+    socket.off('friend_accept', refreshChatList);
+  };
+}, [dispatch, socketRef]);
 
   const onRefresh = async () => {
     setRefreshing(true);

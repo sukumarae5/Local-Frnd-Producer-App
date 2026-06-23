@@ -17,9 +17,10 @@ const { width, height } = Dimensions.get('window');
 
 const SelectYourIdealMatchScreen = ({ navigation }) => {
   const { userdata } = useSelector(state => state.user);
+const gender = useSelector(state => state.auth?.user?.gender);
 
   const handleContinue = () => {
-    const gender = userdata?.user?.gender;
+    // const gender = userdata?.user?.gender;
 
     if (!gender) {
       alert('Gender not found');
