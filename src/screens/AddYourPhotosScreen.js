@@ -117,6 +117,7 @@ const AddYourPhotosScreen = ({ navigation, route }) => {
 
     dispatch(
       userpostphotorequest(formData, () => {
+
         if (from === "EditProfile") {
           navigation.goBack();
         } else {
