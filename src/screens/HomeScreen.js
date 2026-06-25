@@ -26,7 +26,7 @@ import { fetchUnreadCount } from '../features/notification/notificationAction';
 import { callRequest } from '../features/calls/callAction';
 import StoriesScreen from './StoriesScreen';
 import LikeMindedSectionScreen from './LikeMindedSectionScreen';
-import OffersSectionScreen from './OffersSectionScreen';
+import MaleOffersScreen from "./MaleOffersScreen"
 import ActiveDostSectionScreen from './ActiveDostSectionScreen';
 import BottomCallPills from '../components/BottomCallPills';
 import HomeHeader from '../components/HomeHeader';
@@ -135,7 +135,7 @@ const HomeScreen = () => {
       case 'stories':
         return <StoriesScreen />;
       case 'offers':
-        return <OffersSectionScreen />;
+        return <MaleOffersScreen/>;
       case 'like':
         return <LikeMindedSectionScreen />;
       case 'active':
