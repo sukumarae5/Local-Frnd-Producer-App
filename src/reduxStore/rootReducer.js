@@ -21,7 +21,7 @@ import coinReducer from"../features/conis/coinReducer"
 import offersReducer from"../features/Offers/offersReducer"
 import purchaseReducer from "../features/purchase/purchaseReducer"
 import withdrawReducer from "../features/withdraw/withdrawReducer"
-
+import chartOptionsReducer from "../features/chat/chatOptionsReducer"
 
 const rootReducer = combineReducers({
   auth:authReducer,
@@ -45,7 +45,8 @@ const rootReducer = combineReducers({
   coins:coinReducer,
   offers:offersReducer,
   purchase:purchaseReducer,
-  withdraw:withdrawReducer
+  withdraw:withdrawReducer,
+  chatOptions:chartOptionsReducer,
 
 });
 

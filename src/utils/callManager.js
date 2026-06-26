@@ -18,22 +18,17 @@ class CallManager {
     this.currentSession = null;
     this.lastNavigatedSession = null;
   }
+
   safeNavigate(navigationRef, screen, params = {}) {
-
-  if (!navigationRef.current) {
-    console.log("⛔ NAV NOT READY");
-    return;
+    if (!navigationRef?.current) {
+      console.log("⛔ NAV NOT READY");
+      return;
+    }
+    console.log("🚀 NAVIGATING →", screen, params);
+    navigationRef.current.dispatch(
+      CommonActions.navigate({ name: screen, params })
+    );
   }
-
-  console.log("🚀 NAVIGATING →", screen, params);
-
-  navigationRef.current.dispatch(
-    CommonActions.navigate({
-      name: screen,
-      params,
-    })
-  );
-}
 }
 
 export default new CallManager();

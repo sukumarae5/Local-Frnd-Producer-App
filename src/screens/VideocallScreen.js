@@ -48,9 +48,13 @@ const VideocallScreen = ({ route, navigation }) => {
   const myGender = useSelector(s => s.user?.userdata?.user?.gender);
   const connectedCallDetails = useSelector(s => s?.calls?.connectedCallDetails);
   const myId = useSelector(s => s.user.userdata?.user?.user_id);
+  const coinBalance = useSelector(
+    s => s.user?.userdata?.user?.coin_balance ?? 0,
+  );
 
-  // ✅ Same as AudiocallScreen — get callType from route params
   const callType = route?.params?.call_type || 'VIDEO';
+  const isMale = myGender === 'Male';
+  const RATE = callType === 'VIDEO' ? 60 : 10;
 
   const caller = connectedCallDetails?.caller;
   const connectedUser = connectedCallDetails?.connected_user;
@@ -67,9 +71,10 @@ const VideocallScreen = ({ route, navigation }) => {
   const [cameraOn, setCameraOn] = useState(true);
   const [speakerOn, setSpeakerOn] = useState(false);
   const [activeBtn, setActiveBtn] = useState(null);
-  const [isRemoteLarge, setIsRemoteLarge] = useState(true);
   const [otherFaceGone, setOtherFaceGone] = useState(false);
   const [otherCameraOff, setOtherCameraOff] = useState(false);
+  const [coinSecondsLeft, setCoinSecondsLeft] = useState(null);
+  const [warningMsg, setWarningMsg] = useState('');
 
   /* ── Refs ── */
   const pcRef = useRef(null);
@@ -83,8 +88,9 @@ const VideocallScreen = ({ route, navigation }) => {
   const cameraOnRef = useRef(true);
   const captureViewRef = useRef(null);
   const dashOffset = useRef(new Animated.Value(0)).current;
-
-  // ✅ Same refs as AudiocallScreen
+  const coinCountdownRef = useRef(null);
+  const alertShownRef = useRef(false);
+  const coinEndedRef = useRef(false);
   const manualExitRef = useRef(false);
   const forceExitRef = useRef(false);
   const remoteEndedRef = useRef(false);
@@ -95,7 +101,6 @@ const VideocallScreen = ({ route, navigation }) => {
   connectedUIRef.current = connectedUI;
   cameraOnRef.current = cameraOn;
 
-  // ✅ Same as AudiocallScreen — keep otherRef always current
   useEffect(() => {
     otherRef.current = other;
   }, [other]);
@@ -137,11 +142,10 @@ const VideocallScreen = ({ route, navigation }) => {
     });
   }, [cameraOn, connectedUI]);
 
-  /* ── Listen: other user face + camera ── */
+  /* ── Other user face + camera ── */
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
-
     const handleFace = ({ user_id, face_visible }) => {
       if (String(user_id) === String(myId)) return;
       setOtherFaceGone(!face_visible);
@@ -151,7 +155,6 @@ const VideocallScreen = ({ route, navigation }) => {
       setOtherCameraOff(!camera_on);
       if (!camera_on) setOtherFaceGone(false);
     };
-
     socket.on('face_status_update', handleFace);
     socket.on('camera_status_update', handleCamera);
     return () => {
@@ -178,7 +181,6 @@ const VideocallScreen = ({ route, navigation }) => {
     ).start();
   }, []);
 
-  /* ── Call details ── */
   useEffect(() => {
     if (session_id) dispatch(callDetailsRequest());
   }, [session_id]);
@@ -198,7 +200,126 @@ const VideocallScreen = ({ route, navigation }) => {
     );
   };
 
-  /* ── WebRTC ── */
+  /* ══════════════════════════════════════
+     COIN EXHAUSTED — no alert, auto exit
+  ══════════════════════════════════════ */
+  const handleCoinExhausted = () => {
+    if (coinEndedRef.current) return;
+    coinEndedRef.current = true;
+    if (isExitingRef.current) return;
+    isExitingRef.current = true;
+    manualExitRef.current = true;
+    forceExitRef.current = true;
+
+    const currentOther = otherRef.current;
+    socketRef.current?.emit('call_end', { session_id, user_id: myId });
+    socketRef.current?.emit('video_call_hangup', { session_id, user_id: myId });
+    stopCallMedia();
+    callManager.reset();
+    dispatch(clearCall());
+    showToast('Coins exhausted — call ended.');
+
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 1,
+        routes: [
+          { name: myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs' },
+          {
+            name: 'CallStatusScreen',
+            params: {
+              showRating: true,
+              fromCall: true,
+              otherUser: {
+                user_id: currentOther?.user_id,
+                name: currentOther?.name,
+                avatar: currentOther?.avatar,
+              },
+              session_id,
+              role: myGender === 'Male' ? 'Male' : 'female',
+              call_type: callType,
+            },
+          },
+        ],
+      }),
+    );
+  };
+
+  /* ══════════════════════════════════════
+     SERVER COIN EVENTS
+  ══════════════════════════════════════ */
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket || !connectedUI) return;
+
+    socket.emit('video_join_room', { session_id });
+
+    const onMinutesUpdate = ({ remainingCoins, ratePerMinute }) => {
+      if (!isMale) return;
+      const newSecondsLeft = Math.floor((remainingCoins / ratePerMinute) * 60);
+      setCoinSecondsLeft(newSecondsLeft);
+
+      if (coinCountdownRef.current) clearInterval(coinCountdownRef.current);
+      coinCountdownRef.current = setInterval(() => {
+        setCoinSecondsLeft(prev => {
+          if (prev === null || prev <= 0) {
+            setTimeout(() => handleCoinExhausted(), 0);
+            return 0;
+          }
+          const next = prev - 1;
+          if (next === 30 && !alertShownRef.current) {
+            alertShownRef.current = true;
+            setTimeout(() => {
+              Alert.alert(
+                '⚠️ Call Ending Soon',
+                'Your call will end in 30 seconds. Buy more coins to continue.',
+                [
+                  { text: 'OK', style: 'cancel' },
+                  {
+                    text: 'Buy Coins',
+                    onPress: () => {
+                      handleCoinExhausted();
+                      setTimeout(() => navigation.navigate('PlanScreen'), 600);
+                    },
+                  },
+                ],
+                { cancelable: true },
+              );
+            }, 0);
+          }
+          return next;
+        });
+      }, 1000);
+    };
+
+    const onLowBalanceWarning = ({ remainingCoins }) => {
+      if (!isMale) return;
+      const msg = `⚠️ Less than 1 minute left! (${remainingCoins} coins)`;
+      setWarningMsg(msg);
+      showToast(msg);
+      setTimeout(() => setWarningMsg(''), 5000);
+    };
+
+    const onInsufficientBalance = () => {
+      if (!isMale) return;
+      setWarningMsg('Coins finished!');
+      clearInterval(coinCountdownRef.current);
+      handleCoinExhausted();
+    };
+
+    socket.on('male_minutes_update', onMinutesUpdate);
+    socket.on('low_balance_warning', onLowBalanceWarning);
+    socket.on('call_insufficient_balance', onInsufficientBalance);
+
+    return () => {
+      socket.off('male_minutes_update', onMinutesUpdate);
+      socket.off('low_balance_warning', onLowBalanceWarning);
+      socket.off('call_insufficient_balance', onInsufficientBalance);
+    };
+  }, [connectedUI, session_id]);
+
+  /* ══════════════════════════════════════
+     WebRTC INIT
+  ══════════════════════════════════════ */
   useEffect(() => {
     if (!connected || !socketRef.current || startedRef.current) return;
     startedRef.current = true;
@@ -258,27 +379,17 @@ const VideocallScreen = ({ route, navigation }) => {
         socket.on('video_answer', onAnswer);
         socket.on('video_ice_candidate', onIce);
 
-        // ✅ Same as AudiocallScreen call_ended handler
         socket.on('call_ended', data => {
-          const endedBy = data?.endedBy;
-
-          // Only handle if OTHER user ended it
-          if (String(endedBy) === String(myId)) return;
-
+          if (String(data?.endedBy) === String(myId)) return;
           const currentOther = otherRef.current;
-          const otherName = currentOther?.name || 'User';
-
-          showToast(`${otherName} ended the call`);
-
+          showToast(`${currentOther?.name || 'User'} ended the call`);
           forceExitRef.current = true;
           remoteEndedRef.current = true;
           disableExitRef.current = true;
           manualExitRef.current = true;
-
           stopCallMedia();
           dispatch(clearCall());
           callManager.reset();
-
           setTimeout(() => {
             navigation.dispatch(
               CommonActions.reset({
@@ -311,27 +422,17 @@ const VideocallScreen = ({ route, navigation }) => {
           }, 800);
         });
 
-        // ============ ADD inside start() after call_ended handler ============
-        // ✅ Handle video_call_ended too — some servers emit this for video calls
         socket.on('video_call_ended', data => {
-          const endedBy = data?.endedBy;
-
-          if (String(endedBy) === String(myId)) return;
-
+          if (String(data?.endedBy) === String(myId)) return;
           const currentOther = otherRef.current;
-          const otherName = currentOther?.name || 'User';
-
-          showToast(`${otherName} ended the call`);
-
+          showToast(`${currentOther?.name || 'User'} ended the call`);
           forceExitRef.current = true;
           remoteEndedRef.current = true;
           disableExitRef.current = true;
           manualExitRef.current = true;
-
           stopCallMedia();
           dispatch(clearCall());
           callManager.reset();
-
           setTimeout(() => {
             navigation.dispatch(
               CommonActions.reset({
@@ -392,8 +493,8 @@ const VideocallScreen = ({ route, navigation }) => {
       socket.off('video_answer', onAnswer);
       socket.off('video_ice_candidate', onIce);
       socket.off('video_connected');
-      socket.off('call_ended'); // ✅ matches what we registered
-      socket.off('video_call_ended'); // ✅ also clean this up
+      socket.off('call_ended');
+      socket.off('video_call_ended');
     };
   }, [connected]);
 
@@ -430,6 +531,9 @@ const VideocallScreen = ({ route, navigation }) => {
     } catch {}
   };
 
+  /* ══════════════════════════════════════
+     ON CONNECTED
+  ══════════════════════════════════════ */
   const onConnected = () => {
     if (timerRef.current) return;
     connectedRef.current = connectedUIRef.current = true;
@@ -438,50 +542,86 @@ const VideocallScreen = ({ route, navigation }) => {
     setSpeakerOn(true);
     InCallManager.setForceSpeakerphoneOn(true);
     InCallManager.setSpeakerphoneOn(true);
+
+    if (isMale) {
+      if (coinBalance < RATE) {
+        setWarningMsg('No coins! Call ending...');
+        showToast('Insufficient coins.');
+        setTimeout(() => handleCoinExhausted(), 2000);
+        return;
+      }
+
+      const initialSeconds = Math.floor((coinBalance / RATE) * 60);
+      setCoinSecondsLeft(initialSeconds);
+
+      setTimeout(() => {
+        coinCountdownRef.current = setInterval(() => {
+          setCoinSecondsLeft(prev => {
+            if (prev === null) return null;
+            const next = prev <= 0 ? 0 : prev - 1;
+
+            if (next === 30 && !alertShownRef.current) {
+              alertShownRef.current = true;
+              setTimeout(() => {
+                Alert.alert(
+                  '⚠️ Call Ending Soon',
+                  'Your call will end in 30 seconds. Buy more coins to continue.',
+                  [
+                    { text: 'OK', style: 'cancel' },
+                    {
+                      text: 'Buy Coins',
+                      onPress: () => {
+                        handleCoinExhausted();
+                        setTimeout(
+                          () => navigation.navigate('PlanScreen'),
+                          600,
+                        );
+                      },
+                    },
+                  ],
+                  { cancelable: true },
+                );
+              }, 0);
+            }
+
+            if (next <= 0) {
+              setTimeout(() => handleCoinExhausted(), 0);
+            }
+
+            return next;
+          });
+        }, 1000);
+      }, 3000);
+    }
   };
 
   const stopCallMedia = () => {
     if (endedRef.current) return;
     endedRef.current = true;
     clearInterval(timerRef.current);
+    clearInterval(coinCountdownRef.current);
+    coinCountdownRef.current = null;
     InCallManager.stop();
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     pcRef.current?.close();
   };
 
-  // ✅ Exact same as AudiocallScreen handleEndCall
-  // ============ REPLACE handleEndCall in VideocallScreen ============
-
   const handleEndCall = () => {
     if (isExitingRef.current) return;
     isExitingRef.current = true;
     manualExitRef.current = true;
-
     const currentOther = otherRef.current;
-
-    // ✅ Emit BOTH events — covers both server implementations
-    socketRef.current?.emit('call_end', {
-      session_id,
-      user_id: myId,
-    });
-    socketRef.current?.emit('video_call_hangup', {
-      session_id,
-      user_id: myId,
-    });
-
+    socketRef.current?.emit('call_end', { session_id, user_id: myId });
+    socketRef.current?.emit('video_call_hangup', { session_id, user_id: myId });
     stopCallMedia();
     callManager.reset();
     dispatch(clearCall());
-
     showToast('You ended the call');
-
     navigation.dispatch(
       CommonActions.reset({
         index: 1,
         routes: [
-          {
-            name: myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs',
-          },
+          { name: myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs' },
           {
             name: 'CallStatusScreen',
             params: {
@@ -502,18 +642,14 @@ const VideocallScreen = ({ route, navigation }) => {
     );
   };
 
-  // ✅ Exact same as AudiocallScreen beforeRemove
   useEffect(() => {
     const unsub = navigation.addListener('beforeRemove', e => {
-      if (forceExitRef.current) {
-        navigation.dispatch(e.data.action);
-        return;
-      }
-      if (remoteEndedRef.current || disableExitRef.current) {
-        navigation.dispatch(e.data.action);
-        return;
-      }
-      if (manualExitRef.current) {
+      if (
+        forceExitRef.current ||
+        remoteEndedRef.current ||
+        disableExitRef.current ||
+        manualExitRef.current
+      ) {
         navigation.dispatch(e.data.action);
         return;
       }
@@ -521,9 +657,7 @@ const VideocallScreen = ({ route, navigation }) => {
         navigation.dispatch(e.data.action);
         return;
       }
-
       e.preventDefault();
-
       Alert.alert('Exit from Call', 'Are you sure you want to exit the call?', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Exit', style: 'destructive', onPress: handleEndCall },
@@ -532,12 +666,9 @@ const VideocallScreen = ({ route, navigation }) => {
     return unsub;
   }, [navigation]);
 
-  // ============ REPLACE auto cleanup useEffect in VideocallScreen ============
-
   useEffect(() => {
     return () => {
       if (startedRef.current && !endedRef.current && !manualExitRef.current) {
-        console.log('🧹 Video auto cleanup');
         socketRef.current?.emit('call_end', { session_id, user_id: myId });
         socketRef.current?.emit('video_call_hangup', {
           session_id,
@@ -560,11 +691,16 @@ const VideocallScreen = ({ route, navigation }) => {
     return () => socket.off('mic_status_update', handle);
   }, []);
 
-  const flipCamera = () =>
-    localStreamRef.current?.getVideoTracks()[0]?._switchCamera();
-
   const showOtherBlur = !myFaceGone && otherFaceGone && !otherCameraOff;
   const showOtherAvatar = !myFaceGone && otherCameraOff;
+
+  const coinM = coinSecondsLeft !== null ? Math.floor(coinSecondsLeft / 60) : 0;
+  const coinS = coinSecondsLeft !== null ? coinSecondsLeft % 60 : 0;
+  const coinDisplay =
+    coinSecondsLeft !== null
+      ? `${coinM}:${String(coinS).padStart(2, '0')}`
+      : null;
+  const coinIsLow = coinSecondsLeft !== null && coinSecondsLeft <= 60;
 
   return (
     <View style={styles.container}>
@@ -585,6 +721,7 @@ const VideocallScreen = ({ route, navigation }) => {
         </View>
       )}
 
+      {/* ── Mic indicators ── */}
       {!otherMicOn && (
         <View style={styles.micRight}>
           <Ionicons name="mic-off" size={15} color="#fff" />
@@ -596,6 +733,7 @@ const VideocallScreen = ({ route, navigation }) => {
         </View>
       )}
 
+      {/* ── Main video area ── */}
       {!connectedCallDetails ? (
         <View style={styles.waiting}>
           <Text style={styles.waitText}>Loading call...</Text>
@@ -746,12 +884,9 @@ const VideocallScreen = ({ route, navigation }) => {
             )}
           </View>
 
+          {/* ── PIP — local video, no flip button ── */}
           {!myFaceGone && (
-            <TouchableOpacity
-              style={styles.pip}
-              onPress={() => setIsRemoteLarge(p => !p)}
-              activeOpacity={0.9}
-            >
+            <View style={styles.pip}>
               <View style={styles.pipInner}>
                 <RTCView
                   streamURL={localURL}
@@ -796,11 +931,12 @@ const VideocallScreen = ({ route, navigation }) => {
                   </View>
                 )}
               </View>
-            </TouchableOpacity>
+            </View>
           )}
         </>
       )}
 
+      {/* Other face banner */}
       {showOtherBlur && connectedUI && (
         <View style={styles.otherBanner}>
           <Ionicons name="eye-off-outline" size={12} color="#fff" />
@@ -810,17 +946,36 @@ const VideocallScreen = ({ route, navigation }) => {
         </View>
       )}
 
-      <View style={styles.timerPill}>
-        <Text style={styles.timerText}>
-          {connectedUI
-            ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(
-                2,
-                '0',
-              )}`
-            : 'Connecting…'}
-        </Text>
+      {/* ── Timer stack ── */}
+      {/* FIX: added pointerEvents="none" so overlay does NOT block RTCView touches/rendering */}
+      <View style={styles.timerStack} pointerEvents="none">
+        <View style={styles.durationPill}>
+          <Text style={styles.durationText}>
+            {connectedUI
+              ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(
+                  2,
+                  '0',
+                )}`
+              : 'Connecting…'}
+          </Text>
+        </View>
+
+        {connectedUI && isMale && coinDisplay !== null && (
+          <View style={[styles.coinPill, coinIsLow && styles.coinPillLow]}>
+            <Text style={styles.coinPillText}>🪙 {coinDisplay}</Text>
+          </View>
+        )}
       </View>
 
+      {/* Warning banner */}
+      {warningMsg !== '' && (
+        <View style={styles.warningBanner} pointerEvents="none">
+          <Ionicons name="warning-outline" size={14} color="#fff" />
+          <Text style={styles.warningText}>{warningMsg}</Text>
+        </View>
+      )}
+
+      {/* ── Bottom controls — NO flip camera button ── */}
       <LinearGradient colors={['#1b1b1b', '#101010']} style={styles.bottomBar}>
         <RoundBtn
           id="speaker"
@@ -851,13 +1006,6 @@ const VideocallScreen = ({ route, navigation }) => {
           }}
         />
         <RoundBtn
-          id="flip"
-          activeBtn={activeBtn}
-          setActiveBtn={setActiveBtn}
-          icon="camera-reverse"
-          onPress={flipCamera}
-        />
-        <RoundBtn
           id="camera"
           activeBtn={activeBtn}
           setActiveBtn={setActiveBtn}
@@ -869,7 +1017,6 @@ const VideocallScreen = ({ route, navigation }) => {
             setCameraOn(t.enabled);
           }}
         />
-        {/* ✅ Same as AudiocallScreen end button — Alert then handleEndCall */}
         <RoundBtn
           id="end"
           activeBtn={activeBtn}
@@ -940,17 +1087,7 @@ const styles = StyleSheet.create({
     opacity: 0,
     zIndex: -1,
   },
-  faceOval: {
-    position: 'absolute',
-    top: '15%',
-    left: '10%',
-    right: '10%',
-    bottom: '20%',
-    borderWidth: 2,
-    borderColor: 'rgba(255,77,79,0.8)',
-    borderStyle: 'dashed',
-    borderRadius: 300,
-  },
+
   faceHintBox: {
     position: 'absolute',
     bottom: '14%',
@@ -977,6 +1114,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 20,
   },
+
   blurOverlay: {
     ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',
@@ -1014,6 +1152,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
   },
+
   avatarBox: { alignItems: 'center', gap: 14 },
   avatarImg: {
     width: 96,
@@ -1040,6 +1179,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   camOffText: { color: '#bbb', fontSize: 12, fontWeight: '500' },
+
   pip: {
     position: 'absolute',
     top: 70,
@@ -1073,6 +1213,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.15)',
   },
+
   otherBanner: {
     position: 'absolute',
     top: 44,
@@ -1087,6 +1228,7 @@ const styles = StyleSheet.create({
     zIndex: 30,
   },
   otherBannerText: { color: '#fff', fontSize: 11, fontWeight: '600' },
+
   waiting: {
     flex: 1,
     backgroundColor: '#000',
@@ -1100,16 +1242,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
-  timerPill: {
+
+  /* ── FIX: timerStack with pointerEvents="none" in JSX, correct child style names ── */
+  timerStack: {
     position: 'absolute',
     top: 44,
-    alignSelf: 'center',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    gap: 6,
+    zIndex: 20,
+  },
+  /* FIX: was missing — JSX used styles.durationPill but StyleSheet only had styles.timerPill */
+  durationPill: {
     backgroundColor: 'rgba(0,0,0,0.6)',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
   },
-  timerText: { color: '#fff', fontSize: 13 },
+  /* FIX: was missing — JSX used styles.durationText but StyleSheet only had styles.timerText */
+  durationText: { color: '#fff', fontSize: 13 },
+
+  coinPill: {
+    backgroundColor: 'rgba(130,0,230,0.85)',
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  coinPillLow: { backgroundColor: 'rgba(220,50,50,0.92)' },
+  coinPillText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+
+  warningBanner: {
+    position: 'absolute',
+    top: 128,
+    left: 0,
+    right: 0,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(220,50,50,0.93)',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 18,
+    zIndex: 99,
+  },
+  warningText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+
+  /* ── Bottom bar — 4 buttons (speaker, mic, camera, end) ── */
   bottomBar: {
     position: 'absolute',
     bottom: 24,
@@ -1129,6 +1312,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   endBtn: { width: 64, height: 64, borderRadius: 32 },
+
   micRight: {
     position: 'absolute',
     top: 90,
@@ -1147,6 +1331,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     zIndex: 20,
   },
+
   successBox: {
     position: 'absolute',
     top: '30%',

@@ -47,6 +47,7 @@ const HomeScreen = () => {
 
   const { userdata } = useSelector(state => state.user);
   const unread = useSelector(state => state.notification.unread);
+  const coinBalance = userdata?.user?.coin_balance ?? 0;
 
   const [callingRandom, setCallingRandom] = useState(false);
   const [callingRandomVideo, setCallingRandomVideo] = useState(false);
@@ -141,16 +142,18 @@ const HomeScreen = () => {
       case 'active':
         return <ActiveDostSectionScreen />;
       case 'calls':
-        return (
-          <View style={styles.callsWrapper}>
-            <BottomCallPills
-              callingRandom={callingRandom}
-              callingRandomVideo={callingRandomVideo}
-              onRandomAudio={startRandomAudioCall}
-              onRandomVideo={startRandomVideoCall}
-            />
-          </View>
-        );
+  return (
+    <View style={styles.callsWrapper}>
+      <BottomCallPills
+        callingRandom={callingRandom}
+        callingRandomVideo={callingRandomVideo}
+        onRandomAudio={startRandomAudioCall}
+        onRandomVideo={startRandomVideoCall}
+        coinBalance={coinBalance}
+        navigation={navigation}  // ✅ ADD
+      />
+    </View>
+  );
       default:
         return null;
     }
