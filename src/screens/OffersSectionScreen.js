@@ -13,91 +13,32 @@ import { getOffersRequest } from "../features/Offers/offersActions";
 import Ionicons from "react-native-vector-icons/Ionicons";
 
 const { width, height } = Dimensions.get("window");
-
 const wp = v => (width * v) / 100;
 const hp = v => (height * v) / 100;
+
+// Extract a content value by key from the contents array
+const getContent = (contents = [], key) =>
+  (contents.find(c => c.content_key === key) || {}).content_value || "";
 
 const OffersSectionScreen = () => {
   const dispatch = useDispatch();
   const [activeIndex, setActiveIndex] = useState(0);
 
   const { offers, loading } = useSelector(state => state.offers);
- 
+
   const activeOffers = (offers || []).filter(
-  item => Number(item.status) === 1
-);
+    item => Number(item.status) === 1,
+  );
 
   useEffect(() => {
     dispatch(getOffersRequest());
   }, [dispatch]);
 
   const handleScroll = event => {
-    const index = Math.round(event.nativeEvent.contentOffset.x / width);
+    const index = Math.round(
+      event.nativeEvent.contentOffset.x / width,
+    );
     setActiveIndex(index);
-  };
-
-  const getOfferData = item => {
-    const desc = item.description || "";
-
-    if (desc.toLowerCase().includes("reward")) {
-      return {
-        title1: "Daily Rewards for",
-        title2: "Active RJs",
-        subtitle: "The more you engage, the more you earn",
-        button: "View Rewards",
-        color: "#FFFFFF",
-        accent: "#FFD400",
-        buttonColor: "#E94400",
-        miniIcon1: "star",
-        miniIcon2: "gift",
-        left1: "10+ Hours\nTalk",
-        left2: "Extra Daily\nRewards",
-        right: [
-          ["calendar-checkmark-outline", "Daily Login Bonus"],
-          ["gift-outline", "Talk More\nEarn More"],
-          ["star", "Unlock Surprise\nRewards"],
-        ],
-      };
-    }
-
-    if (desc.toLowerCase().includes("conversation")) {
-      return {
-        title1: "Improve Your",
-        title2: "Conversation Rating",
-        subtitle: "Better ratings help you grow faster",
-        button: "Learn More",
-        color: "#FFFFFF",
-        accent: "#16D9FF",
-        buttonColor: "#123FCF",
-        miniIcon1: "star",
-        miniIcon2: "people",
-        left1: "Better Ratings",
-        left2: "More User\nConnections",
-        right: [
-          ["trending-up-outline", "Get More Calls"],
-          ["eye-outline", "Increase\nVisibility"],
-          ["people", "Build Strong\nConnections"],
-        ],
-      };
-    }
-
-    return {
-      title1: "Become an RJ,",
-      title2: "Earn Real Money",
-      subtitle: "Turn your talking skills into earnings",
-      button: "Apply Now",
-      color: "#FFFFFF",
-      accent: "#FFE600",
-      buttonColor: "#6D21B8",
-      miniIcon1: "mic",
-      miniIcon2: "cash",
-      left1: "Join as RJ",
-      left2: "Start Earning",
-      right: [
-        ["time-outline", "Flexible\nWorking Hours"],
-        ["wallet-outline", "Daily Payout\nOpportunities"],
-      ],
-    };
   };
 
   return (
@@ -114,95 +55,95 @@ const OffersSectionScreen = () => {
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={handleScroll}
           >
-            {activeOffers?.map((item, index) => {
-              const data = getOfferData(item);
+            {activeOffers.map((item, index) => {
+              const brand    = getContent(item.contents, "brand");
+              const title1   = getContent(item.contents, "title1");
+              const title2   = getContent(item.contents, "title2");
+              const subtitle = getContent(item.contents, "subtitle");
+
+              const btn         = item.button || {};
+              const buttonText  = btn.button_text  || "Explore";
+              const buttonBg    = btn.button_color  || "#6D21B8";
+              const buttonTxt   = btn.text_color    || "#FFFFFF";
+
+              const features = item.features || [];
 
               return (
                 <View key={item.id || index} style={styles.slide}>
                   <ImageBackground
-                    source={{ uri: item.image_url }}
+                    source={{ uri: item.background_image }}
                     style={styles.card}
                     imageStyle={styles.cardImage}
                     resizeMode="cover"
                   >
+                    {/* ── LEFT CONTENT ── */}
                     <View style={styles.leftContent}>
+                      {/* Brand row */}
                       <View style={styles.brandRow}>
                         <View style={styles.logoBox}>
                           <Ionicons name="heart" size={wp(3)} color="#fff" />
                         </View>
-
                         <Text numberOfLines={1} style={styles.brandText}>
-                          {item.title || "LokalFrnd RJ"}
+                          {brand || "LokalFrnd RJ"}
                         </Text>
                       </View>
 
-                      <Text numberOfLines={1} style={[styles.bigTitle, { color: data.color }]}>
-                        {data.title1}
+                      {/* Titles */}
+                      <Text numberOfLines={2} style={styles.title1}>
+                        {title1}
+                      </Text>
+                      <Text numberOfLines={2} style={styles.title2}>
+                        {title2}
                       </Text>
 
-                      <Text numberOfLines={1} style={[styles.bigTitle, { color: data.accent }]}>
-                        {data.title2}
-                      </Text>
-
+                      {/* Subtitle */}
                       <Text numberOfLines={2} style={styles.subtitle}>
-                        {data.subtitle}
+                        {subtitle}
                       </Text>
 
-                      <View style={styles.miniCard}>
-                        <View style={styles.roundIcon}>
-                          <Ionicons name={data.miniIcon1} size={wp(2.4)} color="#fff" />
-                        </View>
-
-                        <Text numberOfLines={2} style={styles.miniText}>
-                          {data.left1}
-                        </Text>
-
-                        <Ionicons name="arrow-forward" size={wp(2.2)} color="#fff" />
-
-                        <View style={styles.roundIcon}>
-                          <Ionicons name={data.miniIcon2} size={wp(2.5)} color="#fff" />
-                        </View>
-
-                        <Text numberOfLines={2} style={styles.miniText}>
-                          {data.left2}
-                        </Text>
-                      </View>
-
-                      <TouchableOpacity activeOpacity={0.85} style={styles.button}>
+                      {/* CTA Button */}
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        style={[styles.button, { backgroundColor: "#fff" }]}
+                      >
                         <Text
                           numberOfLines={1}
-                          style={[styles.buttonText, { color: data.buttonColor }]}
+                          style={[styles.buttonText, { color: buttonBg }]}
                         >
-                          {data.button}
+                          {buttonText}
                         </Text>
-
                         <Ionicons
                           name="arrow-forward"
                           size={wp(2.8)}
-                          color={data.buttonColor}
+                          color={buttonBg}
                         />
                       </TouchableOpacity>
                     </View>
 
+                    {/* ── RIGHT FEATURE BOXES ── */}
                     <View style={styles.rightContent}>
-                      {data.right.map((r, i) => (
-                        <View key={i} style={styles.rightBox}>
-                          <Ionicons name={r[0]} size={wp(2.6)} color="#fff" />
+                      {features.map((f, i) => (
+                        <View key={f.id || i} style={styles.rightBox}>
+                          <Ionicons
+                            name={f.icon || "star"}
+                            size={wp(2.6)}
+                            color="#fff"
+                          />
                           <Text numberOfLines={2} style={styles.rightText}>
-                            {r[1]}
+                            {f.title}
                           </Text>
                         </View>
                       ))}
                     </View>
-
                   </ImageBackground>
                 </View>
               );
             })}
           </ScrollView>
 
+          {/* Pagination dots */}
           <View style={styles.pagination}>
-            {activeOffers?.map((_, index) => (
+            {activeOffers.map((_, index) => (
               <View
                 key={index}
                 style={[
@@ -246,22 +187,22 @@ const styles = StyleSheet.create({
 
   card: {
     width: width * 0.96,
-    height: hp(22),
+    height: hp(18),
     borderRadius: wp(4),
     overflow: "hidden",
   },
 
   cardImage: {
-    borderRadius: wp(8),
-     height: hp(22),
-    // width: width * 0.96,
+    borderRadius: wp(4),
+    height: hp(18),
   },
 
+  // ── LEFT ──
   leftContent: {
     position: "absolute",
     left: wp(5.2),
     top: hp(2.2),
-    width: "36%",
+    width: "42%",
     zIndex: 10,
     elevation: 10,
   },
@@ -269,7 +210,7 @@ const styles = StyleSheet.create({
   brandRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: hp(0.3),
+    marginBottom: hp(0.4),
     width: "100%",
   },
 
@@ -281,7 +222,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: wp(0.8),
-    marginTop:20
   },
 
   brandText: {
@@ -289,107 +229,81 @@ const styles = StyleSheet.create({
     fontSize: wp(3),
     fontWeight: "900",
     flex: 1,
-    marginTop:20
   },
 
-  bigTitle: {
-    fontSize: wp(2.9),
-    fontWeight: "800",
-    lineHeight: wp(3.7),
+  title1: {
+    color: "#FFFFFF",
+    fontSize: wp(3.8),
+    fontWeight: "900",
+    lineHeight: wp(4.6),
+  },
+
+  title2: {
+    color: "#FFD400",
+    fontSize: wp(3.8),
+    fontWeight: "900",
+    lineHeight: wp(4.6),
+    marginBottom: hp(0.3),
   },
 
   subtitle: {
-    color: "#fff",
-    fontSize: wp(1.75),
-    fontWeight: "700",
-    lineHeight: wp(2.3),
-    marginTop: hp(0.25),
-    marginBottom: hp(0.25),
-  },
-
-  miniCard: {
-    marginTop: hp(0.45),
-    height: hp(3),
-    width: wp(33),
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.45)",
-    borderRadius: wp(1.5),
-    paddingHorizontal: wp(0.55),
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.09)",
-  },
-
-  roundIcon: {
-    width: wp(3.8),
-    height: wp(3.8),
-    borderRadius: wp(1.9),
-    backgroundColor: "rgba(255,255,255,0.18)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: wp(0.35),
-  },
-
-  miniText: {
-    color: "#fff",
-    fontSize: wp(1.45),
-    fontWeight: "800",
-    lineHeight: wp(1.75),
-    marginRight: wp(0.35),
-    flexShrink: 1,
+    color: "rgba(255,255,255,0.85)",
+    fontSize: wp(2),
+    fontWeight: "600",
+    lineHeight: wp(2.7),
+    marginBottom: hp(0.6),
   },
 
   button: {
     marginTop: hp(0.5),
-    width: wp(23.5),
-    height: hp(3),
+    alignSelf: "flex-start",
+    paddingHorizontal: wp(3),
+    height: hp(3.4),
     borderRadius: wp(6),
-    backgroundColor: "#fff",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: wp(1),
+    gap: wp(0.8),
   },
 
   buttonText: {
-    fontSize: wp(2.2),
+    fontSize: wp(2.4),
     fontWeight: "700",
-    marginRight: wp(0.7),
   },
 
+  // ── RIGHT ──
   rightContent: {
     position: "absolute",
-    right: wp(2),
-    top: hp(2.8),
-    width: "20%",
+    right: wp(2.5),
+    top: hp(2.5),
+    width: "22%",
     zIndex: 10,
     elevation: 10,
+    gap: hp(0.4),
   },
 
   rightBox: {
-    minHeight: hp(3.8),
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.25)",
     borderRadius: wp(1.6),
-    backgroundColor: "rgba(0,0,0,0.13)",
+    backgroundColor: "rgba(0,0,0,0.15)",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: wp(0.7),
-    marginBottom: hp(0.25),
-    marginTop:15,
+    paddingHorizontal: wp(1),
+    paddingVertical: hp(0.5),
+    marginBottom: hp(0.4),
   },
 
   rightText: {
     flex: 1,
     color: "#fff",
-    fontSize: wp(1.6),
-    fontWeight: "900",
-    lineHeight: wp(2),
-    marginLeft: wp(0.4),
+    fontSize: wp(1.7),
+    fontWeight: "800",
+    lineHeight: wp(2.2),
+    marginLeft: wp(0.5),
   },
 
-  
-
+  // ── PAGINATION ──
   pagination: {
     flexDirection: "row",
     justifyContent: "center",

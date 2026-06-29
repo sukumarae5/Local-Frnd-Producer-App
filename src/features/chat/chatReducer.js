@@ -299,6 +299,17 @@ export default function chatReducer(state = initialState, action) {
       };
     }
 
+    case 'CHAT_WIPE_LOCAL': {
+      const { otherUserId } = action.payload;
+      return {
+        ...state,
+        conversations: {
+          ...state.conversations,
+          [otherUserId]: [],
+        },
+      };
+    }
+
     default:
       return state;
   }

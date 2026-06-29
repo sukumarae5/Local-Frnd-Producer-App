@@ -66,6 +66,7 @@ const TrainersCallPage = ({ navigation }) => {
 
   const { userdata } = useSelector(state => state.user);
   const users = useSelector(state => state.calls.searchingFemales || []);
+const coinBalance = userdata?.user?.coin_balance ?? 0;
 
   console.log('🔥 TrainersCallPage users:', users);
 
@@ -399,11 +400,13 @@ const TrainersCallPage = ({ navigation }) => {
 
         <View style={styles.bottomPillsContainer}>
           <BottomCallPills
-            callingRandom={callingRandom}
-            callingRandomVideo={callingRandomVideo}
-            onRandomAudio={startRandomAudioCall}
-            onRandomVideo={startRandomVideoCall}
-          />
+  callingRandom={callingRandom}
+  callingRandomVideo={callingRandomVideo}
+  onRandomAudio={startRandomAudioCall}
+  onRandomVideo={startRandomVideoCall}
+  coinBalance={coinBalance}
+  navigation={navigation}  // ✅ ADD
+/>
         </View>
       </View>
     </SafeAreaView>

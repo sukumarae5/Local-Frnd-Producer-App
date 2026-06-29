@@ -14,88 +14,66 @@ import {
 import { RTCIceCandidate, RTCView } from 'react-native-webrtc';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { mediaDevices, MediaStream } from 'react-native-webrtc';
+import { mediaDevices } from 'react-native-webrtc';
 import { CommonActions } from '@react-navigation/native';
 import InCallManager from 'react-native-incall-manager';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { useDispatch, useSelector } from 'react-redux';
 import { clearCall, callDetailsRequest } from '../features/calls/callAction';
 import { otherUserFetchRequest } from '../features/Otherusers/otherUserActions';
-import { submitRatingRequest } from '../features/rating/ratingAction';
-import store from '../reduxStore/store'; // adjust path
 import EndCallConfirmModal from '../screens/EndCallConfirmationScreen';
 import { SocketContext } from '../socket/SocketProvider';
 import { createPC } from '../utils/webrtc';
 import callManager from '../utils/callManager';
-import { NativeEventEmitter, NativeModules } from 'react-native';
+import { NativeEventEmitter } from 'react-native';
 import { ToastAndroid } from 'react-native';
 
 const showToast = msg => {
-  if (Platform.OS === 'android') {
-    ToastAndroid.show(msg, ToastAndroid.SHORT);
-  }
+  if (Platform.OS === 'android') ToastAndroid.show(msg, ToastAndroid.SHORT);
 };
 
 const PRIMARY = '#A020F0';
 
 const AudiocallScreen = ({ route, navigation }) => {
-  // ✅ Get caller_id from route params directly
   const { session_id, caller_id: routeCallerId } = route.params;
-
   const { socketRef, connected } = useContext(SocketContext);
   const dispatch = useDispatch();
-  const { userdata } = useSelector(state => state.user); // ✅ ADD THIS
-  const myGender = useSelector(state => state.auth?.user?.gender);
+
+  const myGender = useSelector(
+    state => state.user?.userdata?.user?.gender || state.auth?.user?.gender,
+  );
   const myId = useSelector(state => state.user.userdata?.user?.user_id);
+  const coinBalance = useSelector(
+    state => state.user?.userdata?.user?.coin_balance ?? 0,
+  );
   const connectedCallDetails = useSelector(
     state => state?.calls?.connectedCallDetails,
   );
-  // In AudiocallScreen.js — both handleEndCall AND call_ended handler
-  // make sure call_type comes from route params properly
 
-  // ✅ ADD this at the top of AudiocallScreen component
   const callType = route?.params?.call_type || 'AUDIO';
-  const caller = connectedCallDetails?.caller;
-  const connectedUser = connectedCallDetails?.connected_user;
+  const isMale = myGender === 'Male';
 
-  // ✅ Use routeCallerId to determine roles immediately without waiting for API
+  // ── Coin rate from server billing (AUDIO=10, VIDEO=60 per minute) ──
+  const RATE = callType === 'VIDEO' ? 60 : 10;
 
   const [me, setMe] = useState(null);
   const [other, setOther] = useState(null);
 
   useEffect(() => {
-    const caller = connectedCallDetails?.caller;
+    const callerData = connectedCallDetails?.caller;
     const connectedUser = connectedCallDetails?.connected_user;
+    if (!callerData || !connectedUser || !myId) return;
 
-    if (!caller || !connectedUser || !myId) return;
-
-    let myData = null;
-    let otherData = null;
-
-    // ✅ UNIVERSAL LOGIC
-    if (String(myId) === String(caller.user_id)) {
-      myData = caller;
-      otherData = connectedUser;
+    if (String(myId) === String(callerData.user_id)) {
+      setMe(callerData);
+      setOther(connectedUser);
     } else {
-      myData = connectedUser;
-      otherData = caller;
+      setMe(connectedUser);
+      setOther(callerData);
     }
-
-    console.log('🔥 FINAL ME:', myData);
-    console.log('🔥 FINAL OTHER:', otherData);
-
-    setMe(myData);
-    setOther(otherData);
   }, [connectedCallDetails, myId]);
 
-  console.log(other);
-  console.log(me);
-  console.log('🧠 myId:', myId);
-  console.log('🧠 routeCallerId:', routeCallerId);
-  console.log('🧠 caller:', caller);
-  console.log('🧠 connectedUser:', connectedUser);
-  console.log('🧠 me:', me);
-  console.log('🧠 other:', other);
+  // ── Refs ──
   const incallEmitter = new NativeEventEmitter();
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -109,37 +87,40 @@ const AudiocallScreen = ({ route, navigation }) => {
   const disableExitRef = useRef(false);
   const remoteEndedRef = useRef(false);
   const forceExitRef = useRef(false);
-  const isInitialMountRef = useRef(true);
-  const connectedRef = useRef(false); // ✅ ADD with other refs
+  const connectedRef = useRef(false);
+  const otherRef = useRef(null);
+  // ADD this ref with other refs:
+  const alertShownRef = useRef(false);
 
+  // ── State ──
   const ripple1 = useRef(new Animated.Value(0)).current;
   const ripple2 = useRef(new Animated.Value(0)).current;
-
   const [connectedUI, setConnectedUI] = useState(false);
   const [micOn, setMicOn] = useState(true);
   const [otherMicOn, setOtherMicOn] = useState(true);
   const [speakerOn, setSpeakerOn] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [audioDevice, setAudioDevice] = useState('earpiece');
-  // values: 'earpiece' | 'speaker' | 'headset' | 'bluetooth'
   const [iceState, setIceState] = useState('new');
   const [remoteStream, setRemoteStream] = useState(null);
-  const [showEndModal, setShowEndModal] = useState(false);
-  const otherRef = useRef(null);
 
-  const requestPermission = async () => {
-    if (Platform.OS !== 'android') return true;
+  // ── Coin display state (server-driven) ──
+  // coinSecondsLeft = total seconds male can talk based on current coins
+  // Calculated from initial balance, decremented locally every second
+  // Reset/corrected whenever server emits male_minutes_update
+  const [coinSecondsLeft, setCoinSecondsLeft] = useState(() => {
+    if (!isMale) return null;
+    // 10 coins = 60 seconds, so 1 coin = 6 seconds
+    return Math.floor((coinBalance / RATE) * 60);
+  });
+  const [warningMsg, setWarningMsg] = useState('');
+  const coinCountdownRef = useRef(null); // local 1s decrement for smooth display
 
-    const res = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-    );
-
-    return res === PermissionsAndroid.RESULTS.GRANTED;
-  };
   useEffect(() => {
     otherRef.current = other;
   }, [other]);
 
+  // ── Ripple animation ──
   useEffect(() => {
     const animate = (anim, delay) => {
       Animated.loop(
@@ -159,25 +140,146 @@ const AudiocallScreen = ({ route, navigation }) => {
         ]),
       ).start();
     };
-
     animate(ripple1, 0);
     animate(ripple2, 800);
   }, []);
 
   useEffect(() => {
-    if (session_id) {
-      console.log('📡 Fetching call details early');
-      dispatch(callDetailsRequest());
-    }
+    if (session_id) dispatch(callDetailsRequest());
   }, [session_id]);
 
-  /* ================= INIT ================= */
+  // ── Permissions ──
+  const requestPermission = async () => {
+    if (Platform.OS !== 'android') return true;
+    const res = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+    );
+    return res === PermissionsAndroid.RESULTS.GRANTED;
+  };
+
+  /* ═══════════════════════════════════════════
+     SERVER COIN EVENTS — join billing room
+     Server emits to call:session_id room
+  ═══════════════════════════════════════════ */
   useEffect(() => {
-    console.log('🔥 ICE STATE UI:', iceState);
-  }, [iceState]);
+    const socket = socketRef.current;
+    if (!socket || !connectedUI) return;
+
+    socket.emit('audio_join_room', { session_id });
+
+    const onMinutesUpdate = ({
+      remainingCoins,
+      remainingMinutes,
+      ratePerMinute,
+    }) => {
+      if (!isMale) return;
+      console.log('💰 male_minutes_update:', remainingCoins, remainingMinutes);
+
+      // ✅ CORRECT: 1 coin = 6 seconds (10 coins = 60 seconds = 1 minute)
+      const newSecondsLeft = Math.floor((remainingCoins / ratePerMinute) * 60);
+      setCoinSecondsLeft(newSecondsLeft);
+
+      // Restart smooth countdown from server-corrected value
+      if (coinCountdownRef.current) clearInterval(coinCountdownRef.current);
+      coinCountdownRef.current = setInterval(() => {
+        setCoinSecondsLeft(prev => {
+          if (prev === null || prev <= 0) return 0;
+
+          const next = prev - 1;
+
+          // ✅ 30-second warning alert
+          if (next === 30 && !alertShownRef.current) {
+            alertShownRef.current = true;
+            // Use setTimeout to avoid setState inside setState
+            setTimeout(() => {
+              Alert.alert(
+                '⚠️ Call Ending Soon',
+                'Your call will end in 30 seconds. Buy more coins to continue.',
+                [
+                  { text: 'OK', style: 'cancel' },
+                  {
+                    text: 'Buy Coins',
+                    onPress: () => {
+                      handleEndCall();
+                      // Navigate to plan screen after ending
+                      setTimeout(() => navigation.navigate('PlanScreen'), 500);
+                    },
+                  },
+                ],
+                { cancelable: true },
+              );
+            }, 0);
+          }
+
+          return next;
+        });
+      }, 1000);
+    };
+
+    const onLowBalanceWarning = ({ remainingCoins }) => {
+      if (!isMale) return;
+      // ✅ Calculate actual minutes left
+      const minutesLeft = Math.floor(remainingCoins / RATE);
+      const msg = `⚠️ Less than 1 minute left! (${remainingCoins} coins)`;
+      setWarningMsg(msg);
+      showToast(msg);
+      setTimeout(() => setWarningMsg(''), 5000);
+    };
+
+    const onInsufficientBalance = () => {
+      if (!isMale) return;
+      setWarningMsg('Coins finished! Call ending...');
+      showToast('Coins exhausted — call ended.');
+      clearInterval(coinCountdownRef.current);
+      forceExitRef.current = true;
+      remoteEndedRef.current = true;
+      manualExitRef.current = true;
+      stopCallMedia();
+      dispatch(clearCall());
+      callManager.reset();
+      setTimeout(() => {
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 1,
+            routes: [
+              { name: isMale ? 'MaleHomeTabs' : 'ReceiverBottomTabs' },
+              {
+                name: 'CallStatusScreen',
+                params: {
+                  showRating: true,
+                  fromCall: true,
+                  otherUser: {
+                    user_id: otherRef.current?.user_id,
+                    name: otherRef.current?.name,
+                    avatar: otherRef.current?.avatar,
+                  },
+                  session_id,
+                  role: isMale ? 'Male' : 'female',
+                  call_type: callType,
+                },
+              },
+            ],
+          }),
+        );
+      }, 1500);
+    };
+
+    socket.on('male_minutes_update', onMinutesUpdate);
+    socket.on('low_balance_warning', onLowBalanceWarning);
+    socket.on('call_insufficient_balance', onInsufficientBalance);
+
+    return () => {
+      socket.off('male_minutes_update', onMinutesUpdate);
+      socket.off('low_balance_warning', onLowBalanceWarning);
+      socket.off('call_insufficient_balance', onInsufficientBalance);
+    };
+  }, [connectedUI, session_id]);
+
+  /* ═══════════════════════════════════════════
+     WebRTC INIT
+  ═══════════════════════════════════════════ */
   useEffect(() => {
     if (!connected || !socketRef.current || startedRef.current) return;
-
     startedRef.current = true;
     const socket = socketRef.current;
 
@@ -188,38 +290,24 @@ const AudiocallScreen = ({ route, navigation }) => {
         return;
       }
 
-      // ✅ START AUDIO ENGINE
       InCallManager.start({ media: 'audio' });
-
       setAudioDevice('earpiece');
       setSpeakerOn(false);
-      // ❌ DO NOT FORCE SPEAKER HERE
       InCallManager.setForceSpeakerphoneOn(false);
       InCallManager.setSpeakerphoneOn(false);
       InCallManager.setMicrophoneMute(false);
 
       pcRef.current = createPC({
-        onIceCandidate: candidate => {
-          console.log('📤 Sending ICE:', candidate);
-          socket.emit('audio_ice_candidate', { session_id, candidate });
-        },
-
+        onIceCandidate: candidate =>
+          socket.emit('audio_ice_candidate', { session_id, candidate }),
         onIceState: setIceState,
         onTrack: stream => {
-          console.log('✅ REMOTE STREAM RECEIVED');
-
           const audioTrack = stream.getAudioTracks()[0];
-
-          if (audioTrack) {
-            audioTrack.enabled = true;
-            console.log('🔊 AUDIO TRACK ENABLED');
-          }
-
+          if (audioTrack) audioTrack.enabled = true;
           setRemoteStream(stream);
         },
       });
 
-      // ✅ GET LOCAL AUDIO
       const stream = await mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -228,63 +316,47 @@ const AudiocallScreen = ({ route, navigation }) => {
         },
         video: false,
       });
-
       localStreamRef.current = stream;
-
       stream.getTracks().forEach(track => {
         track.enabled = true;
         pcRef.current.addTrack(track, stream);
       });
 
-      // ✅ JOIN ROOM
       socket.emit('audio_join', { session_id });
 
-      // ✅ SOCKET EVENTS
       socket.on('audio_offer', onOffer);
       socket.on('audio_answer', onAnswer);
       socket.on('audio_ice_candidate', onIce);
-      // ✅ FIND this inside start() and REPLACE
-      // ============ VERIFY call_ended socket handler has fromCall: true ============
+
       socket.on('call_ended', data => {
-        const endedBy = data?.endedBy;
-
-        if (String(endedBy) === String(myId)) return;
-
-        const otherUser = otherRef.current;
-        const otherName = otherUser?.name || 'User';
-
-        showToast(`${otherName} ended the call`);
-
+        if (String(data?.endedBy) === String(myId)) return;
+        const currentOther = otherRef.current;
+        showToast(`${currentOther?.name || 'User'} ended the call`);
         forceExitRef.current = true;
         remoteEndedRef.current = true;
         disableExitRef.current = true;
         manualExitRef.current = true;
-
         stopCallMedia();
         dispatch(clearCall());
         callManager.reset();
-
         setTimeout(() => {
           navigation.dispatch(
             CommonActions.reset({
               index: 1,
               routes: [
-                {
-                  name:
-                    myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs',
-                },
+                { name: isMale ? 'MaleHomeTabs' : 'ReceiverBottomTabs' },
                 {
                   name: 'CallStatusScreen',
                   params: {
                     showRating: true,
-                    fromCall: true, // ✅ THIS IS THE KEY
+                    fromCall: true,
                     otherUser: {
-                      user_id: otherUser?.user_id,
-                      name: otherUser?.name,
-                      avatar: otherUser?.avatar,
+                      user_id: currentOther?.user_id,
+                      name: currentOther?.name,
+                      avatar: currentOther?.avatar,
                     },
                     session_id,
-                    role: myGender === 'Male' ? 'Male' : 'female',
+                    role: isMale ? 'Male' : 'female',
                     call_type: callType,
                   },
                 },
@@ -293,36 +365,17 @@ const AudiocallScreen = ({ route, navigation }) => {
           );
         }, 800);
       });
-      socket.on('audio_connected', async () => {
-        console.log('🚀 audio_connected');
 
+      socket.on('audio_connected', async () => {
         if (hasStartedRef.current) return;
         hasStartedRef.current = true;
-
-        if (!pcRef.current) {
-          console.log('❌ PC not ready');
-          return;
-        }
-
-        // ✅ Use routeCallerId directly — no retry loop needed
+        if (!pcRef.current) return;
         const isCaller = String(myId) === String(routeCallerId);
-
-        console.log('👤 My ID:', myId);
-        console.log('📞 Route Caller ID:', routeCallerId);
-        console.log('🎯 Am I caller?', isCaller);
-
-        if (!isCaller) {
-          console.log('🙋 Receiver ready');
-          return;
-        }
-
+        if (!isCaller) return;
         try {
-          console.log('📞 Caller → creating offer');
-
           const offer = await pcRef.current.createOffer({
             offerToReceiveAudio: true,
           });
-
           await pcRef.current.setLocalDescription(offer);
           socket.emit('audio_offer', { session_id, offer });
         } catch (err) {
@@ -342,24 +395,15 @@ const AudiocallScreen = ({ route, navigation }) => {
     };
   }, [connected]);
 
-  /* ================= SIGNALING ================= */
-
+  // ── Audio device listener ──
   useEffect(() => {
     const subscription = incallEmitter.addListener(
       'onAudioDeviceChanged',
       data => {
-        console.log('🎧 AUDIO DEVICE:', data);
-
         const device = data.audioDevice;
-
         if (device === 'WIRED_HEADSET' || device === 'BLUETOOTH') {
-          console.log('🎧 Headphone/Bluetooth CONNECTED');
-
-          // ✅ FORCE SWITCH
           setAudioDevice(device === 'BLUETOOTH' ? 'bluetooth' : 'headset');
           setSpeakerOn(false);
-
-          // 🔥 HARD OVERRIDE
           setTimeout(() => {
             InCallManager.setForceSpeakerphoneOn(false);
             InCallManager.setSpeakerphoneOn(false);
@@ -367,53 +411,37 @@ const AudiocallScreen = ({ route, navigation }) => {
         } else if (device === 'SPEAKER') {
           setAudioDevice('speaker');
         } else {
-          console.log('📞 Back to EARPIECE');
-
           setAudioDevice('earpiece');
           setSpeakerOn(false);
-
           InCallManager.setForceSpeakerphoneOn(false);
           InCallManager.setSpeakerphoneOn(false);
         }
       },
     );
-
-    return () => {
-      subscription.remove();
-    };
+    return () => subscription.remove();
   }, []);
 
   const flushIce = async () => {
     if (!pcRef.current || endedRef.current) return;
-
     for (const c of pendingIceRef.current) {
       try {
         await pcRef.current.addIceCandidate(new RTCIceCandidate(c));
       } catch {}
     }
-
     pendingIceRef.current = [];
   };
 
   const onOffer = async ({ offer }) => {
     try {
-      console.log('📥 Received OFFER');
-
       if (!pcRef.current) return;
-
       await pcRef.current.setRemoteDescription(offer);
-
       await flushIce();
       pcRef.current.getReceivers().forEach(r => {
-        if (r.track) {
-          r.track.enabled = true;
-        }
+        if (r.track) r.track.enabled = true;
       });
       const answer = await pcRef.current.createAnswer();
       await pcRef.current.setLocalDescription(answer);
-
       socketRef.current.emit('audio_answer', { session_id, answer });
-
       onConnected();
     } catch (err) {
       console.log('❌ onOffer ERROR:', err);
@@ -423,182 +451,131 @@ const AudiocallScreen = ({ route, navigation }) => {
   const onAnswer = async ({ answer }) => {
     try {
       await pcRef.current.setRemoteDescription(answer);
-
-      // ✅ ENABLE TRACKS
       pcRef.current.getReceivers().forEach(r => {
         if (r.track) r.track.enabled = true;
       });
-
-      // 🔥 CRITICAL: flush AFTER remote desc
       await flushIce();
-
-      console.log('✅ ANSWER APPLIED + ICE FLUSHED');
-
       onConnected();
     } catch (err) {
       console.log('❌ onAnswer ERROR:', err);
     }
   };
+
   const onIce = async ({ candidate }) => {
-    console.log('📥 Received ICE:', candidate);
-
     if (!candidate || !pcRef.current || endedRef.current) return;
-
-    if (
-      !pcRef.current.remoteDescription ||
-      !pcRef.current.remoteDescription.type
-    ) {
-      console.log('⏳ Storing ICE (no remote description yet)');
+    if (!pcRef.current.remoteDescription?.type) {
       pendingIceRef.current.push(candidate);
       return;
     }
-
-    console.log('✅ Adding ICE immediately');
-
     await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
   };
-  /* ================= CONNECTED ================= */
 
+  /* ═══════════════════════════════════════════
+     onConnected — start wall-clock timer +
+     smooth coin countdown for male
+  ═══════════════════════════════════════════ */
   const onConnected = () => {
     if (timerRef.current) return;
     connectedRef.current = true;
     setConnectedUI(true);
 
     const localTrack = localStreamRef.current?.getAudioTracks()[0];
-
-    if (localTrack) {
-      localTrack.enabled = true;
-      console.log('🎤 LOCAL MIC ENABLED');
-    }
-
-    setTimeout(() => {
-      InCallManager.setMicrophoneMute(false);
-    }, 500);
-
-    // ❌ DO NOT AUTO ENABLE SPEAKER
+    if (localTrack) localTrack.enabled = true;
+    setTimeout(() => InCallManager.setMicrophoneMute(false), 500);
     setSpeakerOn(false);
     dispatch(callDetailsRequest());
 
-    timerRef.current = setInterval(() => {
-      setSeconds(s => s + 1);
-    }, 1000);
-  };
+    // Wall-clock seconds counter
+    timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000);
 
-  const toggleMic = () => {
-    const track = localStreamRef.current?.getAudioTracks()[0];
-    if (!track) return;
+    // ── Male only: start smooth local countdown ──
+    // Server will correct this via male_minutes_update every billing cycle
+    // Inside onConnected, replace the coinCountdownRef.current setInterval block:
+    if (isMale) {
+      if (coinBalance < RATE) {
+        setWarningMsg('No coins! Purchase coins to call.');
+        showToast('Insufficient coins to make this call.');
+        setTimeout(() => handleEndCall(), 2000);
+        return;
+      }
 
-    const newState = !track.enabled;
+      // ✅ CORRECT initial seconds: 7961 coins / 10 * 60 = 47766 seconds = 796m 6s
+      const initialSeconds = Math.floor((coinBalance / RATE) * 60);
+      setCoinSecondsLeft(initialSeconds);
 
-    track.enabled = newState;
-    setMicOn(newState);
+      coinCountdownRef.current = setInterval(() => {
+        setCoinSecondsLeft(prev => {
+          if (prev === null) return null;
+          if (prev <= 0) return 0;
 
-    const socket = socketRef.current;
+          const next = prev - 1;
 
-    if (socket && socket.connected) {
-      socket.emit('mic_status', {
-        session_id,
-        user_id: myId,
-        micOn: newState,
-      });
-    } else {
-      console.log('⚠️ Socket not connected, mic state not sent');
+          // 30-second warning
+          if (next === 30 && !alertShownRef.current) {
+            alertShownRef.current = true;
+            setTimeout(() => {
+              Alert.alert(
+                '⚠️ Call Ending Soon',
+                'Your call will end in 30 seconds. Buy more coins to continue.',
+                [
+                  { text: 'OK', style: 'cancel' },
+                  {
+                    text: 'Buy Coins',
+                    onPress: () => {
+                      handleEndCall();
+                      setTimeout(() => navigation.navigate('PlanScreen'), 500);
+                    },
+                  },
+                ],
+                { cancelable: true },
+              );
+            }, 0);
+          }
+
+          return next;
+        });
+      }, 1000);
     }
   };
-
-  const toggleSpeaker = () => {
-    // ❌ Block if headset/bluetooth connected
-    if (audioDevice === 'headset' || audioDevice === 'bluetooth') {
-      console.log('❌ Cannot enable speaker while headset connected');
-      return;
-    }
-
-    const newVal = !speakerOn;
-
-    console.log('🔊 Toggle Speaker:', newVal);
-
-    setSpeakerOn(newVal);
-    setAudioDevice(newVal ? 'speaker' : 'earpiece');
-
-    // 🔥 RESET FIRST (VERY IMPORTANT)
-    InCallManager.setForceSpeakerphoneOn(false);
-
-    setTimeout(() => {
-      InCallManager.setSpeakerphoneOn(newVal);
-    }, 150);
-  };
-
-  /* ================= STOP CALL ================= */
 
   const stopCallMedia = () => {
     if (endedRef.current) return;
-
     endedRef.current = true;
-
     clearInterval(timerRef.current);
-
+    clearInterval(coinCountdownRef.current);
+    coinCountdownRef.current = null;
     InCallManager.stop();
-
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     pcRef.current?.close();
   };
 
-  /* ================= LEAVE SCREEN ================= */
-
-  const leaveScreen = () => {
-    dispatch(clearCall());
-
-    const nextScreen =
-      myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs';
-
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: nextScreen }],
-      }),
-    );
-  };
-
-  // ============ REPLACE handleEndCall ============
-  // ============ VERIFY handleEndCall has fromCall: true ============
   const handleEndCall = () => {
     if (isExitingRef.current) return;
     isExitingRef.current = true;
     manualExitRef.current = true;
-
-    const otherUser = otherRef.current;
-
-    socketRef.current?.emit('call_end', {
-      session_id,
-      user_id: myId,
-      name: me?.name,
-    });
-
+    const currentOther = otherRef.current;
+    socketRef.current?.emit('call_end', { session_id, user_id: myId });
     stopCallMedia();
     callManager.reset();
     dispatch(clearCall());
-
     showToast('You ended the call');
-
     navigation.dispatch(
       CommonActions.reset({
         index: 1,
         routes: [
-          {
-            name: myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs',
-          },
+          { name: isMale ? 'MaleHomeTabs' : 'ReceiverBottomTabs' },
           {
             name: 'CallStatusScreen',
             params: {
               showRating: true,
-              fromCall: true, // ✅ THIS IS THE KEY
+              fromCall: true,
               otherUser: {
-                user_id: otherUser?.user_id,
-                name: otherUser?.name,
-                avatar: otherUser?.avatar,
+                user_id: currentOther?.user_id,
+                name: currentOther?.name,
+                avatar: currentOther?.avatar,
               },
               session_id,
-              role: myGender === 'Male' ? 'Male' : 'female',
+              role: isMale ? 'Male' : 'female',
               call_type: callType,
             },
           },
@@ -607,54 +584,53 @@ const AudiocallScreen = ({ route, navigation }) => {
     );
   };
 
-  /* ================= EXIT CONFIRM ================= */
-  const beforeRemoveRef = useRef(null);
+  const toggleMic = () => {
+    const track = localStreamRef.current?.getAudioTracks()[0];
+    if (!track) return;
+    const newState = !track.enabled;
+    track.enabled = newState;
+    setMicOn(newState);
+    const socket = socketRef.current;
+    if (socket?.connected)
+      socket.emit('mic_status', { session_id, user_id: myId, micOn: newState });
+  };
+
+  const toggleSpeaker = () => {
+    if (audioDevice === 'headset' || audioDevice === 'bluetooth') return;
+    const newVal = !speakerOn;
+    setSpeakerOn(newVal);
+    setAudioDevice(newVal ? 'speaker' : 'earpiece');
+    InCallManager.setForceSpeakerphoneOn(false);
+    setTimeout(() => InCallManager.setSpeakerphoneOn(newVal), 150);
+  };
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', e => {
-      // ✅ HARD EXIT → NEVER SHOW ALERT
-      if (forceExitRef.current) {
+      if (
+        forceExitRef.current ||
+        remoteEndedRef.current ||
+        disableExitRef.current ||
+        manualExitRef.current
+      ) {
         navigation.dispatch(e.data.action);
         return;
       }
-
-      // ✅ REMOTE END → NO ALERT
-      if (remoteEndedRef.current || disableExitRef.current) {
-        navigation.dispatch(e.data.action);
-        return;
-      }
-
-      if (manualExitRef.current) {
-        navigation.dispatch(e.data.action);
-        return;
-      }
-
       if (!connectedRef.current) {
         navigation.dispatch(e.data.action);
         return;
       }
-
       e.preventDefault();
-
       Alert.alert('Exit from Call', 'Are you sure you want to exit the call?', [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Exit',
-          style: 'destructive',
-          onPress: handleEndCall,
-        },
+        { text: 'Exit', style: 'destructive', onPress: handleEndCall },
       ]);
     });
-    beforeRemoveRef.current = unsubscribe;
     return unsubscribe;
   }, [navigation]);
-  /* ================= AUTO CLEANUP ================= */
-  // ✅ REPLACE the auto cleanup useEffect in AudiocallScreen
+
   useEffect(() => {
     return () => {
-      // ✅ Only hangup if call was actually started AND not already ended
       if (startedRef.current && !endedRef.current && !manualExitRef.current) {
-        console.log('🧹 Auto cleanup - emitting hangup');
         socketRef.current?.emit('audio_call_hangup', { session_id });
         stopCallMedia();
         callManager.reset();
@@ -662,23 +638,17 @@ const AudiocallScreen = ({ route, navigation }) => {
       }
     };
   }, []);
+
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
-
     const handleMic = ({ user_id, micOn }) => {
-      if (String(user_id) !== String(myId)) {
-        setOtherMicOn(micOn);
-      }
+      if (String(user_id) !== String(myId)) setOtherMicOn(micOn);
     };
-
     socket.on('mic_status_update', handleMic);
-
-    return () => {
-      socket.off('mic_status_update', handleMic);
-    };
+    return () => socket.off('mic_status_update', handleMic);
   }, []);
-  /* ================= UI ================= */
+
   const getRippleStyle = anim => ({
     position: 'absolute',
     width: 120,
@@ -687,25 +657,30 @@ const AudiocallScreen = ({ route, navigation }) => {
     backgroundColor: 'rgba(226,133,251,0.25)',
     transform: [
       {
-        scale: anim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [1, 1.6],
-        }),
+        scale: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] }),
       },
     ],
-    opacity: anim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.6, 0],
-    }),
+    opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 0] }),
   });
+
+  // ── Format coin time ──
+  const formatCoinTime = secs => {
+    if (secs === null || secs === undefined) return null;
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  };
+
+  const coinDisplay = formatCoinTime(coinSecondsLeft);
+  const coinIsLow = coinSecondsLeft !== null && coinSecondsLeft <= 60;
 
   return (
     <LinearGradient
       colors={['#e2b9fd', '#f19ced', '#FFD1E8']}
       style={styles.container}
     >
+      {/* Hearts background */}
       <View style={styles.topheats} pointerEvents="none">
-        {/* LEFT BIG */}
         <MaskedView
           style={styles.heartMask}
           maskElement={<Ionicons name="heart" style={styles.heartIcon} />}
@@ -715,8 +690,6 @@ const AudiocallScreen = ({ route, navigation }) => {
             style={styles.heartGradient}
           />
         </MaskedView>
-
-        {/* TOP RIGHT SMALL */}
         <MaskedView
           style={styles.heartMaskTopRight}
           maskElement={<Ionicons name="heart" style={styles.heartIconTiny} />}
@@ -726,7 +699,6 @@ const AudiocallScreen = ({ route, navigation }) => {
             style={styles.heartGradient}
           />
         </MaskedView>
-        {/* LEFT SMALL */}
         <MaskedView
           style={styles.heartMaskSmall}
           maskElement={<Ionicons name="heart" style={styles.heartIconSmall} />}
@@ -736,8 +708,6 @@ const AudiocallScreen = ({ route, navigation }) => {
             style={styles.heartGradient}
           />
         </MaskedView>
-
-        {/* RIGHT */}
         <MaskedView
           style={styles.heartMaskRight}
           maskElement={<Ionicons name="heart" style={styles.heartIcon} />}
@@ -748,66 +718,77 @@ const AudiocallScreen = ({ route, navigation }) => {
           />
         </MaskedView>
       </View>
-      <View style={styles.timePill}>
-        <Text style={styles.timeText}>
-          {connectedUI
-            ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(
-                2,
-                '0',
-              )}`
-            : 'Connecting…'}
-        </Text>
+
+      {/* ── Top pills row ── */}
+      <View style={styles.pillsRow}>
+        {/* Call duration */}
+        <View style={styles.timePill}>
+          <Text style={styles.timeText}>
+            {connectedUI
+              ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(
+                  2,
+                  '0',
+                )}`
+              : 'Connecting…'}
+          </Text>
+        </View>
+
+        {/* Coin countdown — male only, shown after connected */}
+        {connectedUI && isMale && coinDisplay !== null && (
+          <View style={[styles.coinPill, coinIsLow && styles.coinPillLow]}>
+            <Text style={styles.coinPillText}>🪙 {coinDisplay}</Text>
+          </View>
+        )}
       </View>
 
+      {/* Warning banner */}
+      {warningMsg !== '' && (
+        <View style={styles.warningBanner}>
+          <Ionicons name="warning-outline" size={16} color="#fff" />
+          <Text style={styles.warningText}>{warningMsg}</Text>
+        </View>
+      )}
+
+      {/* User cards */}
       {connectedCallDetails?.connected && me && other && (
         <View style={styles.usersRow}>
           <View style={styles.userCard}>
             <View style={styles.avatarWrapper}>
-              {/* RIPPLE */}
               <Animated.View style={getRippleStyle(ripple1)} />
               <Animated.View style={getRippleStyle(ripple2)} />
-
-              {/* GRADIENT BORDER */}
               <LinearGradient
                 colors={['#c084fc', '#e879f9', '#f472b6']}
                 style={styles.gradientRing}
               >
                 <Image source={{ uri: me.avatar }} style={styles.avatar} />
               </LinearGradient>
-
               {!micOn && (
                 <View style={styles.muteIcon}>
                   <Ionicons name="mic-off" size={16} color="#fff" />
                 </View>
               )}
             </View>
-
             <Text style={styles.userName}>{me.name}</Text>
-            <Text style={styles.desc}>{me.bio || 'No bio available'}</Text>
+            <Text style={styles.desc}>{me.bio || 'No bio'}</Text>
           </View>
 
           <TouchableOpacity
             style={styles.userCard}
             onPress={() => {
               if (!other?.user_id) return;
-
               dispatch(otherUserFetchRequest(other.user_id));
               navigation.navigate('AboutScreen');
             }}
           >
             <View style={styles.avatarWrapper}>
-              {/* RIPPLE */}
               <Animated.View style={getRippleStyle(ripple1)} />
               <Animated.View style={getRippleStyle(ripple2)} />
-
-              {/* GRADIENT BORDER */}
               <LinearGradient
                 colors={['#c084fc', '#e879f9', '#f472b6']}
                 style={styles.gradientRing}
               >
                 <Image source={{ uri: other.avatar }} style={styles.avatar} />
               </LinearGradient>
-
               {!otherMicOn && (
                 <View style={styles.muteIcon}>
                   <Ionicons name="mic-off" size={16} color="#fff" />
@@ -815,10 +796,12 @@ const AudiocallScreen = ({ route, navigation }) => {
               )}
             </View>
             <Text style={styles.userName}>{other.name}</Text>
-            <Text style={styles.desc}>{other.bio || 'No bio available'}</Text>
+            <Text style={styles.desc}>{other.bio || 'No bio'}</Text>
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Controls */}
       <View style={styles.controls}>
         <TouchableOpacity
           style={[
@@ -867,9 +850,9 @@ const AudiocallScreen = ({ route, navigation }) => {
 
       {remoteStream && (
         <RTCView
-          key={remoteStream?.toURL()}
+          key={remoteStream.toURL()}
           streamURL={remoteStream.toURL()}
-          style={{ width: 1, height: 1 }} // hidden but required
+          style={{ width: 1, height: 1 }}
         />
       )}
     </LinearGradient>
@@ -878,14 +861,8 @@ const AudiocallScreen = ({ route, navigation }) => {
 
 export default AudiocallScreen;
 
-/* ================= STYLES ================= */
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 60,
-    alignItems: 'center',
-  },
+  container: { flex: 1, paddingTop: 60, alignItems: 'center' },
 
   topheats: {
     position: 'absolute',
@@ -905,7 +882,6 @@ const styles = StyleSheet.create({
     height: 220,
     opacity: 0.5,
   },
-
   heartMaskSmall: {
     position: 'absolute',
     top: 120,
@@ -914,7 +890,6 @@ const styles = StyleSheet.create({
     height: 100,
     opacity: 0.4,
   },
-
   heartMaskRight: {
     position: 'absolute',
     top: 320,
@@ -923,8 +898,6 @@ const styles = StyleSheet.create({
     height: 230,
     opacity: 0.5,
   },
-
-  // ✅ NEW (4th heart)
   heartMaskTopRight: {
     position: 'absolute',
     top: 80,
@@ -933,25 +906,16 @@ const styles = StyleSheet.create({
     height: 100,
     opacity: 0.35,
   },
+  heartIcon: { fontSize: 200, color: 'black' },
+  heartIconSmall: { fontSize: 70, color: 'black' },
+  heartIconTiny: { fontSize: 80, color: 'black' },
+  heartGradient: { flex: 1 },
 
-  // ICON SIZES
-  heartIcon: {
-    fontSize: 200,
-    color: 'black',
-  },
-
-  heartIconSmall: {
-    fontSize: 70,
-    color: 'black',
-  },
-
-  heartIconTiny: {
-    fontSize: 80,
-    color: 'black',
-  },
-
-  heartGradient: {
-    flex: 1,
+  // ── Pills ──
+  pillsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   timePill: {
     backgroundColor: '#fb6b7c',
@@ -959,12 +923,36 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
   },
+  timeText: { color: '#fff', fontWeight: '600' },
 
-  timeText: {
-    color: '#fff',
-    fontWeight: '600',
+  coinPill: {
+    backgroundColor: 'rgba(130, 0, 230, 0.85)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
+  coinPillLow: {
+    backgroundColor: 'rgba(220, 50, 50, 0.92)', // turns red when low
+  },
+  coinPillText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 
+  // ── Warning ──
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(220, 50, 50, 0.93)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 8,
+    zIndex: 99,
+  },
+  warningText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+
+  // ── Users ──
   usersRow: {
     flex: 1,
     flexDirection: 'row',
@@ -973,78 +961,11 @@ const styles = StyleSheet.create({
     width: '92%',
     transform: [{ translateY: -200 }],
   },
-
-  userCard: {
-    width: '45%',
-    alignItems: 'center',
-  },
-
-  avatarRing: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    borderWidth: 4,
-    borderColor: '#c77dff',
-    alignItems: 'center',
+  userCard: { width: '45%', alignItems: 'center' },
+  avatarWrapper: {
+    position: 'relative',
     justifyContent: 'center',
-    marginBottom: 10,
-  },
-
-  avatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: '#ddd',
-  },
-
-  userName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-
-  subText: {
-    fontSize: 12,
-    color: '#888',
-    marginBottom: 6,
-  },
-
-  desc: {
-    fontSize: 12,
-    textAlign: 'center',
-    color: '#444',
-  },
-
-  controls: {
-    position: 'absolute',
-    bottom: 50,
-    flexDirection: 'row',
-    gap: 25,
-  },
-
-  circleBtn: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
     alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-  },
-
-  endBtn: {
-    backgroundColor: '#FF4D4F',
-    width: 65,
-    height: 65,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 8,
-  },
-
-  debug: {
-    position: 'absolute',
-    bottom: 10,
-    fontSize: 11,
-    color: '#555',
   },
   gradientRing: {
     width: 100,
@@ -1054,13 +975,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 4,
   },
-
-  avatarWrapper: {
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
+  avatar: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#ddd' },
+  userName: { fontSize: 18, fontWeight: 'bold' },
+  desc: { fontSize: 12, textAlign: 'center', color: '#444' },
   muteIcon: {
     position: 'absolute',
     bottom: 0,
@@ -1071,5 +988,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
+  },
+
+  // ── Controls ──
+  controls: { position: 'absolute', bottom: 50, flexDirection: 'row', gap: 25 },
+  circleBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+  },
+  endBtn: {
+    backgroundColor: '#FF4D4F',
+    width: 65,
+    height: 65,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
   },
 });

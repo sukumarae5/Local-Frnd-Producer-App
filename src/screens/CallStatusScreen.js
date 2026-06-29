@@ -276,27 +276,28 @@ const CallStatusScreen = ({ navigation, route }) => {
     }
   }, [call?.status, call_type, dispatch, role, fromCall]);
 
-  /* ================= BEFORE REMOVE ================= */
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', () => {
-      // ✅ rating screen — don't cancel anything
-      if (fromCall) return;
+// Replace only this useEffect in CallStatusScreen
+useEffect(() => {
+  const unsubscribe = navigation.addListener('beforeRemove', () => {
+    if (fromCall) return;
 
-      if (role === 'female') {
-        dispatch(femaleCancelRequest());
-      } else if (role === 'friend_caller') {
-        dispatch(clearCall());
-      } else if (role === 'friend_receiver') {
-        socketRef.current?.emit('call_reject', {
-          session_id: route?.params?.session_id,
-        });
-        dispatch(clearCall());
-      } else {
-        dispatch(cancelWaitingRequest());
-      }
-    });
-    return unsubscribe;
-  }, [navigation, role, dispatch, fromCall]);
+    if (role === 'female') {
+      dispatch(femaleCancelRequest());
+    } else if (role === 'caller') {
+      // ✅ caller cancelled while ringing — server handles session cleanup
+      socketRef.current?.emit('call_cancel', {
+        session_id: route?.params?.session_id,
+      });
+      dispatch(clearCall());
+    } else if (role === 'friend_receiver') {
+      // ✅ do NOT emit call_reject here — IncomingCallScreen already did
+      dispatch(clearCall());
+    } else {
+      dispatch(cancelWaitingRequest());
+    }
+  });
+  return unsubscribe;
+}, [navigation, role, dispatch, fromCall]);
 
   /* ================= RIPPLE ANIMATIONS ================= */
   const ripple1 = useRef(new Animated.Value(0)).current;

@@ -60,6 +60,7 @@ export const chatDeleteApi  = `${MAIN_BASE_URL}/api/chat/messages`;
 export const chatListApi = `${MAIN_BASE_URL}/api/chat/list`;
 export const chatReadConversationApi =`${MAIN_BASE_URL}/api/chat/read/conversation`;
 export const chatUploadApi = `${MAIN_BASE_URL}/api/chat/upload`;
+export const chatoptionApi = `${MAIN_BASE_URL}/api/chatoptions`;
 
 export const notificationsApi = `${MAIN_BASE_URL}/api/notifications`;
 export const notificationUnreadApi = `${MAIN_BASE_URL}/api/notifications/unread-count`;

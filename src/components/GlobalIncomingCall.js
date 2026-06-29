@@ -1,39 +1,43 @@
-import React from "react";
+import { useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
-import { View, StyleSheet } from "react-native";
-import IncomingCallScreen from "../screens/IncomingCallScreen";
 
 const GlobalIncomingCall = ({ navigationRef }) => {
-
-  const incomingCall = useSelector(state => state.calls.incomingCall);
   const call = useSelector(state => state.calls.call);
+  const navigatedRef = useRef(null); // track which session we navigated for
 
-  if (!incomingCall || incomingCall.call_mode !== "FRIEND") return null;
+  useEffect(() => {
+    if (!navigationRef?.current) return;
+    if (!call) return;
 
-  if (call?.status === "ACCEPTED" || call?.status === "REJECTED") {
-    return null;
-  }
+    const isFriendRinging =
+      call.is_friend &&
+      call.direction === "INCOMING" &&
+      call.status === "RINGING";
 
-  return (
-    <View style={styles.overlay} pointerEvents="auto">
-      <IncomingCallScreen
-  navigation={navigationRef.current} // ✅ FIXED
-  route={{ params: incomingCall }}
-/>
-    </View>
-  );
+    if (!isFriendRinging) return;
+
+    // ✅ Don't navigate twice for same session
+    if (navigatedRef.current === call.session_id) return;
+    navigatedRef.current = call.session_id;
+
+    console.log("📲 GlobalIncomingCall → navigating to IncomingCallScreen");
+
+    navigationRef.current.navigate("IncomingCallScreen", {
+      session_id: call.session_id,
+      call_type: call.call_type,
+      caller_id: call.caller_id,
+      receiver_id: call.receiver_id,
+    });
+  }, [call]);
+
+  // ✅ Reset when call clears so next call can navigate again
+  useEffect(() => {
+    if (!call) {
+      navigatedRef.current = null;
+    }
+  }, [call]);
+
+  return null; // renders nothing — navigation does the work
 };
 
 export default GlobalIncomingCall;
-
-const styles = StyleSheet.create({
-  overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 9999,        // ✅ VERY IMPORTANT
-    elevation: 9999,     // ✅ ANDROID FIX
-  }
-});

@@ -136,11 +136,11 @@ export default function PlanScreen() {
         <OffersSectionScreen />
       </View>
 
-      <Image
+      {/* <Image
         source={require('../assets/blackfriday.png')}
         style={styles.blackBanner}
         resizeMode="contain"
-      />
+      /> */}
     </View>
   );
 

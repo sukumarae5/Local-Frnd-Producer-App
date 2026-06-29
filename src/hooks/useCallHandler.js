@@ -1,70 +1,94 @@
-// ============ REPLACE full useCallHandler.js ============
 import { useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import callManager from '../utils/callManager';
-import store from '../reduxStore/store';
+import { clearCall } from '../features/calls/callAction';
 import { CommonActions } from '@react-navigation/native';
 
 export default function useCallHandler(navigationRef, isNavReady) {
   const call = useSelector(state => state.calls.call);
+  const dispatch = useDispatch();
 
   useEffect(() => {
-    if (!call?.status || !isNavReady) return;
+    if (!isNavReady) return;
+    if (!call?.status) return;
 
     const status = call.status.toUpperCase();
+    const direction = call.direction || 'OUTGOING';
 
     console.log('🔥 CALL HANDLER:', call);
 
-    if (
-      callManager.currentSession &&
-      callManager.currentSession !== call.session_id
-    ) {
-      console.log('🔄 New session → reset');
+    /* ── INCOMING RINGING → GlobalIncomingCall owns this ── */
+    if (direction === 'INCOMING' && status === 'RINGING') return;
+
+    /* ── INCOMING REJECTED → IncomingCallScreen owns navigation ── */
+    if (direction === 'INCOMING' && status === 'REJECTED') return;
+
+    /* ── Session dedup ── */
+    if (callManager.currentSession && callManager.currentSession !== call.session_id) {
       callManager.reset();
     }
-
     callManager.setSession(call.session_id);
 
-    // =============================
-    // 🎲 RANDOM + DIRECT FLOW
-    // =============================
+    /* ── RANDOM + DIRECT ── */
     if (!call.is_friend) {
       if (status === 'ACCEPTED') {
         if (callManager.lastNavigatedSession === call.session_id) return;
         callManager.lastNavigatedSession = call.session_id;
-
-        // ✅ Goes to PerfectMatchScreen first, NOT CallStatusScreen
         callManager.safeNavigate(navigationRef, 'PerfectMatchScreen', {
           session_id: call.session_id,
           call_type: call.call_type,
         });
-
-        return;
       }
+      return;
     }
 
-    // =============================
-    // 👥 FRIEND FLOW
-    // =============================
+    /* ── FRIEND FLOW ── */
     if (call.is_friend) {
-      if (status === 'ACCEPTED') {
-        const navKey = `${call.session_id}_${status}`;
+
+      // Caller waiting → show CallStatusScreen
+      if (direction === 'OUTGOING' && status === 'RINGING') {
+        const navKey = `${call.session_id}_RINGING`;
         if (callManager.lastNavigatedSession === navKey) return;
         callManager.lastNavigatedSession = navKey;
+        callManager.safeNavigate(navigationRef, 'CallStatusScreen', {
+          session_id: call.session_id,
+          call_type: call.call_type,
+          role: 'caller',
+        });
+        return;
+      }
 
-        console.log('➡️ FRIEND CALL SCREEN');
-
-        const screen =
-          call.call_type === 'VIDEO' ? 'VideocallScreen' : 'AudiocallScreen';
-
+      // Accepted → go to call screen
+      if (status === 'ACCEPTED') {
+        const navKey = `${call.session_id}_ACCEPTED`;
+        if (callManager.lastNavigatedSession === navKey) return;
+        callManager.lastNavigatedSession = navKey;
+        const screen = call.call_type === 'VIDEO' ? 'VideocallScreen' : 'AudiocallScreen';
         callManager.safeNavigate(navigationRef, screen, {
           session_id: call.session_id,
           caller_id: call.caller_id,
           receiver_id: call.receiver_id,
         });
+        return;
+      }
 
+      // Caller rejected by receiver → go back from CallStatusScreen
+      if (direction === 'OUTGOING' && status === 'REJECTED') {
+        const navKey = `${call.session_id}_REJECTED`;
+        if (callManager.lastNavigatedSession === navKey) return;
+        callManager.lastNavigatedSession = navKey;
+
+        if (navigationRef?.current?.canGoBack()) {
+          navigationRef.current.goBack();
+        } else {
+          navigationRef?.current?.dispatch(
+            CommonActions.reset({ index: 0, routes: [{ name: 'MaleHomeTabs' }] })
+          );
+        }
+        setTimeout(() => dispatch(clearCall()), 300);
         return;
       }
     }
+
   }, [call, isNavReady]);
 }
