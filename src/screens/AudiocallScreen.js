@@ -167,63 +167,24 @@ const AudiocallScreen = ({ route, navigation }) => {
 
     socket.emit('audio_join_room', { session_id });
 
-    const onMinutesUpdate = ({
-      remainingCoins,
-      remainingMinutes,
-      ratePerMinute,
-    }) => {
+    const onMinutesUpdate = ({ remainingCoins, ratePerMinute }) => {
       if (!isMale) return;
-      console.log('💰 male_minutes_update:', remainingCoins, remainingMinutes);
 
-      // ✅ CORRECT: 1 coin = 6 seconds (10 coins = 60 seconds = 1 minute)
+      console.log('💰 male_minutes_update:', remainingCoins);
+
       const newSecondsLeft = Math.floor((remainingCoins / ratePerMinute) * 60);
+
       setCoinSecondsLeft(newSecondsLeft);
-
-      // Restart smooth countdown from server-corrected value
-      if (coinCountdownRef.current) clearInterval(coinCountdownRef.current);
-      coinCountdownRef.current = setInterval(() => {
-        setCoinSecondsLeft(prev => {
-          if (prev === null || prev <= 0) return 0;
-
-          const next = prev - 1;
-
-          // ✅ 30-second warning alert
-          if (next === 30 && !alertShownRef.current) {
-            alertShownRef.current = true;
-            // Use setTimeout to avoid setState inside setState
-            setTimeout(() => {
-              Alert.alert(
-                '⚠️ Call Ending Soon',
-                'Your call will end in 30 seconds. Buy more coins to continue.',
-                [
-                  { text: 'OK', style: 'cancel' },
-                  {
-                    text: 'Buy Coins',
-                    onPress: () => {
-                      handleEndCall();
-                      // Navigate to plan screen after ending
-                      setTimeout(() => navigation.navigate('PlanScreen'), 500);
-                    },
-                  },
-                ],
-                { cancelable: true },
-              );
-            }, 0);
-          }
-
-          return next;
-        });
-      }, 1000);
     };
 
     const onLowBalanceWarning = ({ remainingCoins }) => {
       if (!isMale) return;
       // ✅ Calculate actual minutes left
       const minutesLeft = Math.floor(remainingCoins / RATE);
-      const msg = `⚠️ Less than 1 minute left! (${remainingCoins} coins)`;
+      const msg = ` Less than 1 minute left! (${remainingCoins} coins)`;
       setWarningMsg(msg);
       showToast(msg);
-      setTimeout(() => setWarningMsg(''), 5000);
+      setTimeout(() => setWarningMsg(''), 15000);
     };
 
     const onInsufficientBalance = () => {
@@ -491,6 +452,7 @@ const AudiocallScreen = ({ route, navigation }) => {
     // ── Male only: start smooth local countdown ──
     // Server will correct this via male_minutes_update every billing cycle
     // Inside onConnected, replace the coinCountdownRef.current setInterval block:
+
     if (isMale) {
       if (coinBalance < RATE) {
         setWarningMsg('No coins! Purchase coins to call.');
@@ -506,30 +468,27 @@ const AudiocallScreen = ({ route, navigation }) => {
       coinCountdownRef.current = setInterval(() => {
         setCoinSecondsLeft(prev => {
           if (prev === null) return null;
-          if (prev <= 0) return 0;
+
+          if (prev <= 0) {
+            clearInterval(coinCountdownRef.current);
+            coinCountdownRef.current = null;
+
+            setCoinSecondsLeft(0);
+
+            handleEndCall();
+
+            return 0;
+          }
 
           const next = prev - 1;
 
           // 30-second warning
           if (next === 30 && !alertShownRef.current) {
             alertShownRef.current = true;
-            setTimeout(() => {
-              Alert.alert(
-                '⚠️ Call Ending Soon',
-                'Your call will end in 30 seconds. Buy more coins to continue.',
-                [
-                  { text: 'OK', style: 'cancel' },
-                  {
-                    text: 'Buy Coins',
-                    onPress: () => {
-                      handleEndCall();
-                      setTimeout(() => navigation.navigate('PlanScreen'), 500);
-                    },
-                  },
-                ],
-                { cancelable: true },
-              );
-            }, 0);
+
+            setWarningMsg(
+              'Low Balance\nRecharge now. Your call will end in 30 seconds.',
+            );
           }
 
           return next;
@@ -668,7 +627,7 @@ const AudiocallScreen = ({ route, navigation }) => {
     if (secs === null || secs === undefined) return null;
     const m = Math.floor(secs / 60);
     const s = secs % 60;
-    return `${m}:${String(s).padStart(2, '0')}`;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
   const coinDisplay = formatCoinTime(coinSecondsLeft);
@@ -940,18 +899,42 @@ const styles = StyleSheet.create({
 
   // ── Warning ──
   warningBanner: {
+    position: 'absolute',
+    bottom: 140,
+    left: 15,
+    right: 15,
+    backgroundColor: '#FF6B35',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(220, 50, 50, 0.93)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginTop: 8,
-    zIndex: 99,
-  },
-  warningText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+    zIndex: 9999,
+    elevation: 20,
 
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+  },
+
+  warningTitle: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  warningText: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 10,
+    lineHeight: 18,
+  },
   // ── Users ──
   usersRow: {
     flex: 1,

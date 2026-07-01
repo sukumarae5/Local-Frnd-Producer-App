@@ -103,6 +103,7 @@ const VideocallScreen = ({ route, navigation }) => {
   const otherRef = useRef(null);
   const handleCoinExhaustedRef = useRef(null);
   const handleEndCallRef = useRef(null);
+  const lastMinuteAlertShownRef = useRef(false);
 
   connectedUIRef.current = connectedUI;
   cameraOnRef.current = cameraOn;
@@ -227,6 +228,10 @@ const VideocallScreen = ({ route, navigation }) => {
     manualExitRef.current = true;
     forceExitRef.current = true;
     clearCoinCountdown();
+
+    localCoinStartedRef.current = false;
+    lastMinuteAlertShownRef.current = false;
+    endedRef.current = false;
     const currentOther = otherRef.current;
     socketRef.current?.emit('call_end', { session_id, user_id: myId });
     socketRef.current?.emit('video_call_hangup', { session_id, user_id: myId });
@@ -274,69 +279,76 @@ const VideocallScreen = ({ route, navigation }) => {
   const startCoinCountdown = useCallback(
     initialSeconds => {
       clearCoinCountdown();
-      if (initialSeconds > 30) alertShownRef.current = false;
       setCoinSecondsLeft(initialSeconds);
+
       coinCountdownRef.current = setInterval(() => {
         setCoinSecondsLeft(prev => {
           if (prev === null) return null;
+
           if (prev <= 0) {
-            setTimeout(() => handleCoinExhaustedRef.current?.(), 0);
+            clearCoinCountdown();
+
+            setTimeout(() => {
+              handleCoinExhaustedRef.current?.();
+            }, 1000);
+
             return 0;
           }
           const next = prev - 1;
+
+          // ✅ same as AudiocallScreen: 30s warning via alertShownRef
           if (next === 30 && !alertShownRef.current) {
             alertShownRef.current = true;
+
+            setWarningMsg(
+              'Low Balance\nRecharge now. Your call will end in 30 seconds.',
+            );
+
             setTimeout(() => {
-              Alert.alert(
-                '⚠️ Call Ending Soon',
-                'Your call will end in 30 seconds. Buy more coins to continue.',
-                [
-                  { text: 'OK', style: 'cancel' },
-                  {
-                    text: 'Buy Coins',
-                    onPress: () => {
-                      handleCoinExhaustedRef.current?.();
-                      setTimeout(() => navigation.navigate('PlanScreen'), 600);
-                    },
-                  },
-                ],
-                { cancelable: true },
-              );
-            }, 0);
+              setWarningMsg('');
+            }, 15000);
           }
-          if (next <= 0)
-            setTimeout(() => handleCoinExhaustedRef.current?.(), 0);
+
           return next;
         });
       }, 1000);
     },
-    [clearCoinCountdown, navigation],
+    [clearCoinCountdown],
   );
 
-  /* ── Server coin events ── */
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket || !connectedUI) return;
     socket.emit('video_join_room', { session_id });
+
     const onMinutesUpdate = ({ remainingCoins, ratePerMinute }) => {
       if (!isMale) return;
-      const newSecondsLeft = Math.floor((remainingCoins / ratePerMinute) * 60);
-      localCoinStartedRef.current = true;
-      startCoinCountdown(newSecondsLeft);
+
+      const effectiveRate = ratePerMinute || RATE;
+
+      const newSeconds = Math.floor((remainingCoins / effectiveRate) * 60);
+
+      // Synchronize the timer with the backend value.
+      setCoinSecondsLeft(newSeconds);
     };
+
     const onLowBalanceWarning = ({ remainingCoins }) => {
       if (!isMale) return;
-      const msg = `⚠️ Less than 1 minute left! (${remainingCoins} coins)`;
+      // ✅ same as AudiocallScreen: show banner, no dedup gate
+      const msg = `Less than 1 minute left! (${remainingCoins} coins)`;
       setWarningMsg(msg);
       showToast(msg);
       setTimeout(() => setWarningMsg(''), 5000);
     };
+
     const onInsufficientBalance = () => {
       if (!isMale) return;
+      // ✅ same as AudiocallScreen: end call immediately
       setWarningMsg('Coins finished!');
       clearCoinCountdown();
       handleCoinExhaustedRef.current?.();
     };
+
     socket.on('male_minutes_update', onMinutesUpdate);
     socket.on('low_balance_warning', onLowBalanceWarning);
     socket.on('call_insufficient_balance', onInsufficientBalance);
@@ -347,18 +359,21 @@ const VideocallScreen = ({ route, navigation }) => {
     };
   }, [connectedUI, session_id, isMale, startCoinCountdown, clearCoinCountdown]);
 
-  /* ── Stop all media ── */
   const stopCallMedia = useCallback(() => {
     if (endedRef.current) return;
     endedRef.current = true;
     clearInterval(timerRef.current);
     timerRef.current = null;
     clearCoinCountdown();
+    localCoinStartedRef.current = false;
+    lastMinuteAlertShownRef.current = false;
+    alertShownRef.current = false;
     InCallManager.stop();
     localStreamRef.current?.getTracks().forEach(t => t.stop());
     localStreamRef.current = null;
     pcRef.current?.close();
     pcRef.current = null;
+    coinEndedRef.current = false;
     setLocalURL(null);
     setRemoteURL(null);
   }, [clearCoinCountdown]);
@@ -372,6 +387,11 @@ const VideocallScreen = ({ route, navigation }) => {
     socketRef.current?.emit('call_end', { session_id, user_id: myId });
     socketRef.current?.emit('video_call_hangup', { session_id, user_id: myId });
     stopCallMedia();
+    localCoinStartedRef.current = false;
+    lastMinuteAlertShownRef.current = false;
+    coinEndedRef.current = false;
+    endedRef.current = false;
+
     callManager.reset();
     dispatch(clearCall());
     showToast('You ended the call');
@@ -413,15 +433,28 @@ const VideocallScreen = ({ route, navigation }) => {
   }, [handleEndCall]);
 
   /* ── On connected ── */
+  /* ── On connected ── */
   const onConnected = useCallback(() => {
     if (timerRef.current) return;
     connectedRef.current = true;
     connectedUIRef.current = true;
     setConnectedUI(true);
+    setSeconds(0);
     timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000);
     setSpeakerOn(true);
     InCallManager.setForceSpeakerphoneOn(true);
     InCallManager.setSpeakerphoneOn(true);
+
+    endedRef.current = false;
+    isExitingRef.current = false;
+    manualExitRef.current = false;
+    forceExitRef.current = false;
+    remoteEndedRef.current = false;
+    disableExitRef.current = false;
+    coinEndedRef.current = false;
+    alertShownRef.current = false;
+    lastMinuteAlertShownRef.current = false;
+
     if (isMale) {
       if (coinBalance < RATE) {
         setWarningMsg('No coins! Call ending...');
@@ -430,11 +463,18 @@ const VideocallScreen = ({ route, navigation }) => {
         return;
       }
       if (!localCoinStartedRef.current) {
+        localCoinStartedRef.current = true;
+
+        // ✅ same as AudiocallScreen: seed immediately and start countdown immediately
         const initialSeconds = Math.floor((coinBalance / RATE) * 60);
+
         startCoinCountdown(initialSeconds);
+
+        // DO NOT start countdown here.
+        // Wait for backend's first deduction (after 3 seconds).
       }
     }
-  }, [isMale, coinBalance, RATE, startCoinCountdown]);
+  }, [isMale, coinBalance, RATE, startCoinCountdown, clearCoinCountdown]);
 
   const onOfferRef = useRef(null);
   const onAnswerRef = useRef(null);
@@ -706,6 +746,7 @@ const VideocallScreen = ({ route, navigation }) => {
           top:0 left:-320 keeps it within vertical bounds so Android GPU
           composites the SurfaceView. opacity:0.01 = invisible but capturable.
           Only mounted when camera is ON. */}
+
       {localURL && connectedUI && cameraOn && (
         <View
           ref={captureViewRef}
@@ -718,7 +759,7 @@ const VideocallScreen = ({ route, navigation }) => {
             style={{ width: 320, height: 240 }}
             objectFit="cover"
             mirror
-             zOrder={2}
+            zOrder={2}
           />
         </View>
       )}
@@ -927,79 +968,63 @@ const VideocallScreen = ({ route, navigation }) => {
                 });
               }}
             >
-           
-           <View style={styles.pipInner}>
-
-    {cameraOn ? (
-        <RTCView
-            streamURL={localURL}
-            style={StyleSheet.absoluteFill}
-            objectFit="cover"
-            mirror
-            surfaceView={false}
-        />
-    ) : (
-        <View style={styles.pipCameraOff}>
-
-            {userdata?.user?.avatar ? (
-                <>
-                    <Image
-                        source={{ uri: userdata.user.avatar }}
-                        style={styles.pipBlurBg}
-                        blurRadius={20}
-                    />
-
-                    <View style={styles.pipTint} />
-
-                    <View style={styles.pipAvatarBox}>
+              <View style={styles.pipInner}>
+                {cameraOn ? (
+                  <RTCView
+                    streamURL={localURL}
+                    style={StyleSheet.absoluteFill}
+                    objectFit="cover"
+                    mirror
+                    surfaceView={false}
+                  />
+                ) : (
+                  <View style={styles.pipCameraOff}>
+                    {userdata?.user?.avatar ? (
+                      <>
                         <Image
+                          source={{ uri: userdata.user.avatar }}
+                          style={styles.pipBlurBg}
+                          blurRadius={20}
+                        />
+
+                        <View style={styles.pipTint} />
+
+                        <View style={styles.pipAvatarBox}>
+                          <Image
                             source={{ uri: userdata.user.avatar }}
                             style={styles.pipAvatar}
-                        />
+                          />
 
-                        <View style={styles.pipCamOffPill}>
+                          <View style={styles.pipCamOffPill}>
                             <Ionicons
-                                name="videocam-off"
-                                size={10}
-                                color="#fff"
+                              name="videocam-off"
+                              size={10}
+                              color="#fff"
                             />
-                            <Text style={styles.pipCamOffText}>
-                                Camera off
-                            </Text>
+                            <Text style={styles.pipCamOffText}>Camera off</Text>
+                          </View>
                         </View>
-                    </View>
-                </>
-            ) : (
-                <>
-                    <View style={styles.pipTint} />
+                      </>
+                    ) : (
+                      <>
+                        <View style={styles.pipTint} />
 
-                    <View style={styles.pipAvatarFallback}>
-                        <Ionicons
-                            name="person"
-                            size={28}
-                            color="#666"
-                        />
-                    </View>
-                </>
-            )}
+                        <View style={styles.pipAvatarFallback}>
+                          <Ionicons name="person" size={28} color="#666" />
+                        </View>
+                      </>
+                    )}
+                  </View>
+                )}
 
-        </View>
-    )}
-
-    {!micOn && (
-        <View style={styles.myMicBadge}>
-            <Ionicons
-                name="mic-off"
-                size={14}
-                color="#fff"
-            />
-        </View>
-    )}
- 
-</View>
+                {!micOn && (
+                  <View style={styles.myMicBadge}>
+                    <Ionicons name="mic-off" size={14} color="#fff" />
+                  </View>
+                )}
+              </View>
             </View>
           )}
-
         </>
       )}
 
@@ -1310,7 +1335,7 @@ const styles = StyleSheet.create({
 
     zIndex: 1000,
     elevation: 1000,
-},
+  },
   pipAvatarBox: {
     flex: 1,
     alignItems: 'center',
@@ -1356,18 +1381,18 @@ const styles = StyleSheet.create({
 
   /* OTHER user mic badge — inside bigVideo, bottom-left of remote feed */
   otherMicBadge: {
-  position: 'absolute',
-  top: 50,
-  left: 14,
-  width: 28,
-  height: 28,
-  borderRadius: 14,
-  backgroundColor: 'rgba(255,77,79,0.95)',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 20,
-  elevation: 20,
-},
+    position: 'absolute',
+    top: 50,
+    left: 14,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,77,79,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 20,
+    elevation: 20,
+  },
 
   otherBanner: {
     position: 'absolute',
@@ -1427,22 +1452,41 @@ const styles = StyleSheet.create({
 
   warningBanner: {
     position: 'absolute',
-    top: 128,
-    left: 0,
-    right: 0,
-    alignSelf: 'center',
+    bottom: 125,
+    left: 15,
+    right: 15,
+    backgroundColor: '#FF6B35',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(220,50,50,0.93)',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 18,
-    zIndex: 99,
-  },
-  warningText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+    zIndex: 9999,
+    elevation: 20,
 
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+  },
+
+  warningTitle: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  warningText: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 10,
+    lineHeight: 18,
+  },
   bottomBar: {
     position: 'absolute',
     bottom: 24,

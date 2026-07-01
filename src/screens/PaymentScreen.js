@@ -5,9 +5,15 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  ScrollView ,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+
 import RazorpayCheckout from "react-native-razorpay";
+
 import { useDispatch, useSelector } from "react-redux";
 import {
   verifyPaymentRequest,
@@ -20,20 +26,21 @@ const PaymentScreen = ({ route, navigation }) => {
   const { order, package: pkg } = route.params;
 
   const { loading, paymentSuccess } = useSelector(
-    (state) => state.purchase
+    state => state.purchase
   );
 
   useEffect(() => {
     dispatch(resetPurchase());
-  }, [dispatch]);
+  }, []);
 
   useEffect(() => {
     if (paymentSuccess) {
       navigation.replace("PaymentSuccessScreen");
     }
-  }, [paymentSuccess, navigation]);
+  }, [paymentSuccess]);
 
   const handlePayment = () => {
+
     dispatch(resetPurchase());
 
     const options = {
@@ -54,8 +61,6 @@ const PaymentScreen = ({ route, navigation }) => {
 
     RazorpayCheckout.open(options)
       .then((data) => {
-        console.log("✅ PAYMENT SUCCESS:", data);
-
         dispatch(
           verifyPaymentRequest({
             razorpay_order_id: data.razorpay_order_id,
@@ -65,96 +70,320 @@ const PaymentScreen = ({ route, navigation }) => {
           })
         );
       })
-      .catch((err) => {
-        console.log("❌ RAZORPAY CLOSED / ERROR:", err);
-
-        // No alert
-        // No error text
-        // No popup from app side
-        return;
-      });
+      .catch(() => {});
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Payment Details</Text>
+    <SafeAreaView style={styles.container}>
+      <StatusBar
+        backgroundColor="#7B2FF7"
+        barStyle="light-content"
+      />
+
+      {/* HEADER */}
+       <ScrollView
+  style={{ flex: 1 }}
+  contentContainerStyle={styles.scrollContent}
+  showsVerticalScrollIndicator={false}
+>
+
+      <LinearGradient
+        colors={["#7B2FF7", "#F107A3"]}
+        style={styles.header}
+      >
+        <Icon
+          name="wallet-plus"
+          color="#fff"
+          size={42}
+        />
+
+        <Text style={styles.headerTitle}>
+          Coin Purchase
+        </Text>
+
+        <Text style={styles.headerSub}>
+          Fast & Secure Payment
+        </Text>
+      </LinearGradient>
+
+      {/* CARD */}
 
       <View style={styles.card}>
-        <Text style={styles.plan}>Coin Package</Text>
-        <Text style={styles.amount}>₹ {order.amount / 100}</Text>
+
+        <View style={styles.coinCircle}>
+          <Icon
+            name="cash-100"
+            color="#FFD700"
+            size={48}
+          />
+        </View>
+
+        <Text style={styles.coinText}>
+          {pkg.coins} Coins
+        </Text>
+
+        <Text style={styles.price}>
+          ₹ {order.amount / 100}
+        </Text>
+
+        <Text style={styles.save}>
+          Instant Credit After Payment
+        </Text>
+
       </View>
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#9333EA" />
-      ) : (
+      {/* DETAILS */}
+
+      <View style={styles.details}>
+
+        <Text style={styles.sectionTitle}>
+          Order Summary
+        </Text>
+
+        <View style={styles.row}>
+          <Text>Coin Package</Text>
+          <Text>{pkg.coins} Coins</Text>
+        </View>
+
+        <View style={styles.row}>
+          <Text>Payment</Text>
+          <Text>Razorpay</Text>
+        </View>
+
+        <View style={styles.row}>
+          <Text>GST</Text>
+          <Text>Included</Text>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.row}>
+          <Text style={styles.total}>
+            Total
+          </Text>
+
+          <Text style={styles.total}>
+            ₹ {order.amount / 100}
+          </Text>
+        </View>
+
+      </View>
+
+      {/* SECURITY */}
+
+      <View style={styles.secureBox}>
+
+        <Icon
+          name="shield-check"
+          size={24}
+          color="#4CAF50"
+        />
+
+        <Text style={styles.secureText}>
+          100% Secure Payment Powered by Razorpay
+        </Text>
+
+      </View>
+
+      {/* BUTTON */}
+ 
+  </ScrollView>
+
+       {loading ? (
+    <ActivityIndicator
+      style={styles.loader}
+      size="large"
+      color="#9333EA"
+    />
+  ) : (
+    <View style={styles.bottomContainer}>
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={handlePayment}
+      >
         <LinearGradient
-          colors={["#7C3AED", "#D946EF"]}
-          style={styles.payBtn}
+          colors={["#7B2FF7", "#F107A3"]}
+          style={styles.button}
         >
-          <TouchableOpacity
-            style={styles.payTouchable}
-            activeOpacity={0.8}
-            onPress={handlePayment}
-          >
-            <Text style={styles.payText}>
-              PAY ₹ {order.amount / 100}
-            </Text>
-          </TouchableOpacity>
+          <Icon
+            name="lock"
+            color="#fff"
+            size={20}
+          />
+
+          <Text style={styles.buttonText}>
+            PAY ₹ {order.amount / 100}
+          </Text>
         </LinearGradient>
-      )}
+      </TouchableOpacity>
     </View>
+  )}
+</SafeAreaView>
   );
 };
 
 export default PaymentScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "#fff",
-  },
 
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 20,
-    color: "#000",
-  },
+container:{
+flex:1,
+backgroundColor:"#F7F8FC"
+},
 
-  card: {
-    backgroundColor: "#f3f3f3",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
+header:{
+height:220,
+justifyContent:"center",
+alignItems:"center",
+borderBottomLeftRadius:35,
+borderBottomRightRadius:35
+},
 
-  plan: {
-    fontSize: 16,
-    color: "#000",
-  },
+headerTitle:{
+fontSize:26,
+fontWeight:"700",
+color:"#fff",
+marginTop:10
+},
 
-  amount: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginTop: 5,
-    color: "#000",
-  },
+headerSub:{
+color:"#fff",
+marginTop:6,
+fontSize:15,
+opacity:.9
+},
 
-  payBtn: {
-    marginTop: 20,
-    borderRadius: 10,
-    overflow: "hidden",
-  },
+card:{
+backgroundColor:"#fff",
+marginHorizontal:22,
+marginTop:-45,
+borderRadius:25,
+padding:25,
+alignItems:"center",
+elevation:10
+},
 
-  payTouchable: {
-    padding: 15,
-    alignItems: "center",
-  },
+coinCircle:{
+width:90,
+height:90,
+borderRadius:45,
+backgroundColor:"#FFF8E1",
+justifyContent:"center",
+alignItems:"center"
+},
 
-  payText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
+coinText:{
+fontSize:28,
+fontWeight:"700",
+marginTop:18,
+color:"#222"
+},
+
+price:{
+fontSize:34,
+fontWeight:"800",
+color:"#7B2FF7",
+marginTop:10
+},
+
+save:{
+marginTop:8,
+color:"#888"
+},
+
+details:{
+backgroundColor:"#fff",
+margin:20,
+padding:20,
+borderRadius:20,
+elevation:3
+},
+
+sectionTitle:{
+fontSize:18,
+fontWeight:"700",
+marginBottom:15
+},
+
+row:{
+flexDirection:"row",
+justifyContent:"space-between",
+marginVertical:10
+},
+
+divider:{
+height:1,
+backgroundColor:"#ECECEC",
+marginVertical:12
+},
+
+total:{
+fontSize:18,
+fontWeight:"700"
+},
+
+secureBox:{
+flexDirection:"row",
+alignItems:"center",
+backgroundColor:"#fff",
+marginHorizontal:20,
+padding:16,
+borderRadius:18,
+elevation:2
+},
+
+secureText:{
+marginLeft:12,
+fontWeight:"600",
+color:"#444",
+flex:1
+},
+
+button: {
+  height: 58,
+  borderRadius: 18,
+  justifyContent: "center",
+  alignItems: "center",
+  flexDirection: "row",
+},
+
+buttonText:{
+color:"#fff",
+fontSize:18,
+fontWeight:"700",
+marginLeft:10
+},
+scrollContent: {
+  flexGrow: 1,
+  paddingBottom: 120, // enough space for fixed button
+},
+
+bottomContainer: {
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: "#fff",
+  paddingHorizontal: 20,
+  paddingTop: 15,
+  paddingBottom: 25,
+  borderTopLeftRadius: 24,
+  borderTopRightRadius: 24,
+
+  shadowColor: "#000",
+  shadowOpacity: 0.1,
+  shadowRadius: 10,
+  shadowOffset: {
+    width: 0,
+    height: -5,
   },
+  elevation: 20,
+},
+
+loader: {
+  position: "absolute",
+  bottom: 40,
+  alignSelf: "center",
+},
+
 });
