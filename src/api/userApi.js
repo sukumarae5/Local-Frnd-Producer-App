@@ -7,6 +7,7 @@ export const user_Otp = `${MAIN_BASE_URL}/api/auth/verify-otp`;
 export const user_ResendOtp = `${MAIN_BASE_URL}/api/auth/resend-otp`;
 
 export const user_Edit = `${MAIN_BASE_URL}/api/user/profile`;
+export const DELETE_API = `${MAIN_BASE_URL}/api/user/profile`;
 export const USER_PHOTO_POST_URL = `${MAIN_BASE_URL}/api/photo`;
 
 export const USER_DATA = `${MAIN_BASE_URL}/api/userprofile/profile`;
@@ -39,7 +40,11 @@ export const deletemystatusapi = `${MAIN_BASE_URL}/api/status/`;
 export const friendsstatusviewapi = `${MAIN_BASE_URL}/api/status/view`;
 export const mystatusviewersapi = `${MAIN_BASE_URL}/api/status/viewers/`;
 
-export const friendstatusapi = `${MAIN_BASE_URL}/api/status/friends`;
+export const friendstatusapi=`${MAIN_BASE_URL}/api/status/friends`
+export const likeMindedapi =`${MAIN_BASE_URL}/api/like-minded`
+
+
+
 
 //calls
 export const random_calls = `${MAIN_BASE_URL}/api/call/random-connect`; // MALE

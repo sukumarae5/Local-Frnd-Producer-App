@@ -1,4 +1,3 @@
-// userReducer.js
 import {
   RESET_USER_STATE,
   USER_DATA_FAILED,
@@ -12,7 +11,10 @@ import {
   NEW_USER_DATA_REQUEST,
   NEW_USER_DATA_SUCCESS,
   NEW_USER_DATA_FAILED,
-} from './userType';
+  DELETE_USER_REQUEST,
+  DELETE_USER_SUCCESS,
+  DELETE_USER_FAILED,
+} from "./userType";
 
 const initialState = {
   loading: false,
@@ -25,23 +27,32 @@ const initialState = {
   newUserData: null,
   message: null,
   userDataResponse: null,
+
+  // Delete-account state
+  deleting: false,
+  deleteSuccess: false,
+  deleteError: null,
+  deleteResponse: null,
 };
 
 export default function userReducer(state = initialState, action) {
   switch (action.type) {
-
     case USER_EDIT_REQUEST:
-      return { ...state, loading: true, error: null };
+      return {
+        ...state,
+        loading: true,
+        error: null,
+      };
 
     case USER_EDIT_SUCCESS:
       return {
         ...state,
         loading: false,
-        success: action.payload.success,
-        mode: action.payload.mode,
+        success: action.payload?.success,
+        mode: action.payload?.mode,
         data: action.payload,
-        result: action.payload.result,
-        message: action.payload.message,
+        result: action.payload?.result,
+        message: action.payload?.message,
       };
 
     case USER_EDIT_FAILED:
@@ -52,7 +63,6 @@ export default function userReducer(state = initialState, action) {
         success: false,
       };
 
-    // ✅ Normal fetch — clears userDataResponse so no stale alert
     case USER_DATA_REQUEST:
       return {
         ...state,
@@ -61,7 +71,6 @@ export default function userReducer(state = initialState, action) {
         userDataResponse: null,
       };
 
-    // ✅ Silent refresh — does NOT touch userDataResponse at all
     case USER_DATA_SILENT_REQUEST:
       return {
         ...state,
@@ -72,17 +81,17 @@ export default function userReducer(state = initialState, action) {
       return {
         ...state,
         loading: false,
-        userdata: action.payload.data ?? action.payload,
-        message: action.payload.message,
+        userdata: action.payload?.data ?? action.payload,
+        message: action.payload?.message,
       };
 
     case USER_DATA_FAILED:
-      return { ...state, loading: false, error: action.payload };
+      return {
+        ...state,
+        loading: false,
+        error: action.payload,
+      };
 
-    case USER_LOGOUT_REQUEST:
-      return { ...initialState };
-
-    // ✅ Resets before new patch request
     case NEW_USER_DATA_REQUEST:
       return {
         ...state,
@@ -93,7 +102,6 @@ export default function userReducer(state = initialState, action) {
         userDataResponse: null,
       };
 
-    // ✅ Plain string message, sets userDataResponse for screens to read
     case NEW_USER_DATA_SUCCESS:
       return {
         ...state,
@@ -101,9 +109,9 @@ export default function userReducer(state = initialState, action) {
         success: true,
         error: null,
         message:
-          typeof action.payload?.message === 'string'
+          typeof action.payload?.message === "string"
             ? action.payload.message
-            : 'Updated successfully',
+            : "Updated successfully",
         userDataResponse: action.payload,
         userdata: {
           ...state.userdata,
@@ -121,15 +129,46 @@ export default function userReducer(state = initialState, action) {
         success: false,
         error: action.payload,
         message:
-          typeof action.payload?.message === 'string'
+          typeof action.payload?.message === "string"
             ? action.payload.message
-            : typeof action.payload === 'string'
-            ? action.payload
-            : 'Something went wrong',
+            : typeof action.payload === "string"
+              ? action.payload
+              : "Something went wrong",
         userDataResponse: null,
       };
 
-    // ✅ Clears all alert-related state when returning to a screen
+    case DELETE_USER_REQUEST:
+      return {
+        ...state,
+        deleting: true,
+        deleteSuccess: false,
+        deleteError: null,
+        deleteResponse: null,
+      };
+
+    case DELETE_USER_SUCCESS:
+      return {
+        ...state,
+        deleting: false,
+        deleteSuccess: true,
+        deleteError: null,
+        deleteResponse: action.payload,
+      };
+
+    case DELETE_USER_FAILED:
+      return {
+        ...state,
+        deleting: false,
+        deleteSuccess: false,
+        deleteError: action.payload,
+        deleteResponse: null,
+      };
+
+    case USER_LOGOUT_REQUEST:
+      return {
+        ...initialState,
+      };
+
     case RESET_USER_STATE:
       return {
         ...state,
@@ -137,6 +176,9 @@ export default function userReducer(state = initialState, action) {
         error: null,
         message: null,
         userDataResponse: null,
+        deleteSuccess: false,
+        deleteError: null,
+        deleteResponse: null,
       };
 
     default:
