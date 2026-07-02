@@ -119,9 +119,9 @@ const HomeScreen = () => {
     };
   }, [socket]);
 
-  const imageUrl = userdata?.images?.profile_image
-    ? { uri: userdata.images.profile_image }
-    : require('../assets/boy2.jpg');
+  const imageUrl = userdata?.images?.display_profile_image
+  ? { uri: userdata.images.display_profile_image }
+  : require('../assets/boy2.jpg');
 
   const sections = [
     { id: 'stories' },

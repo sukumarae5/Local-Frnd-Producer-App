@@ -11,6 +11,8 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  PermissionsAndroid,
 } from 'react-native';
 import {
   useNavigation,
@@ -36,6 +38,12 @@ import { RESET_USER_STATE } from '../features/user/userType';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { userdeletephotorequest } from '../features/photo/photoAction';
 import ContinueButton from '../components/Common/ContinueButton';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+
+import {
+  uploadProfileImageRequest,
+  deleteProfileImageRequest,
+} from '../features/profileImage/profileImageAction';
 
 const { width, height } = Dimensions.get('window');
 const wp = percent => (width * percent) / 100;
@@ -48,9 +56,13 @@ const EditProfileScreen = () => {
 
   // ✅ HOOK 1 — selector (always first, never conditional)
   const { userdata, userDataResponse } = useSelector(state => state.user);
+  const { loading } = useSelector(state => state.profileImage);
 
   // ✅ HOOK 2-14 — all useState in fixed order
-  const [profileImg, setProfileImg] = useState(null);
+
+  const [profileImg, setProfileImg] = useState(
+    userdata?.images?.display_profile_image || null,
+  );
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -67,7 +79,7 @@ const EditProfileScreen = () => {
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [openSection, setOpenSection] = useState(null);
-const isResponseHandled = useRef(false);
+  const isResponseHandled = useRef(false);
 
   // ✅ HOOK 15 — useRef
   const isFormInitialized = useRef(false);
@@ -80,48 +92,46 @@ const isResponseHandled = useRef(false);
     dispatch({ type: FETCH_LIFESTYLE_OPTIONS_REQUEST });
   }, []);
 
-// ✅ HOOK 17 — focus listener — NO dispatch, only reset ref
-useEffect(() => {
-  const unsubscribe = navigation.addListener('focus', () => {
-    isFormInitialized.current = false;
-    isResponseHandled.current = false; // ✅ only reset ref
-    // ❌ REMOVE dispatch(RESET_USER_STATE) — this was wiping userDataResponse
-  });
-  return unsubscribe;
-}, [navigation]);
+  // ✅ HOOK 17 — focus listener — NO dispatch, only reset ref
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      isFormInitialized.current = false;
+      isResponseHandled.current = false; // ✅ only reset ref
+      // ❌ REMOVE dispatch(RESET_USER_STATE) — this was wiping userDataResponse
+    });
+    return unsubscribe;
+  }, [navigation]);
 
-// ✅ HOOK 18 — alert effect — clear Redux only AFTER user taps OK
-useEffect(() => {
-  if (!userDataResponse || isResponseHandled.current) return; // ✅ .current fixed
+  // ✅ HOOK 18 — alert effect — clear Redux only AFTER user taps OK
+  useEffect(() => {
+    if (!userDataResponse || isResponseHandled.current) return; // ✅ .current fixed
 
-  const isSuccess = userDataResponse?.success === true;
-  const safeMessage =
-    typeof userDataResponse?.message === 'string'
-      ? userDataResponse.message
-      : isSuccess
-      ? 'Profile updated successfully!'
-      : 'Something went wrong';
+    const isSuccess = userDataResponse?.success === true;
+    const safeMessage =
+      typeof userDataResponse?.message === 'string'
+        ? userDataResponse.message
+        : isSuccess
+        ? 'Profile updated successfully!'
+        : 'Something went wrong';
 
-  isResponseHandled.current = true;
+    isResponseHandled.current = true;
 
-  Alert.alert(
-    isSuccess ? 'Success ✅' : 'Error ❌',
-    safeMessage,
-    [{
-      text: 'OK',
-      onPress: () => {
-        dispatch({ type: RESET_USER_STATE }); // ✅ clear ONLY after OK tap
+    Alert.alert(isSuccess ? 'Success ✅' : 'Error ❌', safeMessage, [
+      {
+        text: 'OK',
+        onPress: () => {
+          dispatch({ type: RESET_USER_STATE }); // ✅ clear ONLY after OK tap
+        },
       },
-    }]
-  );
-}, [userDataResponse]); // ✅ removed isResponseHandled from deps — it's a ref
+    ]);
+  }, [userDataResponse]); // ✅ removed isResponseHandled from deps — it's a ref
 
   // ✅ HOOK 19 — form prefill on focus (useFocusEffect always last)
   useFocusEffect(
     useCallback(() => {
       if (!userdata) return;
 
-      setProfileImg(userdata?.images?.avatar ?? null);
+      setProfileImg(userdata?.images?.display_profile_image ?? null);
       setFullName(userdata?.user?.name ?? '');
       setUsername(userdata?.user?.username ?? '');
       setEmail(userdata?.user?.email ?? '');
@@ -173,30 +183,113 @@ useEffect(() => {
     return `${year}-${month}-${day}`;
   };
 
+  const requestCameraPermission = async () => {
+    if (Platform.OS !== 'android') return true;
+
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.CAMERA,
+    );
+
+    return granted === PermissionsAndroid.RESULTS.GRANTED;
+  };
+
+  const uploadImage = asset => {
+  if (!asset) return;
+
+  const formData = new FormData();
+
+  formData.append("photo", {
+    uri: asset.uri,
+    type: asset.type || "image/jpeg",
+    name: asset.fileName || `profile_${Date.now()}.jpg`,
+  });
+
+  dispatch(
+    uploadProfileImageRequest(formData, () => {
+      dispatch({
+        type: "USER_DATA_REQUEST",
+      });
+    }),
+  );
+};
+
+  const openCamera = async () => {
+    const allowed = await requestCameraPermission();
+
+    if (!allowed) {
+      Alert.alert('Camera permission denied');
+      return;
+    }
+
+    launchCamera(
+      {
+        mediaType: 'photo',
+        quality: 0.8,
+      },
+      response => {
+        if (response.didCancel || response.errorCode) return;
+
+        if (response.assets?.length) {
+          setProfileImg(response.assets[0].uri);
+
+          uploadImage(response.assets[0]);
+        }
+      },
+    );
+  };
+  const openGallery = () => {
+    launchImageLibrary(
+      {
+        mediaType: 'photo',
+        quality: 0.8,
+      },
+      response => {
+        if (response.didCancel || response.errorCode) return;
+
+        if (response.assets?.length) {
+          setProfileImg(response.assets[0].uri);
+
+          uploadImage(response.assets[0]);
+        }
+      },
+    );
+  };
+
   const pickImage = () => {
     Alert.alert(
-      'Select Option',
-      'Choose an option to upload photo',
+      'Profile Photo',
+      'Choose an option',
       [
         {
           text: 'Camera',
-          onPress: () =>
-            navigation.navigate('UplodePhotoScreen', {
-              open: 'camera',
-              from: 'EditProfile',
-            }),
+          onPress: openCamera,
         },
         {
           text: 'Gallery',
-          onPress: () =>
-            navigation.navigate('UplodePhotoScreen', {
-              open: 'gallery',
-              from: 'EditProfile',
-            }),
+          onPress: openGallery,
         },
-        { text: 'Cancel', style: 'cancel' },
-      ],
-      { cancelable: true },
+        profileImg ||
+        userdata?.images?.display_profile_image ||
+        userdata?.images?.avatar
+          ? {
+              text: 'Remove Photo',
+              style: 'destructive',
+              onPress: () => {
+                dispatch(
+                  deleteProfileImageRequest(() => {
+                    dispatch({
+                      type: 'USER_DATA_REQUEST',
+                    });
+                  }),
+                );
+              },
+            }
+          : null,
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ].filter(Boolean),
     );
   };
 
@@ -257,6 +350,11 @@ useEffect(() => {
   };
 
   const interestText = selectedInterests.map(i => i.name).join(', ');
+  const displayImage =
+    profileImg ??
+    userdata?.images?.display_profile_image ??
+    userdata?.images?.avatar ??
+    null;
 
   return (
     <WelcomeScreenbackgroungpage>
@@ -280,18 +378,32 @@ useEffect(() => {
 
             {/* AVATAR */}
             <View style={styles.avatarSection}>
-              <TouchableOpacity style={styles.avatarRing} onPress={pickImage}>
-                <Image
-                  source={
-                    profileImg
-                      ? { uri: profileImg }
-                      : require('../assets/boy1.jpg')
-                  }
-                  style={styles.avatar}
-                />
-                <View style={styles.cameraBtn}>
-                  <Icon name="camera" size={14} color="#fff" />
-                </View>
+              <TouchableOpacity
+                style={styles.avatarRing}
+                onPress={!loading ? pickImage : null}
+                activeOpacity={0.8}
+              >
+                <>
+                  <Image
+                    source={
+                      displayImage
+                        ? { uri: displayImage }
+                        : require('../assets/boy1.jpg')
+                    }
+                    style={styles.avatar}
+                  />
+
+                  {loading && (
+                    <View style={styles.uploadLoader}>
+                      <ActivityIndicator size="large" color="#ffffff" />
+                    </View>
+                  )}
+                </>
+                {!loading && (
+                  <View style={styles.cameraBtn}>
+                    <Icon name="camera" size={14} color="#fff" />
+                  </View>
+                )}
               </TouchableOpacity>
             </View>
 
@@ -598,12 +710,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(4),
     paddingVertical: hp(2),
   },
-headerTitle: { 
-  fontSize: wp(5), 
-  fontWeight: '600', 
-  marginLeft: wp(2),
-  color: '#000', // ✅ ADD
-},
+  headerTitle: {
+    fontSize: wp(5),
+    fontWeight: '600',
+    marginLeft: wp(2),
+    color: '#000', // ✅ ADD
+  },
   avatarSection: { alignItems: 'center', marginVertical: hp(3) },
   avatarRing: {
     width: wp(30),
@@ -648,11 +760,12 @@ headerTitle: {
     borderWidth: 1,
     borderColor: '#eee',
   },
-input: { 
-  flex: 1, 
-  fontSize: wp(4),
-  color: '#000', // ✅ ADD
-},  genderRow: { flexDirection: 'row', marginTop: hp(1) },
+  input: {
+    flex: 1,
+    fontSize: wp(4),
+    color: '#000', // ✅ ADD
+  },
+  genderRow: { flexDirection: 'row', marginTop: hp(1) },
   genderItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -683,8 +796,11 @@ input: {
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
-  accordionTitle: { fontSize: wp(4), fontWeight: '600' ,color: '#000', // ✅ ADD
-},
+  accordionTitle: {
+    fontSize: wp(4),
+    fontWeight: '600',
+    color: '#000', // ✅ ADD
+  },
   accordionArrow: {
     width: wp(6),
     height: wp(6),
@@ -757,5 +873,14 @@ input: {
     shadowOpacity: 0.05,
     shadowRadius: 5,
     elevation: 5,
+  },
+  uploadLoader: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 100,
   },
 });

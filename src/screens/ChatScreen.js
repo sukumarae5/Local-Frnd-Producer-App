@@ -819,11 +819,13 @@ const ChatScreen = ({ route, navigation }) => {
   };
 
   const avatarUri =
+    user?.display_profile_image ||
     user?.avatar ||
     user?.profile_pic ||
     user?.profile_image ||
     user?.image ||
     null;
+
   const lastSeenValue =
     user?.last_seen || user?.lastSeen || user?.last_active || null;
 

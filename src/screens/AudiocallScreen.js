@@ -212,7 +212,7 @@ const AudiocallScreen = ({ route, navigation }) => {
                   otherUser: {
                     user_id: otherRef.current?.user_id,
                     name: otherRef.current?.name,
-                    avatar: otherRef.current?.avatar,
+                    avatar: otherRef.current?.display_profile_image,
                   },
                   session_id,
                   role: isMale ? 'Male' : 'female',
@@ -314,7 +314,7 @@ const AudiocallScreen = ({ route, navigation }) => {
                     otherUser: {
                       user_id: currentOther?.user_id,
                       name: currentOther?.name,
-                      avatar: currentOther?.avatar,
+                      avatar: currentOther?.display_profile_image,
                     },
                     session_id,
                     role: isMale ? 'Male' : 'female',
@@ -531,7 +531,7 @@ const AudiocallScreen = ({ route, navigation }) => {
               otherUser: {
                 user_id: currentOther?.user_id,
                 name: currentOther?.name,
-                avatar: currentOther?.avatar,
+                avatar: currentOther?.display_profile_image,
               },
               session_id,
               role: isMale ? 'Male' : 'female',
@@ -719,7 +719,10 @@ const AudiocallScreen = ({ route, navigation }) => {
                 colors={['#c084fc', '#e879f9', '#f472b6']}
                 style={styles.gradientRing}
               >
-                <Image source={{ uri: me.avatar }} style={styles.avatar} />
+                <Image
+                  source={{ uri: me.display_profile_image }}
+                  style={styles.avatar}
+                />
               </LinearGradient>
               {!micOn && (
                 <View style={styles.muteIcon}>
@@ -746,7 +749,10 @@ const AudiocallScreen = ({ route, navigation }) => {
                 colors={['#c084fc', '#e879f9', '#f472b6']}
                 style={styles.gradientRing}
               >
-                <Image source={{ uri: other.avatar }} style={styles.avatar} />
+                <Image
+                  source={{ uri: other.display_profile_image }}
+                  style={styles.avatar}
+                />
               </LinearGradient>
               {!otherMicOn && (
                 <View style={styles.muteIcon}>

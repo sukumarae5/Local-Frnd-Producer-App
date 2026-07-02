@@ -187,14 +187,14 @@ const styles = StyleSheet.create({
 
   card: {
     width: width * 0.96,
-    height: hp(18),
+    height: hp(20),
     borderRadius: wp(4),
     overflow: "hidden",
   },
 
   cardImage: {
     borderRadius: wp(4),
-    height: hp(18),
+    height: hp(20),
   },
 
   // ── LEFT ──

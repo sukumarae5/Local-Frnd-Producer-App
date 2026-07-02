@@ -56,10 +56,27 @@ const VideocallScreen = ({ route, navigation }) => {
   const isMale = myGender === 'Male';
   const RATE = callType === 'VIDEO' ? 60 : 10;
 
-  const caller = connectedCallDetails?.caller;
-  const connectedUser = connectedCallDetails?.connected_user;
-  const iAmCaller = String(myId) === String(routeCallerId);
-  const other = iAmCaller ? connectedUser : caller;
+  /* ── me / other — derived the SAME way as AudiocallScreen ──
+     IMPORTANT: this is based on connectedCallDetails.caller.user_id
+     (the actual server data), NOT on routeCallerId (a nav param).
+     Using routeCallerId here was the root cause of avatars being
+     swapped / showing "my" avatar in the "other user" slots. */
+  const [me, setMe] = useState(null);
+  const [other, setOther] = useState(null);
+
+  useEffect(() => {
+    const callerData = connectedCallDetails?.caller;
+    const connectedUser = connectedCallDetails?.connected_user;
+    if (!callerData || !connectedUser || !myId) return;
+
+    if (String(myId) === String(callerData.user_id)) {
+      setMe(callerData);
+      setOther(connectedUser);
+    } else {
+      setMe(connectedUser);
+      setOther(callerData);
+    }
+  }, [connectedCallDetails, myId]);
 
   /* ── State ── */
   const [localURL, setLocalURL] = useState(null);
@@ -252,7 +269,7 @@ const VideocallScreen = ({ route, navigation }) => {
               otherUser: {
                 user_id: currentOther?.user_id,
                 name: currentOther?.name,
-                avatar: currentOther?.avatar,
+                avatar: currentOther?.display_profile_image,
               },
               session_id,
               role: myGender === 'Male' ? 'Male' : 'female',
@@ -262,6 +279,7 @@ const VideocallScreen = ({ route, navigation }) => {
         ],
       }),
     );
+    
   }, [
     session_id,
     myId,
@@ -297,17 +315,17 @@ const VideocallScreen = ({ route, navigation }) => {
           const next = prev - 1;
 
           // ✅ same as AudiocallScreen: 30s warning via alertShownRef
-          if (next === 30 && !alertShownRef.current) {
-            alertShownRef.current = true;
+         if (next === 30 && !alertShownRef.current) {
+    alertShownRef.current = true;
 
-            setWarningMsg(
-              'Low Balance\nRecharge now. Your call will end in 30 seconds.',
-            );
+    setWarningMsg(
+        'Low Balance\nRecharge now. Your call will end in 30 seconds.'
+    );
 
-            setTimeout(() => {
-              setWarningMsg('');
-            }, 15000);
-          }
+    setTimeout(() => {
+        setWarningMsg('');
+    }, 15000);
+}
 
           return next;
         });
@@ -408,7 +426,7 @@ const VideocallScreen = ({ route, navigation }) => {
               otherUser: {
                 user_id: currentOther?.user_id,
                 name: currentOther?.name,
-                avatar: currentOther?.avatar,
+                avatar: currentOther?.display_profile_image,
               },
               session_id,
               role: myGender === 'Male' ? 'Male' : 'female',
@@ -432,7 +450,6 @@ const VideocallScreen = ({ route, navigation }) => {
     handleEndCallRef.current = handleEndCall;
   }, [handleEndCall]);
 
-  /* ── On connected ── */
   /* ── On connected ── */
   const onConnected = useCallback(() => {
     if (timerRef.current) return;
@@ -530,7 +547,11 @@ const VideocallScreen = ({ route, navigation }) => {
     };
   }, [session_id, flushIce]);
 
-  /* ── WebRTC init ── */
+  /* ── WebRTC init ──
+     NOTE: routeCallerId is still used here — and only here — to decide
+     which peer sends the initial WebRTC offer. That's a signaling-role
+     decision, separate from "who do I display as the other user", which
+     now comes from connectedCallDetails via the me/other effect above. */
   useEffect(() => {
     if (!connected || !socketRef.current || startedRef.current) return;
     startedRef.current = true;
@@ -555,7 +576,7 @@ const VideocallScreen = ({ route, navigation }) => {
                 otherUser: {
                   user_id: currentOther?.user_id,
                   name: currentOther?.name,
-                  avatar: currentOther?.avatar,
+                  avatar: currentOther?.display_profile_image,
                 },
                 session_id,
                 role: myGender === 'Male' ? 'Male' : 'female',
@@ -740,12 +761,18 @@ const VideocallScreen = ({ route, navigation }) => {
   const coinIsLow = coinSecondsLeft !== null && coinSecondsLeft <= 60;
   const guideColor = faceStatus === 'multiple_faces' ? '#FFA940' : '#FF4D4F';
 
+  // ── My own avatar for camera-off states — single consistent source,
+  //    same field used everywhere (display_profile_image), matching
+  //    what's used for "other" and matching AudiocallScreen.
+const myAvatar = userdata?.images?.display_profile_image;
+console.log(myAvatar)
   return (
     <View style={styles.container}>
       {/* ── Hidden capture view for face detection ──
           top:0 left:-320 keeps it within vertical bounds so Android GPU
           composites the SurfaceView. opacity:0.01 = invisible but capturable.
           Only mounted when camera is ON. */}
+
 
       {localURL && connectedUI && cameraOn && (
         <View
@@ -804,9 +831,9 @@ const VideocallScreen = ({ route, navigation }) => {
                 ) : (
                   /* Camera off — blurred avatar instead of frozen frame */
                   <View style={StyleSheet.absoluteFill}>
-                    {userdata?.user?.avatar ? (
+                    {myAvatar ? (
                       <Image
-                        source={{ uri: userdata.user.avatar }}
+                        source={{ uri: myAvatar }}
                         style={StyleSheet.absoluteFill}
                         blurRadius={18}
                       />
@@ -888,9 +915,9 @@ const VideocallScreen = ({ route, navigation }) => {
                 {/* Other user face gone — blur overlay */}
                 {showOtherBlur && (
                   <View style={styles.blurOverlay} pointerEvents="none">
-                    {other?.avatar ? (
+                    {other?.display_profile_image ? (
                       <Image
-                        source={{ uri: other.avatar }}
+                        source={{ uri: other.display_profile_image }}
                         style={styles.blurBg}
                         blurRadius={25}
                       />
@@ -919,9 +946,9 @@ const VideocallScreen = ({ route, navigation }) => {
                 {/* Other user camera off — avatar overlay */}
                 {showOtherAvatar && (
                   <View style={styles.blurOverlay} pointerEvents="none">
-                    {other?.avatar ? (
+                    {other?.display_profile_image ? (
                       <Image
-                        source={{ uri: other.avatar }}
+                        source={{ uri: other.display_profile_image }}
                         style={styles.blurBg}
                         blurRadius={25}
                       />
@@ -932,9 +959,9 @@ const VideocallScreen = ({ route, navigation }) => {
                     )}
                     <View style={styles.blurTint} />
                     <View style={styles.avatarBox}>
-                      {other?.avatar ? (
+                      {other?.display_profile_image ? (
                         <Image
-                          source={{ uri: other.avatar }}
+                          source={{ uri: other.display_profile_image }}
                           style={styles.avatarImg}
                         />
                       ) : (
@@ -979,10 +1006,10 @@ const VideocallScreen = ({ route, navigation }) => {
                   />
                 ) : (
                   <View style={styles.pipCameraOff}>
-                    {userdata?.user?.avatar ? (
+                    {myAvatar ? (
                       <>
                         <Image
-                          source={{ uri: userdata.user.avatar }}
+                          source={{ uri: myAvatar }}
                           style={styles.pipBlurBg}
                           blurRadius={20}
                         />
@@ -991,7 +1018,7 @@ const VideocallScreen = ({ route, navigation }) => {
 
                         <View style={styles.pipAvatarBox}>
                           <Image
-                            source={{ uri: userdata.user.avatar }}
+                            source={{ uri: myAvatar }}
                             style={styles.pipAvatar}
                           />
 
@@ -1450,43 +1477,43 @@ const styles = StyleSheet.create({
   coinPillLow: { backgroundColor: 'rgba(220,50,50,0.92)' },
   coinPillText: { color: '#fff', fontWeight: '700', fontSize: 12 },
 
-  warningBanner: {
-    position: 'absolute',
-    bottom: 125,
-    left: 15,
-    right: 15,
-    backgroundColor: '#FF6B35',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    zIndex: 9999,
-    elevation: 20,
+warningBanner: {
+  position: 'absolute',
+ bottom: 125,
+  left: 15,
+  right: 15,
+  backgroundColor: '#FF6B35',
+  borderRadius: 12,
+  paddingHorizontal: 14,
+  paddingVertical: 12,
+  flexDirection: 'row',
+  alignItems: 'center',
+  zIndex: 9999,
+  elevation: 20,
 
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
+  shadowColor: '#000',
+  shadowOpacity: 0.25,
+  shadowRadius: 8,
+  shadowOffset: {
+    width: 0,
+    height: 3,
   },
+},
 
-  warningTitle: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
+warningTitle: {
+  color: '#fff',
+  fontSize: 15,
+  fontWeight: '700',
+},
 
-  warningText: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 10,
-    lineHeight: 18,
-  },
+warningText: {
+  flex: 1,
+  color: '#fff',
+  fontSize: 12,
+  fontWeight: '600',
+  marginLeft: 10,
+  lineHeight: 18,
+},
   bottomBar: {
     position: 'absolute',
     bottom: 24,

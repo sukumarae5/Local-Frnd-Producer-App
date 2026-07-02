@@ -1,27 +1,28 @@
-import { all } from "redux-saga/effects";
-import authSaga from "../features/Auth/authSaga";
-import userSaga from "../features/user/userSaga";
-import photoSaga from "../features/photo/photoSaga";
-import randomuserSaga from "../features/RandomUsers/randomuserSaga";
-import languageSaga from "../features/language/languageSaga"
-import avatarsSaga from "../features/Avatars/avatarsSaga";
-import locationSaga from "../features/Countries/locationSaga"
-import callSaga from "../features/calls/callSaga";
-import friendSaga from "../features/friend/friendSaga";
-import interestSaga from "../features/interest/interestSaga"
-import lifestyleSaga from "../features/lifeStyle/lifestyleSaga"
+import { all } from 'redux-saga/effects';
+import authSaga from '../features/Auth/authSaga';
+import userSaga from '../features/user/userSaga';
+import photoSaga from '../features/photo/photoSaga';
+import randomuserSaga from '../features/RandomUsers/randomuserSaga';
+import languageSaga from '../features/language/languageSaga';
+import avatarsSaga from '../features/Avatars/avatarsSaga';
+import locationSaga from '../features/Countries/locationSaga';
+import callSaga from '../features/calls/callSaga';
+import friendSaga from '../features/friend/friendSaga';
+import interestSaga from '../features/interest/interestSaga';
+import lifestyleSaga from '../features/lifeStyle/lifestyleSaga';
 // import lifestyleOptionsSaga from "../features/lifeStyle/lifestyleSaga"
 // import userLifestyleSaga from"../features/lifeStyle/lifestyleSaga"
-import otherusersSaga from "../features/Otherusers/otherUserSaga"
-import chatSaga from "../features/chat/chatSaga"
-import ratingSaga from "../features/rating/ratingSaga"
-import notificationSaga from "../features/notification/notificationSaga"
-import statusSaga from "../features/Status/statusSaga"
-import watchCoins from"../features/conis/coinSaga"
-import offersSaga from"../features/Offers/offersSaga"
-import  watchPurchase  from "../features/purchase/purchaseSaga";
-import {watchWithdraw}  from "../features/withdraw/withdrawSaga";
-import chatOptionsSaga from "../features/chat/chatOptionsSaga"
+import otherusersSaga from '../features/Otherusers/otherUserSaga';
+import chatSaga from '../features/chat/chatSaga';
+import ratingSaga from '../features/rating/ratingSaga';
+import notificationSaga from '../features/notification/notificationSaga';
+import statusSaga from '../features/Status/statusSaga';
+import watchCoins from '../features/conis/coinSaga';
+import offersSaga from '../features/Offers/offersSaga';
+import watchPurchase from '../features/purchase/purchaseSaga';
+import { watchWithdraw } from '../features/withdraw/withdrawSaga';
+import chatOptionsSaga from '../features/chat/chatOptionsSaga';
+import profileImageSaga from '../features/profileImage/profileImageSaga';
 
 export default function* rootSaga() {
   yield all([
@@ -40,16 +41,14 @@ export default function* rootSaga() {
     // userLifestyleSaga(),
     otherusersSaga(),
     chatSaga(),
-        ratingSaga(),
-        notificationSaga(),
-        statusSaga(),
-        watchCoins(),
-        offersSaga(),
-        watchPurchase(),
-        watchWithdraw(),
-        chatOptionsSaga(),
-
-
-
+    ratingSaga(),
+    notificationSaga(),
+    statusSaga(),
+    watchCoins(),
+    offersSaga(),
+    watchPurchase(),
+    watchWithdraw(),
+    chatOptionsSaga(),
+    profileImageSaga(),
   ]);
 }
