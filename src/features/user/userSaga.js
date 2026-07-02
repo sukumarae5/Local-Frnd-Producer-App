@@ -2,45 +2,75 @@ import { call, put, takeLatest } from "redux-saga/effects";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { 
-  userEditSuccess, 
-  userEditFailed, 
-  userDataSuccess, 
+import {
+  userEditSuccess,
+  userEditFailed,
+  userDataSuccess,
+  userDataFailed,
   newUserDataSuccess,
-  newUserDataFailed
+  newUserDataFailed,
+  deleteUserSuccess,
+  deleteUserFailed,
 } from "./userAction";
 
-import { NEW_USER_DATA_REQUEST, USER_DATA_REQUEST, USER_DATA_SILENT_REQUEST, USER_EDIT_REQUEST } from "./userType";
-import { user_Edit, USER_DATA, newuserapi } from "../../api/userApi";
-import { USER_LOGOUT_REQUEST } from "./userType";
-import { cancel, take, race } from "redux-saga/effects";
+import {
+  USER_EDIT_REQUEST,
+  USER_DATA_REQUEST,
+  USER_DATA_SILENT_REQUEST,
+  NEW_USER_DATA_REQUEST,
+  DELETE_USER_REQUEST,
+} from "./userType";
 
+import {
+  user_Edit,
+  USER_DATA,
+  newuserapi,
+  DELETE_API,
+} from "../../api/userApi";
+
+function getErrorPayload(error) {
+  return (
+    error?.response?.data || {
+      message: error?.message || "Something went wrong",
+    }
+  );
+}
 
 function* handleUserEdit(action) {
   try {
     const token = yield call([AsyncStorage, "getItem"], "twittoke");
-    const user_id = yield call([AsyncStorage, "getItem"], "user_id");
-console.log(token)
+    const userId = yield call([AsyncStorage, "getItem"], "user_id");
+
+    if (!token) {
+      throw new Error("Authentication token not found");
+    }
+
+    if (!userId) {
+      throw new Error("User ID not found");
+    }
+
     const response = yield call(() =>
-      axios.put(`${user_Edit}/${user_id}`, action.payload, {
-        headers: { Authorization: `Bearer ${token}` },
+      axios.put(`${user_Edit}/${userId}`, action.payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       })
     );
-console.log(response)
-    yield put(userEditSuccess(response));
+
+    yield put(userEditSuccess(response.data));
   } catch (error) {
-    const msg = error.response?.data?.message || error.message;
-    yield put(userEditFailed(msg));
+    yield put(userEditFailed(getErrorPayload(error)));
   }
 }
-
-
 
 function* handleUserData() {
   try {
     const token = yield call([AsyncStorage, "getItem"], "twittoke");
 
-    // ⛔ No user_id required because backend doesn't want it
+    if (!token) {
+      throw new Error("Authentication token not found");
+    }
 
     const response = yield call(() =>
       axios.get(USER_DATA, {
@@ -49,76 +79,111 @@ function* handleUserData() {
         },
       })
     );
-console.log(response)
-    yield put(userDataSuccess(response.data)); // store user data
+
+    yield put(userDataSuccess(response.data));
   } catch (error) {
-    const msg = error.response?.data?.message || error.message;
-    yield put( userEditFailed(msg)); // correct error action
+    yield put(userDataFailed(getErrorPayload(error)));
   }
 }
 
 function* handleNewUserData(action) {
   try {
-    if (!action.payload || typeof action.payload !== "object") return;
+    if (!action.payload || typeof action.payload !== "object") {
+      throw new Error("Invalid update data");
+    }
 
     const token = yield call([AsyncStorage, "getItem"], "twittoke");
 
-    // 🧼 Clean payload
+    if (!token) {
+      throw new Error("Authentication token not found");
+    }
+
     const cleanPayload = Object.fromEntries(
       Object.entries(action.payload).filter(
-        ([_, value]) => value !== undefined && value !== null
+        ([, value]) => value !== undefined && value !== null
       )
     );
 
-    if (Object.keys(cleanPayload).length === 0) return;
+    if (Object.keys(cleanPayload).length === 0) {
+      throw new Error("No data available to update");
+    }
 
-    // 🔥 PATCH API
     const response = yield call(() =>
       axios.patch(newuserapi, cleanPayload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+    );
+
+    yield put(newUserDataSuccess(response.data));
+
+    yield put({
+      type: USER_DATA_SILENT_REQUEST,
+    });
+  } catch (error) {
+    yield put(newUserDataFailed(getErrorPayload(error)));
+  }
+}
+
+function* handleUserDataSilent() {
+  try {
+    const token = yield call([AsyncStorage, "getItem"], "twittoke");
+
+    if (!token) {
+      return;
+    }
+
+    const response = yield call(() =>
+      axios.get(USER_DATA, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
     );
-    
-   
-    // ✅ PATCH SUCCESS (store only response.data)
-    yield put(newUserDataSuccess(response.data));
 
-    // 🔥 THIS IS THE KEY LINE (force refresh user)
-    yield put({ type: USER_DATA_SILENT_REQUEST }); // ← CHANGE THIS
-
-    
-  } catch (error) {
-  const backendError =
-    error?.response?.data || {
-      message: error.message,
-    };
-
-  yield put(newUserDataFailed(backendError));
-}
-}
-
- function* handleUserDataSilent() {
-  try {
-    const token = yield call([AsyncStorage, "getItem"], "twittoke");
-    const response = yield call(() =>
-      axios.get(USER_DATA, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-    );
-    // ✅ Only updates userdata, never touches userDataResponse
     yield put(userDataSuccess(response.data));
   } catch (error) {
-    // silent fail — don't show any alert
-    console.log('Silent refresh failed:', error.message);
+    console.log(
+      "Silent user refresh failed:",
+      error?.response?.data || error?.message
+    );
+  }
+}
+
+function* handleDeleteUser() {
+  try {
+    const token = yield call([AsyncStorage, "getItem"], "twittoke");
+    const userId = yield call([AsyncStorage, "getItem"], "user_id");
+
+    if (!token) {
+      throw new Error("Authentication token not found");
+    }
+
+    if (!userId) {
+      throw new Error("User ID not found");
+    }
+
+    const response = yield call(() =>
+      axios.delete(`${DELETE_API}/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+    );
+
+    yield put(deleteUserSuccess(response.data));
+  } catch (error) {
+    yield put(deleteUserFailed(getErrorPayload(error)));
   }
 }
 
 export default function* userSaga() {
   yield takeLatest(USER_EDIT_REQUEST, handleUserEdit);
   yield takeLatest(USER_DATA_REQUEST, handleUserData);
-   yield takeLatest(NEW_USER_DATA_REQUEST, handleNewUserData);
-     yield takeLatest(USER_DATA_SILENT_REQUEST, handleUserDataSilent); // ✅ ADD
-
+  yield takeLatest(NEW_USER_DATA_REQUEST, handleNewUserData);
+  yield takeLatest(USER_DATA_SILENT_REQUEST, handleUserDataSilent);
+  yield takeLatest(DELETE_USER_REQUEST, handleDeleteUser);
 }

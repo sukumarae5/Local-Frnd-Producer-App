@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,36 +7,72 @@ import {
   Modal,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
+
 import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useDispatch } from "react-redux";
-import { userlogoutrequest } from "../features/user/userAction";
+import { useDispatch, useSelector } from "react-redux";
+
+import {
+  deleteUserRequest,
+  resetUserState,
+  userlogoutrequest,
+} from "../features/user/userAction";
+
 import { SocketContext } from "../socket/SocketProvider";
 import WelcomeScreenbackgroungpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
 
 const { height } = Dimensions.get("window");
+
+const getErrorMessage = (error) => {
+  if (typeof error === "string") {
+    return error;
+  }
+
+  if (typeof error?.message === "string") {
+    return error.message;
+  }
+
+  if (typeof error?.error === "string") {
+    return error.error;
+  }
+
+  return "Unable to delete your account. Please try again.";
+};
 
 const SettingScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const { socketRef } = useContext(SocketContext);
 
+  const {
+    deleting,
+    deleteSuccess,
+    deleteError,
+    deleteResponse,
+  } = useSelector((state) => state.user);
+
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const clearUserSession = async () => {
-    socketRef?.current?.disconnect();
+    try {
+      socketRef?.current?.disconnect();
 
-    await AsyncStorage.multiRemove(["twittoke", "user_id"]);
+      await AsyncStorage.multiRemove(["twittoke", "user_id"]);
 
-    dispatch(userlogoutrequest());
+      dispatch(userlogoutrequest());
 
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Phone" }],
-    });
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Phone" }],
+      });
+    } catch (error) {
+      console.log("Clear session error:", error);
+    }
   };
 
   const handleConfirmLogout = async () => {
@@ -44,26 +80,58 @@ const SettingScreen = () => {
     await clearUserSession();
   };
 
-  const handleDeleteAccount = async () => {
+  const handleDeleteAccount = () => {
+    if (deleting) {
+      return;
+    }
+
+    // Do not clear local data here.
+    // First wait for DELETE_USER_SUCCESS.
+    dispatch(deleteUserRequest());
+  };
+
+  useEffect(() => {
+    if (!deleteSuccess) {
+      return;
+    }
+
+    const message =
+      deleteResponse?.message ||
+      "Your account has been permanently deleted.";
+
     setShowDeleteModal(false);
 
-    /*
-      Add your permanent delete account API here.
-
-      Example:
-      const token = await AsyncStorage.getItem("twittoke");
-
-      await fetch("YOUR_DELETE_ACCOUNT_API_URL", {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+    Alert.alert("Account Deleted", message, [
+      {
+        text: "OK",
+        onPress: async () => {
+          dispatch(resetUserState());
+          await clearUserSession();
         },
-      });
-    */
+      },
+    ]);
+  }, [deleteSuccess, deleteResponse]);
 
-    await clearUserSession();
-  };
+  useEffect(() => {
+    if (!deleteError) {
+      return;
+    }
+
+    Alert.alert("Delete Failed", getErrorMessage(deleteError), [
+      {
+        text: "OK",
+        onPress: () => {
+          dispatch(resetUserState());
+        },
+      },
+    ]);
+  }, [deleteError, dispatch]);
+
+  useEffect(() => {
+    return () => {
+      dispatch(resetUserState());
+    };
+  }, [dispatch]);
 
   return (
     <WelcomeScreenbackgroungpage>
@@ -72,25 +140,31 @@ const SettingScreen = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContainer}
         >
-          {/* HEADER */}
           <View style={styles.header}>
-            <Icon
-              name="arrow-back"
-              size={22}
-              color="#000"
+            <TouchableOpacity
               onPress={() => navigation.goBack()}
-            />
+              activeOpacity={0.7}
+              hitSlop={{
+                top: 10,
+                bottom: 10,
+                left: 10,
+                right: 10,
+              }}
+            >
+              <Icon name="arrow-back" size={22} color="#000" />
+            </TouchableOpacity>
 
             <Text style={styles.headerTitle}>Settings</Text>
           </View>
 
-
-          
-          {/* DELETE ACCOUNT BUTTON */}
           <TouchableOpacity
             style={styles.deleteItem}
-            onPress={() => setShowDeleteModal(true)}
+            onPress={() => {
+              dispatch(resetUserState());
+              setShowDeleteModal(true);
+            }}
             activeOpacity={0.8}
+            disabled={deleting}
           >
             <View style={styles.deleteIcon}>
               <Icon name="trash-outline" size={20} color="#fff" />
@@ -101,11 +175,11 @@ const SettingScreen = () => {
             <Icon name="chevron-forward" size={18} color="#aaa" />
           </TouchableOpacity>
 
-          {/* LOGOUT BUTTON */}
           <TouchableOpacity
             style={styles.logoutItem}
             onPress={() => setShowLogoutModal(true)}
             activeOpacity={0.8}
+            disabled={deleting}
           >
             <View style={styles.logoutIcon}>
               <Icon name="log-out-outline" size={20} color="#fff" />
@@ -115,10 +189,9 @@ const SettingScreen = () => {
 
             <Icon name="chevron-forward" size={18} color="#aaa" />
           </TouchableOpacity>
-
         </ScrollView>
 
-        {/* LOGOUT MODAL */}
+        {/* Logout modal */}
         <Modal
           transparent
           visible={showLogoutModal}
@@ -158,12 +231,16 @@ const SettingScreen = () => {
           </View>
         </Modal>
 
-        {/* DELETE ACCOUNT MODAL */}
+        {/* Delete-account modal */}
         <Modal
           transparent
           visible={showDeleteModal}
           animationType="fade"
-          onRequestClose={() => setShowDeleteModal(false)}
+          onRequestClose={() => {
+            if (!deleting) {
+              setShowDeleteModal(false);
+            }
+          }}
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalBox}>
@@ -180,19 +257,31 @@ const SettingScreen = () => {
 
               <View style={styles.modalButtons}>
                 <TouchableOpacity
-                  style={styles.cancelBtn}
+                  style={[
+                    styles.cancelBtn,
+                    deleting && styles.disabledButton,
+                  ]}
                   onPress={() => setShowDeleteModal(false)}
                   activeOpacity={0.8}
+                  disabled={deleting}
                 >
                   <Text style={styles.cancelText}>CANCEL</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={styles.deleteConfirmBtn}
+                  style={[
+                    styles.deleteConfirmBtn,
+                    deleting && styles.disabledButton,
+                  ]}
                   onPress={handleDeleteAccount}
                   activeOpacity={0.8}
+                  disabled={deleting}
                 >
-                  <Text style={styles.confirmText}>DELETE</Text>
+                  {deleting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.confirmText}>DELETE</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -229,14 +318,15 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     color: "#000",
   },
-logoutItem: {
-  flexDirection: "row",
-  alignItems: "center",
-  paddingVertical: 18,
-  paddingHorizontal: 20,
-  backgroundColor: "#fff",
-  marginTop: 25,
-},
+
+  logoutItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    backgroundColor: "#fff",
+    marginTop: 25,
+  },
 
   logoutIcon: {
     width: 34,
@@ -328,6 +418,7 @@ logoutItem: {
     color: "#777",
     textAlign: "center",
     marginBottom: 20,
+    lineHeight: 19,
   },
 
   modalButtons: {
@@ -337,11 +428,12 @@ logoutItem: {
 
   cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
+    minHeight: 44,
     borderRadius: 10,
     backgroundColor: "#F4E6FF",
     marginRight: 10,
     alignItems: "center",
+    justifyContent: "center",
   },
 
   cancelText: {
@@ -351,18 +443,24 @@ logoutItem: {
 
   confirmBtn: {
     flex: 1,
-    paddingVertical: 12,
+    minHeight: 44,
     borderRadius: 10,
     backgroundColor: "#C44DFF",
     alignItems: "center",
+    justifyContent: "center",
   },
 
   deleteConfirmBtn: {
     flex: 1,
-    paddingVertical: 12,
+    minHeight: 44,
     borderRadius: 10,
     backgroundColor: "#FF3B30",
     alignItems: "center",
+    justifyContent: "center",
+  },
+
+  disabledButton: {
+    opacity: 0.6,
   },
 
   confirmText: {

@@ -1,0 +1,5 @@
+// src/features/likeMinded/likeMindedType.js
+
+export const GET_LIKE_MINDED_REQUEST = "GET_LIKE_MINDED_REQUEST";
+export const GET_LIKE_MINDED_SUCCESS = "GET_LIKE_MINDED_SUCCESS";
+export const GET_LIKE_MINDED_FAILURE = "GET_LIKE_MINDED_FAILURE";

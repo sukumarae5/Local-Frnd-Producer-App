@@ -22,6 +22,7 @@ import offersSaga from"../features/Offers/offersSaga"
 import  watchPurchase  from "../features/purchase/purchaseSaga";
 import {watchWithdraw}  from "../features/withdraw/withdrawSaga";
 import chatOptionsSaga from "../features/chat/chatOptionsSaga"
+import likeMindedSaga  from "../features/LikeMinded/likeMindedSaga"
 
 export default function* rootSaga() {
   yield all([
@@ -48,8 +49,9 @@ export default function* rootSaga() {
         watchPurchase(),
         watchWithdraw(),
         chatOptionsSaga(),
+        likeMindedSaga(),
 
 
 
-  ]);
+  ])
 }
