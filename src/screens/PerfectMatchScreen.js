@@ -209,12 +209,12 @@ const PerfectMatchScreen = () => {
         {/* Profiles */}
         <View style={styles.profileRow}>
           <View style={styles.profileBlock}>
-            <GradientHeartAvatar source={{ uri: me?.avatar }} size={160} />
+            <GradientHeartAvatar source={{ uri: me?.display_profile_image  }} size={160} />
             <Text style={styles.name}>{me?.name}</Text>
           </View>
 
           <View style={styles.profileBlock}>
-            <GradientHeartAvatar source={{ uri: other?.avatar }} size={160} />
+            <GradientHeartAvatar source={{ uri: other?.display_profile_image  }} size={160} />
             <Text style={styles.name}>{other?.name}</Text>
           </View>
         </View>

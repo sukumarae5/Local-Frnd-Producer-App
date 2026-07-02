@@ -114,9 +114,11 @@ const RecentsCallHistoryScreen = ({ navigation }) => {
       item.duration_seconds === 0;
 
     const avatar =
-      item.avatar ||
-      "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+  item.display_profile_image ||
+  item.avatar ||
+  "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
+  
     return (
       <View style={styles.row}>
         {/* Avatar */}

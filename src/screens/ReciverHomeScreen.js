@@ -50,7 +50,7 @@ const ReciverHomeScreen = ({ navigation }) => {
   }, [dispatch]);
 
   const coins = userdata?.user?.rings_balance ?? 0;
-  const avatar = userdata?.images?.avatar || userdata?.images?.profile_image;
+const avatar = userdata?.images?.display_profile_image;
 
   const sections = [
     { id: 'stories' },

@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useContext, useState, useCallback } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useContext,
+  useState,
+  useCallback,
+} from 'react';
 import {
   View,
   Text,
@@ -20,7 +26,7 @@ import {
   FRIEND_ACCEPT_REQUEST,
   FRIEND_REJECT_REQUEST,
 } from '../features/friend/friendType';
-import { SocketContext } from "../socket/SocketProvider";
+import { SocketContext } from '../socket/SocketProvider';
 /* ─────────────────────────────────────────
    TIME HELPERS — timezone-safe
 ───────────────────────────────────────── */
@@ -91,7 +97,7 @@ const dedupNotifications = list => {
 const NotificationScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { list = [], loading } = useSelector(state => state.notification);
-const { socketRef } = useContext(SocketContext);
+  const { socketRef } = useContext(SocketContext);
   const [processingId, setProcessingId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -99,21 +105,21 @@ const { socketRef } = useContext(SocketContext);
     dispatch(fetchNotifications());
     dispatch(markNotificationsRead());
   }, [dispatch]);
-useEffect(() => {
-  const socket = socketRef.current;
+  useEffect(() => {
+    const socket = socketRef.current;
 
-  if (!socket) return;
+    if (!socket) return;
 
-  const handleDelete = () => {
-    dispatch(fetchNotifications());
-  };
+    const handleDelete = () => {
+      dispatch(fetchNotifications());
+    };
 
-  socket.on("notification_deleted", handleDelete);
+    socket.on('notification_deleted', handleDelete);
 
-  return () => {
-    socket.off("notification_deleted", handleDelete);
-  };
-}, [dispatch, socketRef]);
+    return () => {
+      socket.off('notification_deleted', handleDelete);
+    };
+  }, [dispatch, socketRef]);
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
@@ -197,7 +203,10 @@ useEffect(() => {
           >
             <Image
               source={{
-                uri: item.avatar_url || 'https://i.pravatar.cc/150?img=12',
+                uri:
+                  item.display_profile_image ||
+                  item.avatar_url ||
+                  'https://i.pravatar.cc/150?img=12',
               }}
               style={styles.avatar}
             />

@@ -30,12 +30,13 @@ import chatOptionsReducer from "../features/chat/chatOptionsReducer";
 
 import likeMindedReducer from "../features/LikeMinded/likeMindedReducer";
 
+import profileImageReducer from '../features/profileImage/profileImageReducer';
+
 const rootReducer = combineReducers({
   auth: authReducer,
   user: userReducer,
   photo: photoReducer,
   randomusers: randomuserReducer,
-  calls: callReducer,
   language: languageReducer,
   avatars: avatarsReducer,
   friends: friendReducer,
@@ -58,6 +59,9 @@ const rootReducer = combineReducers({
   chatOptions: chatOptionsReducer,
 
   likeMinded: likeMindedReducer,
+  randomusers:randomuserReducer,
+  calls: callReducer,
+  profileImage: profileImageReducer,
 });
 
 export default rootReducer;

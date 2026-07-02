@@ -1,9 +1,8 @@
-import { MAIN_BASE_URL } from "./baseUrl1";
-import { TEST_BASE_URL } from "./baseUrl1";
-
+import { MAIN_BASE_URL } from './baseUrl1';
+import { TEST_BASE_URL } from './baseUrl1';
 
 export const user_Register = `${MAIN_BASE_URL}/api/auth/register`;
-export const user_login=`${MAIN_BASE_URL}/api/auth/login`
+export const user_login = `${MAIN_BASE_URL}/api/auth/login`;
 export const user_Otp = `${MAIN_BASE_URL}/api/auth/verify-otp`;
 export const user_ResendOtp = `${MAIN_BASE_URL}/api/auth/resend-otp`;
 
@@ -11,35 +10,35 @@ export const user_Edit = `${MAIN_BASE_URL}/api/user/profile`;
 export const DELETE_API = `${MAIN_BASE_URL}/api/user/profile`;
 export const USER_PHOTO_POST_URL = `${MAIN_BASE_URL}/api/photo`;
 
-export const USER_DATA=`${MAIN_BASE_URL}/api/userprofile/profile`;
-export const random_users_data=`${MAIN_BASE_URL}/api/user/random-users`;
-export const languages=`${MAIN_BASE_URL}/api/language/getlanguages`;
-export const newuserapi=`${MAIN_BASE_URL}/api/user/profile`
-export const avatarsapi=`${MAIN_BASE_URL}/api/avatars`
+export const USER_DATA = `${MAIN_BASE_URL}/api/userprofile/profile`;
+export const random_users_data = `${MAIN_BASE_URL}/api/user/random-users`;
+export const languages = `${MAIN_BASE_URL}/api/language/getlanguages`;
+export const newuserapi = `${MAIN_BASE_URL}/api/user/profile`;
+export const avatarsapi = `${MAIN_BASE_URL}/api/avatars`;
 export const recent_calls = `${MAIN_BASE_URL}/api/calls/recent-users`;
 export const friendrequest = `${MAIN_BASE_URL}/api/friend/request`;
 export const friendList = `${MAIN_BASE_URL}/api/friend/list`;
 export const friendAccept = `${MAIN_BASE_URL}/api/friend/accept`;
 export const friendReject = `${MAIN_BASE_URL}/api/friend/reject`;
-export const friendPending  = `${MAIN_BASE_URL}/api/friend/pending`;
-export const friendStatus =  `${MAIN_BASE_URL}/api/friend/status`;
+export const friendPending = `${MAIN_BASE_URL}/api/friend/pending`;
+export const friendStatus = `${MAIN_BASE_URL}/api/friend/status`;
 export const friendUnfriend = `${MAIN_BASE_URL}/api/friend/unfriend`;
-export const statesapi=`${MAIN_BASE_URL}/api/location/states`;
-export const citiesapi=`${MAIN_BASE_URL}/api/location/cities`
-export const Locationapi=`${MAIN_BASE_URL}/api/location/countries`;
-export const yourinterest =`${MAIN_BASE_URL}/api/interest`
-export const selectinterest =`${MAIN_BASE_URL}/api/userinterest`
-export const lifestycategory=`${MAIN_BASE_URL}/api/lifestylecategory`
-export const lifeStyleallapi=`${MAIN_BASE_URL}/api/lifestyle`
-export const userlifestyleapi=`${MAIN_BASE_URL}/api/userlifestyle/`
-export const otheruserapi=`${MAIN_BASE_URL}/api/userprofile/profile`
+export const statesapi = `${MAIN_BASE_URL}/api/location/states`;
+export const citiesapi = `${MAIN_BASE_URL}/api/location/cities`;
+export const Locationapi = `${MAIN_BASE_URL}/api/location/countries`;
+export const yourinterest = `${MAIN_BASE_URL}/api/interest`;
+export const selectinterest = `${MAIN_BASE_URL}/api/userinterest`;
+export const lifestycategory = `${MAIN_BASE_URL}/api/lifestylecategory`;
+export const lifeStyleallapi = `${MAIN_BASE_URL}/api/lifestyle`;
+export const userlifestyleapi = `${MAIN_BASE_URL}/api/userlifestyle/`;
+export const otheruserapi = `${MAIN_BASE_URL}/api/userprofile/profile`;
 
-
-export const statusapi=`${MAIN_BASE_URL}/api/status/create`
-export const mystatusapi=`${MAIN_BASE_URL}/api/status/my`
-export const deletemystatusapi=`${MAIN_BASE_URL}/api/status/`
-export const friendsstatusviewapi=`${MAIN_BASE_URL}/api/status/view`
-export const mystatusviewersapi=`${MAIN_BASE_URL}/api/status/viewers/`
+export const PROFILE_IMAGE_API = `${MAIN_BASE_URL}/api/profile-image`;
+export const statusapi = `${MAIN_BASE_URL}/api/status/create`;
+export const mystatusapi = `${MAIN_BASE_URL}/api/status/my`;
+export const deletemystatusapi = `${MAIN_BASE_URL}/api/status/`;
+export const friendsstatusviewapi = `${MAIN_BASE_URL}/api/status/view`;
+export const mystatusviewersapi = `${MAIN_BASE_URL}/api/status/viewers/`;
 
 export const friendstatusapi=`${MAIN_BASE_URL}/api/status/friends`
 export const likeMindedapi =`${MAIN_BASE_URL}/api/like-minded`
@@ -48,19 +47,19 @@ export const likeMindedapi =`${MAIN_BASE_URL}/api/like-minded`
 
 
 //calls
-export const random_calls = `${MAIN_BASE_URL}/api/call/random-connect`;       // MALE
-export const female_search = `${MAIN_BASE_URL}/api/call/start-search`;       // FEMALE
-export const female_cancel = `${MAIN_BASE_URL}/api/call/cancel-search`;      // FEMALE
+export const random_calls = `${MAIN_BASE_URL}/api/call/random-connect`; // MALE
+export const female_search = `${MAIN_BASE_URL}/api/call/start-search`; // FEMALE
+export const female_cancel = `${MAIN_BASE_URL}/api/call/cancel-search`; // FEMALE
 export const searching_females = `${MAIN_BASE_URL}/api/call/searching-females`;
-export const call_connected_details =`${MAIN_BASE_URL}/api/call/connected-details`;
+export const call_connected_details = `${MAIN_BASE_URL}/api/call/connected-details`;
 export const direct_call = `${MAIN_BASE_URL}/api/call/direct-connect`; // MALE
-export const friend_connect =`${MAIN_BASE_URL}/api/call/friend-connect`;
+export const friend_connect = `${MAIN_BASE_URL}/api/call/friend-connect`;
 export const cancel_waiting = `${MAIN_BASE_URL}/api/call/cancel-waiting`;
 
 export const chatHistoryApi = `${MAIN_BASE_URL}/api/chat/messages`;
-export const chatDeleteApi  = `${MAIN_BASE_URL}/api/chat/messages`;
+export const chatDeleteApi = `${MAIN_BASE_URL}/api/chat/messages`;
 export const chatListApi = `${MAIN_BASE_URL}/api/chat/list`;
-export const chatReadConversationApi =`${MAIN_BASE_URL}/api/chat/read/conversation`;
+export const chatReadConversationApi = `${MAIN_BASE_URL}/api/chat/read/conversation`;
 export const chatUploadApi = `${MAIN_BASE_URL}/api/chat/upload`;
 export const chatoptionApi = `${MAIN_BASE_URL}/api/chatoptions`;
 
@@ -68,15 +67,12 @@ export const notificationsApi = `${MAIN_BASE_URL}/api/notifications`;
 export const notificationUnreadApi = `${MAIN_BASE_URL}/api/notifications/unread-count`;
 export const notificationMarkReadApi = `${MAIN_BASE_URL}/api/notifications/read`;
 
-export const RATING_POST_URL  =`${MAIN_BASE_URL}/api/rating/submit`;
+export const RATING_POST_URL = `${MAIN_BASE_URL}/api/rating/submit`;
 
-export const coinsapi=`${MAIN_BASE_URL}/api/coin-packages`
-export const offersapi=`${MAIN_BASE_URL}/api/offers`
-
+export const coinsapi = `${MAIN_BASE_URL}/api/coin-packages`;
+export const offersapi = `${MAIN_BASE_URL}/api/offers`;
 
 export const purchaseApi = `${MAIN_BASE_URL}/api/purchase`;
 
-
 export const withdrawCreateApi = `${MAIN_BASE_URL}/api/withdraw/create`;
 export const withdrawHistoryApi = `${MAIN_BASE_URL}/api/withdraw/history`;
-
