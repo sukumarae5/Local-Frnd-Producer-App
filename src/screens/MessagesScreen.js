@@ -1,5 +1,11 @@
 // screens/MessagesScreen.js
-import React, { useMemo, useState, useCallback, useContext, useEffect } from 'react';
+import React, {
+  useMemo,
+  useState,
+  useCallback,
+  useContext,
+  useEffect,
+} from 'react';
 import {
   View,
   Text,
@@ -44,8 +50,8 @@ const playMessageSound = async () => {
       await loadSound();
     }
 
-    await msgSound?.stop();   // reset
-    await msgSound?.play();   // play
+    await msgSound?.stop(); // reset
+    await msgSound?.play(); // play
   } catch (err) {
     console.log('Playback error:', err);
   }
@@ -53,24 +59,25 @@ const playMessageSound = async () => {
 // ────────────────────────────────────────────────────────────────────────────
 
 const MessagesScreen = ({ navigation }) => {
-  const dispatch      = useDispatch();
+  const dispatch = useDispatch();
   const { socketRef } = useContext(SocketContext);
 
-  const chatList = useSelector(state => state.chat.chatList)     ?? [];
-  const unread   = useSelector(state => state.chat.unread)       ?? {};
-  const myId     = useSelector(state => state.user.userdata?.user?.user_id);
+  const chatList = useSelector(state => state.chat.chatList) ?? [];
+  const unread = useSelector(state => state.chat.unread) ?? {};
+  const myId = useSelector(state => state.user.userdata?.user?.user_id);
   const userdata = useSelector(state => state.user.userdata);
 
   // Chat options state — muted[conversationId], blocked[userId]
-  const mutedMap   = useSelector(state => state.chatOptions?.muted)   ?? {};
+  const mutedMap = useSelector(state => state.chatOptions?.muted) ?? {};
   const blockedMap = useSelector(state => state.chatOptions?.blocked) ?? {};
 
   // conversationIds map: otherUserId → conversationId (from chat reducer)
-  const conversationIds = useSelector(state => state.chat.conversationIds) ?? {};
+  const conversationIds =
+    useSelector(state => state.chat.conversationIds) ?? {};
 
-  const [search,     setSearch]     = useState('');
+  const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const [callingId,  setCallingId]  = useState(null);
+  const [callingId, setCallingId] = useState(null);
 
   // ── Load chat list on focus ────────────────────────────────────────────
   useFocusEffect(
@@ -99,17 +106,17 @@ const MessagesScreen = ({ navigation }) => {
       refreshChatList();
     };
 
-    socket.on('chat_receive',        onChatReceive);
-    socket.on('chat_read_update',    refreshChatList);
-    socket.on('chat_read_all_update',refreshChatList);
-    socket.on('friend_accept',       refreshChatList);
+    socket.on('chat_receive', onChatReceive);
+    socket.on('chat_read_update', refreshChatList);
+    socket.on('chat_read_all_update', refreshChatList);
+    socket.on('friend_accept', refreshChatList);
 
     return () => {
       clearTimeout(timeout);
-      socket.off('chat_receive',        onChatReceive);
-      socket.off('chat_read_update',    refreshChatList);
-      socket.off('chat_read_all_update',refreshChatList);
-      socket.off('friend_accept',       refreshChatList);
+      socket.off('chat_receive', onChatReceive);
+      socket.off('chat_read_update', refreshChatList);
+      socket.off('chat_read_all_update', refreshChatList);
+      socket.off('friend_accept', refreshChatList);
     };
   }, [dispatch, socketRef, myId]);
 
@@ -160,14 +167,20 @@ const MessagesScreen = ({ navigation }) => {
   // ── Row renderer ───────────────────────────────────────────────────────
   const renderItem = useCallback(
     ({ item }) => {
-      const count    = unread[item.user_id] || 0;
-      const avatar   = item.avatar || item.profile_pic || item.profile_image || item.image || null;
+      const count = unread[item.user_id] || 0;
+      const avatar =
+        item.display_profile_image ||
+        item.avatar ||
+        item.profile_image ||
+        item.image ||
+        'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+
       const firstLetter = item.name?.[0]?.toUpperCase() || '?';
 
       // Look up mute/block status for this chat item
-      const convId     = conversationIds[item.user_id];
-      const isMuted    = convId ? !!mutedMap[convId]       : false;
-      const isBlocked  = !!blockedMap[item.user_id];
+      const convId = conversationIds[item.user_id];
+      const isMuted = convId ? !!mutedMap[convId] : false;
+      const isBlocked = !!blockedMap[item.user_id];
 
       return (
         <TouchableOpacity
@@ -214,7 +227,11 @@ const MessagesScreen = ({ navigation }) => {
               {/* Mute label inline */}
               {isMuted && (
                 <View style={styles.muteTag}>
-                  <Ionicons name="notifications-off-outline" size={10} color="#8B2FC9" />
+                  <Ionicons
+                    name="notifications-off-outline"
+                    size={10}
+                    color="#8B2FC9"
+                  />
                   <Text style={styles.muteTagText}>Muted</Text>
                 </View>
               )}
@@ -273,7 +290,15 @@ const MessagesScreen = ({ navigation }) => {
         </TouchableOpacity>
       );
     },
-    [unread, openChat, startFriendCall, callingId, mutedMap, blockedMap, conversationIds],
+    [
+      unread,
+      openChat,
+      startFriendCall,
+      callingId,
+      mutedMap,
+      blockedMap,
+      conversationIds,
+    ],
   );
 
   // ──────────────────────────────────────────────────────────────────────
@@ -362,16 +387,29 @@ export default MessagesScreen;
 /* ═══════════════════════════════ STYLES ═══════════════════════════════ */
 
 const styles = StyleSheet.create({
-  container:       { flex: 1, paddingHorizontal: 20 },
+  container: { flex: 1, paddingHorizontal: 20 },
 
-  headerContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  headerTitle:     { fontSize: 22, fontWeight: '700', marginLeft: 12, color: '#000' },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginLeft: 12,
+    color: '#000',
+  },
 
-  searchRow:            { marginBottom: 14 },
+  searchRow: { marginBottom: 14 },
   searchGradientBorder: { borderRadius: 25, padding: 1.5 },
   searchBox: {
-    height: 40, backgroundColor: '#fff', borderRadius: 25,
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12,
+    height: 40,
+    backgroundColor: '#fff',
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
   },
   searchInput: { flex: 1, marginLeft: 8, fontSize: 14, color: '#000' },
 
@@ -381,71 +419,117 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
 
   /* AVATAR */
-  avatarWrap:       { marginRight: 12, position: 'relative' },
-  avatar:           { width: 48, height: 48, borderRadius: 24 },
-  placeholderAvatar:{
-    width: 48, height: 48, borderRadius: 24,
-    backgroundColor: '#C51DAF', justifyContent: 'center', alignItems: 'center',
+  avatarWrap: { marginRight: 12, position: 'relative' },
+  avatar: { width: 48, height: 48, borderRadius: 24 },
+  placeholderAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#C51DAF',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  placeholderText:  { color: '#fff', fontWeight: '700', fontSize: 18 },
+  placeholderText: { color: '#fff', fontWeight: '700', fontSize: 18 },
 
   onlineDot: {
-    position: 'absolute', right: 1, bottom: 1,
-    width: 12, height: 12, borderRadius: 6,
-    backgroundColor: '#31D158', borderWidth: 2, borderColor: '#fff',
+    position: 'absolute',
+    right: 1,
+    bottom: 1,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#31D158',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
 
   // Mute badge — purple, top-right corner of avatar
   muteBadge: {
-    position: 'absolute', top: -2, right: -2,
-    width: 16, height: 16, borderRadius: 8,
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: '#8B2FC9',
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#fff',
   },
 
   // Block badge — red, top-right corner
   blockBadge: {
-    position: 'absolute', top: -2, right: -2,
-    width: 16, height: 16, borderRadius: 8,
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: '#E53935',
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#fff',
   },
 
   /* CENTER */
   centerPart: { flex: 1 },
 
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  name:    { fontSize: 16, fontWeight: '700', color: '#000', flexShrink: 1 },
+  name: { fontSize: 16, fontWeight: '700', color: '#000', flexShrink: 1 },
 
   muteTag: {
-    flexDirection: 'row', alignItems: 'center', gap: 2,
-    backgroundColor: '#F3E7FF', borderRadius: 8,
-    paddingHorizontal: 5, paddingVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: '#F3E7FF',
+    borderRadius: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
   },
   muteTagText: { fontSize: 10, color: '#8B2FC9', fontWeight: '600' },
 
   blockTag: {
-    flexDirection: 'row', alignItems: 'center', gap: 2,
-    backgroundColor: '#FFF0F0', borderRadius: 8,
-    paddingHorizontal: 5, paddingVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: '#FFF0F0',
+    borderRadius: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
   },
   blockTagText: { fontSize: 10, color: '#E53935', fontWeight: '600' },
 
-  last:       { fontSize: 13, color: '#8E8E8E', marginTop: 4 },
-  newMsgText: { fontSize: 13, marginTop: 4, color: '#C51DAF', fontWeight: '600' },
+  last: { fontSize: 13, color: '#8E8E8E', marginTop: 4 },
+  newMsgText: {
+    fontSize: 13,
+    marginTop: 4,
+    color: '#C51DAF',
+    fontWeight: '600',
+  },
 
   /* CALL SECTION */
-  callSection:    { flexDirection: 'row' },
-  callBtn:        { padding: 6, marginLeft: 4 },
-  callBtnDisabled:{ opacity: 0.4 },
+  callSection: { flexDirection: 'row' },
+  callBtn: { padding: 6, marginLeft: 4 },
+  callBtnDisabled: { opacity: 0.4 },
 
   separator: { height: 1, backgroundColor: '#f2f2f2' },
 
   /* EMPTY */
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyTitle:     { fontSize: 18, fontWeight: '600', marginTop: 10, marginBottom: 20, color: '#444' },
-  primaryBtn:     { backgroundColor: '#C51DAF', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20 },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 10,
+    marginBottom: 20,
+    color: '#444',
+  },
+  primaryBtn: {
+    backgroundColor: '#C51DAF',
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
   primaryBtnText: { color: '#fff', fontWeight: '600' },
 });

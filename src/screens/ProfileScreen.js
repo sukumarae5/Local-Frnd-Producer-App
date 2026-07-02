@@ -26,10 +26,7 @@ const GradientHeart = ({ size = 140, style }) => {
       maskElement={<Icon name="heart" size={size} color="black" />}
     >
       <LinearGradient
-        colors={[
-          'rgba(255,255,255,0.5)', 
-          'rgba(152,50,248,0.15)', 
-        ]}
+        colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }} // 180deg
         style={{ width: size, height: size }}
@@ -57,12 +54,12 @@ const ProfileScreen = () => {
     <WelcomeScreenbackgroungpage>
       <View style={styles.container}>
         {/* ================= TOP PURPLE SECTION ================= */}
-       <LinearGradient
-  colors={['#F3D1FF', '#E9C9FF', '#F8D4F4']}
-  start={{ x: 0, y: 0 }}
-  end={{ x: 0, y: 1 }}
-  style={styles.topBg}
->
+        <LinearGradient
+          colors={['#F3D1FF', '#E9C9FF', '#F8D4F4']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.topBg}
+        >
           {/* HEART BACKGROUND */}
           <GradientHeart size={140} style={styles.leftHeart} />
           <GradientHeart size={220} style={styles.rightHeart} />
@@ -84,8 +81,7 @@ const ProfileScreen = () => {
                 pointerEvents="none"
                 source={{
                   uri:
-                    userdata?.images?.avatar ||
-                    userdata?.images?.profile_image ||
+                    userdata?.images?.display_profile_image ||
                     'https://i.pravatar.cc/150?img=12',
                 }}
                 style={styles.avatar}
@@ -186,14 +182,14 @@ export default ProfileScreen;
 
 const styles = StyleSheet.create({
   container: {
-  flex: 1,
-  backgroundColor: '#fff', // ✅ ADD
-},
- topBg: {
-  height: 300,
-  paddingTop: 10,
-  overflow: 'hidden', // 👈 important for curve + hearts
-},
+    flex: 1,
+    backgroundColor: '#fff', // ✅ ADD
+  },
+  topBg: {
+    height: 300,
+    paddingTop: 10,
+    overflow: 'hidden', // 👈 important for curve + hearts
+  },
 
   leftHeart: {
     position: 'absolute',
@@ -219,12 +215,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
 
- headerTitle: {
-  fontSize: 20,
-  fontWeight: '600',
-  marginLeft: 10,
-  color: '#000', // ✅ ADD
-},
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginLeft: 10,
+    color: '#000', // ✅ ADD
+  },
 
   avatarWrap: {
     alignItems: 'center',
@@ -265,10 +261,10 @@ const styles = StyleSheet.create({
   },
 
   username: {
-  fontSize: 20,
-  fontWeight: '700',
-  color: '#000', // ✅ ADD
-},
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000', // ✅ ADD
+  },
 
   content: {
     flex: 1,
@@ -290,10 +286,10 @@ const styles = StyleSheet.create({
   },
 
   itemTitle: {
-  fontSize: 14,
-  fontWeight: '500',
-  color: '#000', // ✅ ADD
-},
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000', // ✅ ADD
+  },
 
   itemSub: {
     fontSize: 11,
@@ -301,4 +297,3 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 });
-

@@ -57,8 +57,8 @@ const DOT_RADIUS = (CENTER_SIZE * 1.7) / 2;
 const CallStatusScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
   const { socketRef, connected } = useContext(SocketContext);
-
-  const rotateAnim = useRef(new Animated.Value(0)).current;
+const userdata = useSelector(state => state.user.userdata);  
+const rotateAnim = useRef(new Animated.Value(0)).current;
   const navigatedRef = useRef(false);
 
   const call = useSelector(state => state.calls?.call);
@@ -276,28 +276,28 @@ const CallStatusScreen = ({ navigation, route }) => {
     }
   }, [call?.status, call_type, dispatch, role, fromCall]);
 
-// Replace only this useEffect in CallStatusScreen
-useEffect(() => {
-  const unsubscribe = navigation.addListener('beforeRemove', () => {
-    if (fromCall) return;
+  // Replace only this useEffect in CallStatusScreen
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', () => {
+      if (fromCall) return;
 
-    if (role === 'female') {
-      dispatch(femaleCancelRequest());
-    } else if (role === 'caller') {
-      // ✅ caller cancelled while ringing — server handles session cleanup
-      socketRef.current?.emit('call_cancel', {
-        session_id: route?.params?.session_id,
-      });
-      dispatch(clearCall());
-    } else if (role === 'friend_receiver') {
-      // ✅ do NOT emit call_reject here — IncomingCallScreen already did
-      dispatch(clearCall());
-    } else {
-      dispatch(cancelWaitingRequest());
-    }
-  });
-  return unsubscribe;
-}, [navigation, role, dispatch, fromCall]);
+      if (role === 'female') {
+        dispatch(femaleCancelRequest());
+      } else if (role === 'caller') {
+        // ✅ caller cancelled while ringing — server handles session cleanup
+        socketRef.current?.emit('call_cancel', {
+          session_id: route?.params?.session_id,
+        });
+        dispatch(clearCall());
+      } else if (role === 'friend_receiver') {
+        // ✅ do NOT emit call_reject here — IncomingCallScreen already did
+        dispatch(clearCall());
+      } else {
+        dispatch(cancelWaitingRequest());
+      }
+    });
+    return unsubscribe;
+  }, [navigation, role, dispatch, fromCall]);
 
   /* ================= RIPPLE ANIMATIONS ================= */
   const ripple1 = useRef(new Animated.Value(0)).current;
@@ -407,8 +407,7 @@ useEffect(() => {
             <View style={styles.dottedCircle} />
             <Animated.View style={styles.rotatingRing}>
               {smallAvatars.map((img, i) => {
-                const angle =
-                  i * (360 / smallAvatars.length) * (Math.PI / 180);
+                const angle = i * (360 / smallAvatars.length) * (Math.PI / 180);
                 const r = DOT_RADIUS;
                 return (
                   <Image
@@ -429,9 +428,13 @@ useEffect(() => {
             </Animated.View>
             <View style={styles.centerCircle}>
               <Image
-                source={require('../assets/girl2.jpg')}
-                style={styles.centerImage}
-              />
+  source={
+    userdata?.images?.display_profile_image
+      ? { uri: userdata.images.display_profile_image }
+      : require('../assets/girl2.jpg')
+  }
+  style={styles.centerImage}
+/>
             </View>
           </View>
 

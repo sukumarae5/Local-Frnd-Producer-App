@@ -48,10 +48,7 @@ const FilterChip = ({ active, onPress, icon, label }) => {
         />
         <Text
           numberOfLines={1}
-          style={[
-            styles.chipText,
-            { color: active ? '#fff' : '#8C37F8' },
-          ]}
+          style={[styles.chipText, { color: active ? '#fff' : '#8C37F8' }]}
         >
           {label}
         </Text>
@@ -66,12 +63,12 @@ const TrainersCallPage = ({ navigation }) => {
 
   const { userdata } = useSelector(state => state.user);
   const users = useSelector(state => state.calls.searchingFemales || []);
-const coinBalance = userdata?.user?.coin_balance ?? 0;
+  const coinBalance = userdata?.user?.coin_balance ?? 0;
 
   console.log('🔥 TrainersCallPage users:', users);
 
-  const imageUrl = userdata?.images?.profile_image
-    ? { uri: userdata.images.profile_image }
+  const imageUrl = userdata?.images?.display_profile_image
+    ? { uri: userdata.images.display_profile_image }
     : require('../assets/boy1.jpg');
 
   const connected = socketCtx?.connected;
@@ -249,7 +246,9 @@ const coinBalance = userdata?.user?.coin_balance ?? 0;
             withSpacing={true}
           />
 
-          <MaskedView maskElement={<Text style={styles.lookText}>Local frnd</Text>}>
+          <MaskedView
+            maskElement={<Text style={styles.lookText}>Local frnd</Text>}
+          >
             <LinearGradient
               colors={['#D51BF9', '#8C37F8']}
               start={{ x: 0, y: 0 }}
@@ -376,7 +375,11 @@ const coinBalance = userdata?.user?.coin_balance ?? 0;
                     >
                       <View style={styles.avatarOuter}>
                         <Image
-                          source={require('../assets/boy1.jpg')}
+                          source={
+                            item.display_profile_image
+                              ? { uri: item.display_profile_image }
+                              : require('../assets/boy1.jpg')
+                          }
                           style={styles.avatar}
                         />
 
@@ -400,13 +403,13 @@ const coinBalance = userdata?.user?.coin_balance ?? 0;
 
         <View style={styles.bottomPillsContainer}>
           <BottomCallPills
-  callingRandom={callingRandom}
-  callingRandomVideo={callingRandomVideo}
-  onRandomAudio={startRandomAudioCall}
-  onRandomVideo={startRandomVideoCall}
-  coinBalance={coinBalance}
-  navigation={navigation}  // ✅ ADD
-/>
+            callingRandom={callingRandom}
+            callingRandomVideo={callingRandomVideo}
+            onRandomAudio={startRandomAudioCall}
+            onRandomVideo={startRandomVideoCall}
+            coinBalance={coinBalance}
+            navigation={navigation} // ✅ ADD
+          />
         </View>
       </View>
     </SafeAreaView>
