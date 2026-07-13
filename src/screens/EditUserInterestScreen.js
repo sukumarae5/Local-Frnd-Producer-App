@@ -1,41 +1,27 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  SafeAreaView,
-  Alert,
-  ActivityIndicator,
-} from "react-native";
-import Icon from "react-native-vector-icons/Ionicons";
-import { useDispatch, useSelector } from "react-redux";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import { CLEAR_UPDATE_INTERESTS } from "../features/interest/interestTypes";
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { moderateScale } from 'react-native-size-matters';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { CLEAR_UPDATE_INTERESTS } from '../features/interest/interestTypes';
 
-import {
-  fetchInterestsRequest,
-  updateselectinterestsrequest,
-} from "../features/interest/interestActions";
-
-const PURPLE = "#B832F9";
+import { fetchInterestsRequest, updateselectinterestsrequest } from '../features/interest/interestActions';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 const EditUserInterestScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const { selected = [] } = route.params || {};
 
-  const {
-    interests = [],
-    updateselectedInterests,
-    selectedInterests,
-    loading,
-  } = useSelector((state) => state.interest);
-
-  console.log(selectedInterests);
+  const { interests = [], updateselectedInterests, loading } = useSelector((state) => state.interest);
 
   const [localSelection, setLocalSelection] = useState(selected);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,44 +33,32 @@ const EditUserInterestScreen = () => {
 
   const toggleInterest = (item) => {
     setLocalSelection((prev) =>
-      prev.some((i) => i.id === item.id)
-        ? prev.filter((i) => i.id !== item.id)
-        : [...prev, item]
+      prev.some((i) => i.id === item.id) ? prev.filter((i) => i.id !== item.id) : [...prev, item]
     );
   };
 
   const handleDone = () => {
     const interestIds = localSelection.map((item) => item.id);
-
     setIsSubmitting(true);
-
-    dispatch(
-      updateselectinterestsrequest({
-        interests: interestIds,
-      })
-    );
+    dispatch(updateselectinterestsrequest({ interests: interestIds }));
   };
 
   useEffect(() => {
     if (!updateselectedInterests || isHandled) return;
 
     const isSuccess = updateselectedInterests?.success === true;
-
-    const safeMessage =
-      typeof updateselectedInterests?.message === "string"
-        ? updateselectedInterests.message
-        : "Operation completed";
+    const safeMessage = typeof updateselectedInterests?.message === 'string' ? updateselectedInterests.message : 'Operation completed';
 
     setIsSubmitting(false);
     setIsHandled(true);
 
-    Alert.alert(isSuccess ? "Success ✅" : "Error ❌", safeMessage, [
+    Alert.alert(isSuccess ? 'Success ✅' : 'Error ❌', safeMessage, [
       {
-        text: "OK",
+        text: 'OK',
         onPress: () => {
           if (isSuccess) {
             dispatch({ type: CLEAR_UPDATE_INTERESTS });
-            navigation.navigate("EditProfileScreen");
+            navigation.navigate('EditProfileScreen');
           }
         },
       },
@@ -92,37 +66,32 @@ const EditUserInterestScreen = () => {
   }, [updateselectedInterests, isHandled, dispatch, navigation]);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener("focus", () => {
-      setIsHandled(false);
-    });
-
+    const unsubscribe = navigation.addListener('focus', () => setIsHandled(false));
     return unsubscribe;
   }, [navigation]);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.container}>
-        {/* HEADER - SAME LIKE EDIT USER LIFESTYLE SCREEN */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Icon name="chevron-back" size={26} color="#111" />
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={theme.hitSlop}>
+            <Icon name="chevron-back" size={moderateScale(26)} color={colors.icon} />
           </TouchableOpacity>
 
-          <Text style={styles.headerTitle}>Edit Interests</Text>
+          <AppText variant="h4" style={styles.headerTitle}>Edit Interests</AppText>
 
           <TouchableOpacity onPress={handleDone} disabled={isSubmitting}>
             {isSubmitting ? (
-              <ActivityIndicator color={PURPLE} size="small" />
+              <ActivityIndicator color={colors.editPurple} size="small" />
             ) : (
-              <Text style={styles.done}>DONE</Text>
+              <AppText variant="subtitle" style={styles.done}>DONE</AppText>
             )}
           </TouchableOpacity>
         </View>
 
-        {/* LIST */}
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {loading && interests.length === 0 && (
-            <Text style={styles.empty}>Loading interests...</Text>
+            <AppText variant="body" color="textMuted" style={styles.empty}>Loading interests...</AppText>
           )}
 
           {interests.map((item) => {
@@ -135,11 +104,9 @@ const EditUserInterestScreen = () => {
                 onPress={() => toggleInterest(item)}
                 activeOpacity={0.8}
               >
-                <Text style={styles.text}>{item.name}</Text>
+                <AppText variant="body" style={styles.text}>{item.name}</AppText>
 
-                {selectedItem && (
-                  <Icon name="checkmark-circle" size={20} color={PURPLE} />
-                )}
+                {selectedItem && <Icon name="checkmark-circle" size={moderateScale(20)} color={colors.editPurple} />}
               </TouchableOpacity>
             );
           })}
@@ -151,65 +118,41 @@ const EditUserInterestScreen = () => {
 
 export default EditUserInterestScreen;
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
+const createStyles = (theme) => {
+  const { colors, spacing, radius } = theme;
 
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
+    container: { flex: 1, backgroundColor: colors.background },
 
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    marginTop: 40,
-  },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: spacing.lg,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
 
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111",
-  },
+    headerTitle: {},
+    done: { color: colors.editPurple, fontWeight: '700' },
 
-  done: {
-    color: PURPLE,
-    fontWeight: "700",
-  },
+    scrollContent: { paddingBottom: spacing.xl },
 
-  scrollContent: {
-    paddingBottom: 30,
-  },
+    empty: { textAlign: 'center', marginTop: spacing.xxxl },
 
-  empty: {
-    textAlign: "center",
-    marginTop: 40,
-    color: "#999",
-    fontSize: 15,
-  },
+    row: {
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.lg,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
 
-  row: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F2F2F2",
-  },
+    selectedRow: { backgroundColor: colors.lavenderTint },
 
-  selectedRow: {
-    backgroundColor: "#F6ECFF",
-  },
-
-  text: {
-    fontSize: 16,
-    color: "#333",
-  },
-});
+    text: { color: colors.text },
+  });
+};

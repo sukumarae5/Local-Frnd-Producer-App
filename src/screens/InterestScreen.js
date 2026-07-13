@@ -1,53 +1,36 @@
-import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, TouchableOpacity, ScrollView, Alert, StyleSheet, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { moderateScale } from 'react-native-size-matters';
 import Icon from 'react-native-vector-icons/Ionicons';
-import LinearGradient from 'react-native-linear-gradient';
 import WelcomeScreenbackgroundgpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage.js';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  fetchInterestsRequest,
-  selectInterestsRequest,
-} from '../features/interest/interestActions';
+import { fetchInterestsRequest, selectInterestsRequest } from '../features/interest/interestActions';
 import ContinueButton from '../components/Common/ContinueButton';
-import { Dimensions } from 'react-native';
-const { width, height } = Dimensions.get('window');
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 const InterestScreen = ({ navigation }) => {
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const { height } = useWindowDimensions();
+  const styles = useMemo(() => createStyles(theme, height), [theme, height]);
 
-  // ✅ CORRECT REDUCER DATA
-  const { interests, loading, message, selectedInterests } = useSelector(
-    state => state.interest,
-  );
+  const { interests, message, selectedInterests } = useSelector((state) => state.interest);
 
-  // local state
   const [selected, setSelected] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResponseHandled, setIsResponseHandled] = useState(false);
 
-  // fetch interests
   useEffect(() => {
     dispatch(fetchInterestsRequest());
   }, [dispatch]);
 
-  // toggle interest
-  const toggleSelect = item => {
-    setSelected(prev =>
-      prev.includes(item.id)
-        ? prev.filter(v => v !== item.id)
-        : [...prev, item.id],
-    );
+  const toggleSelect = (item) => {
+    setSelected((prev) => (prev.includes(item.id) ? prev.filter((v) => v !== item.id) : [...prev, item.id]));
   };
 
-  // ✅ SINGLE, CORRECT BACKEND RESPONSE HANDLER
   useEffect(() => {
     if (!message || isResponseHandled) return;
 
@@ -60,61 +43,41 @@ const InterestScreen = ({ navigation }) => {
       {
         text: 'OK',
         onPress: () => {
-          if (isSuccess) {
-            navigation.navigate('GenderScreen');
-          }
+          if (isSuccess) navigation.navigate('GenderScreen');
         },
       },
     ]);
   }, [message, selectedInterests, isResponseHandled, navigation]);
 
-  // reset alert guard when screen opens again
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      setIsResponseHandled(false);
-    });
+    const unsubscribe = navigation.addListener('focus', () => setIsResponseHandled(false));
     return unsubscribe;
   }, [navigation]);
 
-  // submit handler
   const handleSubmit = () => {
     if (selected.length === 0) return;
-
     setIsSubmitting(true);
-
-    dispatch(
-      selectInterestsRequest({
-        interests: selected,
-      }),
-    );
+    dispatch(selectInterestsRequest({ interests: selected }));
   };
 
   return (
     <WelcomeScreenbackgroundgpage>
-      <View style={{ flex: 1 }}>
+      <SafeAreaView style={styles.flex} edges={[]}>
         <View style={styles.container}>
-          {/* HEADER */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Icon name="chevron-back" size={26} color="#000" />
+            <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={theme.hitSlop}>
+              <Icon name="chevron-back" size={moderateScale(26)} color={colors.icon} />
             </TouchableOpacity>
-
-            <Text style={styles.headerTitle}>Select Your Interest</Text>
+            <AppText variant="h4" style={styles.headerTitle}>Select Your Interest</AppText>
           </View>
 
-          {/* SUB TEXT */}
-          <Text style={styles.subText}>
-            Select your interests to match with soul mate who have similar
-            things in common
-          </Text>
+          <AppText variant="bodySmall" color="textSecondary" style={styles.subText}>
+            Select your interests to match with soul mate who have similar things in common
+          </AppText>
 
-          {/* TAG LIST */}
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: height * 0.12 }}
-          >
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
             <View style={styles.tagsWrapper}>
-              {interests?.map(item => {
+              {interests?.map((item) => {
                 const active = selected.includes(item.id);
 
                 return (
@@ -123,11 +86,9 @@ const InterestScreen = ({ navigation }) => {
                     onPress={() => toggleSelect(item)}
                     style={[styles.tag, active && styles.tagActive]}
                   >
-                    <Text
-                      style={[styles.tagText, active && styles.tagTextActive]}
-                    >
+                    <AppText variant="bodySmall" style={[styles.tagText, active && styles.tagTextActive]}>
                       {item.name}
-                    </Text>
+                    </AppText>
                   </TouchableOpacity>
                 );
               })}
@@ -135,78 +96,61 @@ const InterestScreen = ({ navigation }) => {
           </ScrollView>
         </View>
 
-        {/* 🔥 FIXED BUTTON */}
         <View style={styles.bottomFixed}>
-          <ContinueButton
-            disabled={selected.length === 0}
-            loading={isSubmitting}
-            onPress={handleSubmit}
-          />
+          <ContinueButton disabled={selected.length === 0} loading={isSubmitting} onPress={handleSubmit} />
         </View>
-      </View>
+      </SafeAreaView>
     </WelcomeScreenbackgroundgpage>
   );
 };
 
 export default InterestScreen;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: width * 0.05,
-    paddingTop: height * 0.02,
-  },
+const createStyles = (theme, height) => {
+  const { colors, spacing, radius } = theme;
 
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: height * 0.04,
-  },
-  headerTitle: {
-    fontSize: width * 0.045,
-    fontWeight: '700',
-    color: '#000',
-    marginLeft: width * 0.03,
-  },
+  return StyleSheet.create({
+    flex: { flex: 1 },
 
-  subText: {
-    fontSize: width * 0.035,
-    marginBottom: height * 0.04,
-    lineHeight: 20,
-  },
+    container: {
+      flex: 1,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+    },
 
-  tagsWrapper: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: width * 0.02, // 🔥 responsive gap
-  },
-  tag: {
-    borderWidth: 1,
-    borderColor: '#E3D4FF',
-    borderRadius: width * 0.025,
-    paddingHorizontal: width * 0.035,
-    paddingVertical: height * 0.01,
-    backgroundColor: '#FFEFFE',
-    marginTop: height * 0.01,
-  },
-  tagActive: {
-    backgroundColor: '#8A2DFF',
-    borderColor: '#8A2DFF',
-  },
-  tagText: {
-    color: '#4c4c4c',
-    fontSize: width * 0.032,
-    fontWeight: '500',
-  },
-  tagTextActive: {
-    color: '#FFFFFF',
-  },
+    header: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xxl },
+    headerTitle: { marginLeft: spacing.sm },
 
-  bottomFixed: {
-    position: 'absolute',
-    bottom: height * 0.03,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-});
+    subText: { marginBottom: spacing.xxl, lineHeight: moderateScale(20) },
+
+    scrollContent: { paddingBottom: height * 0.12 },
+
+    tagsWrapper: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+
+    tag: {
+      borderWidth: 1,
+      borderColor: '#E3D4FF',
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      backgroundColor: '#FFEFFE',
+      marginTop: spacing.sm,
+    },
+
+    tagActive: {
+      backgroundColor: colors.accentViolet,
+      borderColor: colors.accentViolet,
+    },
+
+    tagText: { color: '#4c4c4c', fontWeight: '500' },
+    tagTextActive: { color: '#FFFFFF' },
+
+    bottomFixed: {
+      position: 'absolute',
+      bottom: spacing.lg,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+    },
+  });
+};

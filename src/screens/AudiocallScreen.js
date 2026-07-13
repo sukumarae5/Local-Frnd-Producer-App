@@ -1,8 +1,6 @@
-import React, { useEffect, useRef, useState, useContext } from 'react';
+import React, { useEffect, useRef, useState, useContext, useMemo } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   TouchableOpacity,
   Platform,
   PermissionsAndroid,
@@ -10,6 +8,8 @@ import {
   Image,
   Alert,
   Easing,
+  StyleSheet,
+  useWindowDimensions,
 } from 'react-native';
 import { RTCIceCandidate, RTCView } from 'react-native-webrtc';
 import LinearGradient from 'react-native-linear-gradient';
@@ -25,35 +25,53 @@ import EndCallConfirmModal from '../screens/EndCallConfirmationScreen';
 import { SocketContext } from '../socket/SocketProvider';
 import { createPC } from '../utils/webrtc';
 import callManager from '../utils/callManager';
-import { NativeEventEmitter } from 'react-native';
-import { ToastAndroid } from 'react-native';
+import { NativeEventEmitter, ToastAndroid } from 'react-native';
+import { moderateScale } from 'react-native-size-matters';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
-const showToast = msg => {
+const showToast = (msg) => {
   if (Platform.OS === 'android') ToastAndroid.show(msg, ToastAndroid.SHORT);
 };
 
-const PRIMARY = '#A020F0';
+// Theme-aware call-screen palette. Light mode keeps your original design;
+// dark mode swaps to a matched deep-purple set.
+const getAudioPalette = (theme) => {
+  if (theme.isDark) {
+    return {
+      gradient: ['#241530', '#2B1838', '#1A0F22'],
+      primary: '#B85CF9',
+      timePillBg: '#8C2C4A',
+      heartBase: '#1A0F22',
+      gradientRing: ['#7C3AED', '#A855F7', '#D946A0'],
+    };
+  }
+  return {
+    gradient: ['#e2b9fd', '#f19ced', '#FFD1E8'],
+    primary: '#A020F0',
+    timePillBg: '#fb6b7c',
+    heartBase: '#e2b9fd',
+    gradientRing: ['#c084fc', '#e879f9', '#f472b6'],
+  };
+};
 
 const AudiocallScreen = ({ route, navigation }) => {
   const { session_id, caller_id: routeCallerId } = route.params;
   const { socketRef, connected } = useContext(SocketContext);
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const { width, height } = useWindowDimensions();
+  const palette = useMemo(() => getAudioPalette(theme), [theme]);
+  const styles = useMemo(() => createStyles(theme, palette), [theme, palette]);
+  const PRIMARY = palette.primary;
 
-  const myGender = useSelector(
-    state => state.user?.userdata?.user?.gender || state.auth?.user?.gender,
-  );
-  const myId = useSelector(state => state.user.userdata?.user?.user_id);
-  const coinBalance = useSelector(
-    state => state.user?.userdata?.user?.coin_balance ?? 0,
-  );
-  const connectedCallDetails = useSelector(
-    state => state?.calls?.connectedCallDetails,
-  );
+  const myGender = useSelector((state) => state.user?.userdata?.user?.gender || state.auth?.user?.gender);
+  const myId = useSelector((state) => state.user.userdata?.user?.user_id);
+  const coinBalance = useSelector((state) => state.user?.userdata?.user?.coin_balance ?? 0);
+  const connectedCallDetails = useSelector((state) => state?.calls?.connectedCallDetails);
 
   const callType = route?.params?.call_type || 'AUDIO';
   const isMale = myGender === 'Male';
-
-  // ── Coin rate from server billing (AUDIO=10, VIDEO=60 per minute) ──
   const RATE = callType === 'VIDEO' ? 60 : 10;
 
   const [me, setMe] = useState(null);
@@ -73,7 +91,6 @@ const AudiocallScreen = ({ route, navigation }) => {
     }
   }, [connectedCallDetails, myId]);
 
-  // ── Refs ──
   const incallEmitter = new NativeEventEmitter();
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -89,10 +106,8 @@ const AudiocallScreen = ({ route, navigation }) => {
   const forceExitRef = useRef(false);
   const connectedRef = useRef(false);
   const otherRef = useRef(null);
-  // ADD this ref with other refs:
   const alertShownRef = useRef(false);
 
-  // ── State ──
   const ripple1 = useRef(new Animated.Value(0)).current;
   const ripple2 = useRef(new Animated.Value(0)).current;
   const [connectedUI, setConnectedUI] = useState(false);
@@ -104,40 +119,25 @@ const AudiocallScreen = ({ route, navigation }) => {
   const [iceState, setIceState] = useState('new');
   const [remoteStream, setRemoteStream] = useState(null);
 
-  // ── Coin display state (server-driven) ──
-  // coinSecondsLeft = total seconds male can talk based on current coins
-  // Calculated from initial balance, decremented locally every second
-  // Reset/corrected whenever server emits male_minutes_update
   const [coinSecondsLeft, setCoinSecondsLeft] = useState(() => {
     if (!isMale) return null;
-    // 10 coins = 60 seconds, so 1 coin = 6 seconds
     return Math.floor((coinBalance / RATE) * 60);
   });
   const [warningMsg, setWarningMsg] = useState('');
-  const coinCountdownRef = useRef(null); // local 1s decrement for smooth display
+  const coinCountdownRef = useRef(null);
 
   useEffect(() => {
     otherRef.current = other;
   }, [other]);
 
-  // ── Ripple animation ──
   useEffect(() => {
     const animate = (anim, delay) => {
       Animated.loop(
         Animated.sequence([
           Animated.delay(delay),
-          Animated.timing(anim, {
-            toValue: 1,
-            duration: 2000,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(anim, {
-            toValue: 0,
-            duration: 0,
-            useNativeDriver: true,
-          }),
-        ]),
+          Animated.timing(anim, { toValue: 1, duration: 2000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(anim, { toValue: 0, duration: 0, useNativeDriver: true }),
+        ])
       ).start();
     };
     animate(ripple1, 0);
@@ -148,19 +148,12 @@ const AudiocallScreen = ({ route, navigation }) => {
     if (session_id) dispatch(callDetailsRequest());
   }, [session_id]);
 
-  // ── Permissions ──
   const requestPermission = async () => {
     if (Platform.OS !== 'android') return true;
-    const res = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-    );
+    const res = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
     return res === PermissionsAndroid.RESULTS.GRANTED;
   };
 
-  /* ═══════════════════════════════════════════
-     SERVER COIN EVENTS — join billing room
-     Server emits to call:session_id room
-  ═══════════════════════════════════════════ */
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket || !connectedUI) return;
@@ -169,18 +162,12 @@ const AudiocallScreen = ({ route, navigation }) => {
 
     const onMinutesUpdate = ({ remainingCoins, ratePerMinute }) => {
       if (!isMale) return;
-
-      console.log('💰 male_minutes_update:', remainingCoins);
-
       const newSecondsLeft = Math.floor((remainingCoins / ratePerMinute) * 60);
-
       setCoinSecondsLeft(newSecondsLeft);
     };
 
     const onLowBalanceWarning = ({ remainingCoins }) => {
       if (!isMale) return;
-      // ✅ Calculate actual minutes left
-      const minutesLeft = Math.floor(remainingCoins / RATE);
       const msg = ` Less than 1 minute left! (${remainingCoins} coins)`;
       setWarningMsg(msg);
       showToast(msg);
@@ -220,7 +207,7 @@ const AudiocallScreen = ({ route, navigation }) => {
                 },
               },
             ],
-          }),
+          })
         );
       }, 1500);
     };
@@ -236,9 +223,6 @@ const AudiocallScreen = ({ route, navigation }) => {
     };
   }, [connectedUI, session_id]);
 
-  /* ═══════════════════════════════════════════
-     WebRTC INIT
-  ═══════════════════════════════════════════ */
   useEffect(() => {
     if (!connected || !socketRef.current || startedRef.current) return;
     startedRef.current = true;
@@ -259,10 +243,9 @@ const AudiocallScreen = ({ route, navigation }) => {
       InCallManager.setMicrophoneMute(false);
 
       pcRef.current = createPC({
-        onIceCandidate: candidate =>
-          socket.emit('audio_ice_candidate', { session_id, candidate }),
+        onIceCandidate: (candidate) => socket.emit('audio_ice_candidate', { session_id, candidate }),
         onIceState: setIceState,
-        onTrack: stream => {
+        onTrack: (stream) => {
           const audioTrack = stream.getAudioTracks()[0];
           if (audioTrack) audioTrack.enabled = true;
           setRemoteStream(stream);
@@ -270,15 +253,11 @@ const AudiocallScreen = ({ route, navigation }) => {
       });
 
       const stream = await mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         video: false,
       });
       localStreamRef.current = stream;
-      stream.getTracks().forEach(track => {
+      stream.getTracks().forEach((track) => {
         track.enabled = true;
         pcRef.current.addTrack(track, stream);
       });
@@ -289,7 +268,7 @@ const AudiocallScreen = ({ route, navigation }) => {
       socket.on('audio_answer', onAnswer);
       socket.on('audio_ice_candidate', onIce);
 
-      socket.on('call_ended', data => {
+      socket.on('call_ended', (data) => {
         if (String(data?.endedBy) === String(myId)) return;
         const currentOther = otherRef.current;
         showToast(`${currentOther?.name || 'User'} ended the call`);
@@ -322,7 +301,7 @@ const AudiocallScreen = ({ route, navigation }) => {
                   },
                 },
               ],
-            }),
+            })
           );
         }, 800);
       });
@@ -334,9 +313,7 @@ const AudiocallScreen = ({ route, navigation }) => {
         const isCaller = String(myId) === String(routeCallerId);
         if (!isCaller) return;
         try {
-          const offer = await pcRef.current.createOffer({
-            offerToReceiveAudio: true,
-          });
+          const offer = await pcRef.current.createOffer({ offerToReceiveAudio: true });
           await pcRef.current.setLocalDescription(offer);
           socket.emit('audio_offer', { session_id, offer });
         } catch (err) {
@@ -356,29 +333,25 @@ const AudiocallScreen = ({ route, navigation }) => {
     };
   }, [connected]);
 
-  // ── Audio device listener ──
   useEffect(() => {
-    const subscription = incallEmitter.addListener(
-      'onAudioDeviceChanged',
-      data => {
-        const device = data.audioDevice;
-        if (device === 'WIRED_HEADSET' || device === 'BLUETOOTH') {
-          setAudioDevice(device === 'BLUETOOTH' ? 'bluetooth' : 'headset');
-          setSpeakerOn(false);
-          setTimeout(() => {
-            InCallManager.setForceSpeakerphoneOn(false);
-            InCallManager.setSpeakerphoneOn(false);
-          }, 100);
-        } else if (device === 'SPEAKER') {
-          setAudioDevice('speaker');
-        } else {
-          setAudioDevice('earpiece');
-          setSpeakerOn(false);
+    const subscription = incallEmitter.addListener('onAudioDeviceChanged', (data) => {
+      const device = data.audioDevice;
+      if (device === 'WIRED_HEADSET' || device === 'BLUETOOTH') {
+        setAudioDevice(device === 'BLUETOOTH' ? 'bluetooth' : 'headset');
+        setSpeakerOn(false);
+        setTimeout(() => {
           InCallManager.setForceSpeakerphoneOn(false);
           InCallManager.setSpeakerphoneOn(false);
-        }
-      },
-    );
+        }, 100);
+      } else if (device === 'SPEAKER') {
+        setAudioDevice('speaker');
+      } else {
+        setAudioDevice('earpiece');
+        setSpeakerOn(false);
+        InCallManager.setForceSpeakerphoneOn(false);
+        InCallManager.setSpeakerphoneOn(false);
+      }
+    });
     return () => subscription.remove();
   }, []);
 
@@ -397,7 +370,7 @@ const AudiocallScreen = ({ route, navigation }) => {
       if (!pcRef.current) return;
       await pcRef.current.setRemoteDescription(offer);
       await flushIce();
-      pcRef.current.getReceivers().forEach(r => {
+      pcRef.current.getReceivers().forEach((r) => {
         if (r.track) r.track.enabled = true;
       });
       const answer = await pcRef.current.createAnswer();
@@ -412,7 +385,7 @@ const AudiocallScreen = ({ route, navigation }) => {
   const onAnswer = async ({ answer }) => {
     try {
       await pcRef.current.setRemoteDescription(answer);
-      pcRef.current.getReceivers().forEach(r => {
+      pcRef.current.getReceivers().forEach((r) => {
         if (r.track) r.track.enabled = true;
       });
       await flushIce();
@@ -431,10 +404,6 @@ const AudiocallScreen = ({ route, navigation }) => {
     await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
   };
 
-  /* ═══════════════════════════════════════════
-     onConnected — start wall-clock timer +
-     smooth coin countdown for male
-  ═══════════════════════════════════════════ */
   const onConnected = () => {
     if (timerRef.current) return;
     connectedRef.current = true;
@@ -446,12 +415,7 @@ const AudiocallScreen = ({ route, navigation }) => {
     setSpeakerOn(false);
     dispatch(callDetailsRequest());
 
-    // Wall-clock seconds counter
-    timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000);
-
-    // ── Male only: start smooth local countdown ──
-    // Server will correct this via male_minutes_update every billing cycle
-    // Inside onConnected, replace the coinCountdownRef.current setInterval block:
+    timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
 
     if (isMale) {
       if (coinBalance < RATE) {
@@ -461,34 +425,26 @@ const AudiocallScreen = ({ route, navigation }) => {
         return;
       }
 
-      // ✅ CORRECT initial seconds: 7961 coins / 10 * 60 = 47766 seconds = 796m 6s
       const initialSeconds = Math.floor((coinBalance / RATE) * 60);
       setCoinSecondsLeft(initialSeconds);
 
       coinCountdownRef.current = setInterval(() => {
-        setCoinSecondsLeft(prev => {
+        setCoinSecondsLeft((prev) => {
           if (prev === null) return null;
 
           if (prev <= 0) {
             clearInterval(coinCountdownRef.current);
             coinCountdownRef.current = null;
-
             setCoinSecondsLeft(0);
-
             handleEndCall();
-
             return 0;
           }
 
           const next = prev - 1;
 
-          // 30-second warning
           if (next === 30 && !alertShownRef.current) {
             alertShownRef.current = true;
-
-            setWarningMsg(
-              'Low Balance\nRecharge now. Your call will end in 30 seconds.',
-            );
+            setWarningMsg('Low Balance\nRecharge now. Your call will end in 30 seconds.');
           }
 
           return next;
@@ -504,7 +460,7 @@ const AudiocallScreen = ({ route, navigation }) => {
     clearInterval(coinCountdownRef.current);
     coinCountdownRef.current = null;
     InCallManager.stop();
-    localStreamRef.current?.getTracks().forEach(t => t.stop());
+    localStreamRef.current?.getTracks().forEach((t) => t.stop());
     pcRef.current?.close();
   };
 
@@ -539,7 +495,7 @@ const AudiocallScreen = ({ route, navigation }) => {
             },
           },
         ],
-      }),
+      })
     );
   };
 
@@ -550,8 +506,7 @@ const AudiocallScreen = ({ route, navigation }) => {
     track.enabled = newState;
     setMicOn(newState);
     const socket = socketRef.current;
-    if (socket?.connected)
-      socket.emit('mic_status', { session_id, user_id: myId, micOn: newState });
+    if (socket?.connected) socket.emit('mic_status', { session_id, user_id: myId, micOn: newState });
   };
 
   const toggleSpeaker = () => {
@@ -564,13 +519,8 @@ const AudiocallScreen = ({ route, navigation }) => {
   };
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', e => {
-      if (
-        forceExitRef.current ||
-        remoteEndedRef.current ||
-        disableExitRef.current ||
-        manualExitRef.current
-      ) {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (forceExitRef.current || remoteEndedRef.current || disableExitRef.current || manualExitRef.current) {
         navigation.dispatch(e.data.action);
         return;
       }
@@ -608,22 +558,17 @@ const AudiocallScreen = ({ route, navigation }) => {
     return () => socket.off('mic_status_update', handleMic);
   }, []);
 
-  const getRippleStyle = anim => ({
+  const getRippleStyle = (anim) => ({
     position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: moderateScale(120),
+    height: moderateScale(120),
+    borderRadius: moderateScale(60),
     backgroundColor: 'rgba(226,133,251,0.25)',
-    transform: [
-      {
-        scale: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] }),
-      },
-    ],
+    transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] }) }],
     opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 0] }),
   });
 
-  // ── Format coin time ──
-  const formatCoinTime = secs => {
+  const formatCoinTime = (secs) => {
     if (secs === null || secs === undefined) return null;
     const m = Math.floor(secs / 60);
     const s = secs % 60;
@@ -634,104 +579,60 @@ const AudiocallScreen = ({ route, navigation }) => {
   const coinIsLow = coinSecondsLeft !== null && coinSecondsLeft <= 60;
 
   return (
-    <LinearGradient
-      colors={['#e2b9fd', '#f19ced', '#FFD1E8']}
-      style={styles.container}
-    >
-      {/* Hearts background */}
+    <LinearGradient colors={palette.gradient} style={styles.container}>
       <View style={styles.topheats} pointerEvents="none">
-        <MaskedView
-          style={styles.heartMask}
-          maskElement={<Ionicons name="heart" style={styles.heartIcon} />}
-        >
-          <LinearGradient
-            colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']}
-            style={styles.heartGradient}
-          />
+        <MaskedView style={styles.heartMask} maskElement={<Ionicons name="heart" style={styles.heartIcon} />}>
+          <LinearGradient colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']} style={styles.heartGradient} />
         </MaskedView>
-        <MaskedView
-          style={styles.heartMaskTopRight}
-          maskElement={<Ionicons name="heart" style={styles.heartIconTiny} />}
-        >
-          <LinearGradient
-            colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']}
-            style={styles.heartGradient}
-          />
+        <MaskedView style={styles.heartMaskTopRight} maskElement={<Ionicons name="heart" style={styles.heartIconTiny} />}>
+          <LinearGradient colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']} style={styles.heartGradient} />
         </MaskedView>
-        <MaskedView
-          style={styles.heartMaskSmall}
-          maskElement={<Ionicons name="heart" style={styles.heartIconSmall} />}
-        >
-          <LinearGradient
-            colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']}
-            style={styles.heartGradient}
-          />
+        <MaskedView style={styles.heartMaskSmall} maskElement={<Ionicons name="heart" style={styles.heartIconSmall} />}>
+          <LinearGradient colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']} style={styles.heartGradient} />
         </MaskedView>
-        <MaskedView
-          style={styles.heartMaskRight}
-          maskElement={<Ionicons name="heart" style={styles.heartIcon} />}
-        >
-          <LinearGradient
-            colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']}
-            style={styles.heartGradient}
-          />
+        <MaskedView style={styles.heartMaskRight} maskElement={<Ionicons name="heart" style={styles.heartIcon} />}>
+          <LinearGradient colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']} style={styles.heartGradient} />
         </MaskedView>
       </View>
 
-      {/* ── Top pills row ── */}
       <View style={styles.pillsRow}>
-        {/* Call duration */}
         <View style={styles.timePill}>
-          <Text style={styles.timeText}>
-            {connectedUI
-              ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(
-                  2,
-                  '0',
-                )}`
-              : 'Connecting…'}
-          </Text>
+          <AppText variant="subtitle" style={styles.timeText}>
+            {connectedUI ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : 'Connecting…'}
+          </AppText>
         </View>
 
-        {/* Coin countdown — male only, shown after connected */}
         {connectedUI && isMale && coinDisplay !== null && (
           <View style={[styles.coinPill, coinIsLow && styles.coinPillLow]}>
-            <Text style={styles.coinPillText}>🪙 {coinDisplay}</Text>
+            <AppText variant="bodySmall" style={styles.coinPillText}>🪙 {coinDisplay}</AppText>
           </View>
         )}
       </View>
 
-      {/* Warning banner */}
       {warningMsg !== '' && (
         <View style={styles.warningBanner}>
-          <Ionicons name="warning-outline" size={16} color="#fff" />
-          <Text style={styles.warningText}>{warningMsg}</Text>
+          <Ionicons name="warning-outline" size={moderateScale(16)} color="#fff" />
+          <AppText variant="caption" style={styles.warningText}>{warningMsg}</AppText>
         </View>
       )}
 
-      {/* User cards */}
       {connectedCallDetails?.connected && me && other && (
         <View style={styles.usersRow}>
           <View style={styles.userCard}>
             <View style={styles.avatarWrapper}>
               <Animated.View style={getRippleStyle(ripple1)} />
               <Animated.View style={getRippleStyle(ripple2)} />
-              <LinearGradient
-                colors={['#c084fc', '#e879f9', '#f472b6']}
-                style={styles.gradientRing}
-              >
-                <Image
-                  source={{ uri: me.display_profile_image }}
-                  style={styles.avatar}
-                />
+              <LinearGradient colors={palette.gradientRing} style={styles.gradientRing}>
+                <Image source={{ uri: me.display_profile_image }} style={styles.avatar} />
               </LinearGradient>
               {!micOn && (
                 <View style={styles.muteIcon}>
-                  <Ionicons name="mic-off" size={16} color="#fff" />
+                  <Ionicons name="mic-off" size={moderateScale(16)} color="#fff" />
                 </View>
               )}
             </View>
-            <Text style={styles.userName}>{me.name}</Text>
-            <Text style={styles.desc}>{me.bio || 'No bio'}</Text>
+            <AppText variant="h4" style={styles.userName}>{me.name}</AppText>
+            <AppText variant="caption" style={styles.desc}>{me.bio || 'No bio'}</AppText>
           </View>
 
           <TouchableOpacity
@@ -745,80 +646,48 @@ const AudiocallScreen = ({ route, navigation }) => {
             <View style={styles.avatarWrapper}>
               <Animated.View style={getRippleStyle(ripple1)} />
               <Animated.View style={getRippleStyle(ripple2)} />
-              <LinearGradient
-                colors={['#c084fc', '#e879f9', '#f472b6']}
-                style={styles.gradientRing}
-              >
-                <Image
-                  source={{ uri: other.display_profile_image }}
-                  style={styles.avatar}
-                />
+              <LinearGradient colors={palette.gradientRing} style={styles.gradientRing}>
+                <Image source={{ uri: other.display_profile_image }} style={styles.avatar} />
               </LinearGradient>
               {!otherMicOn && (
                 <View style={styles.muteIcon}>
-                  <Ionicons name="mic-off" size={16} color="#fff" />
+                  <Ionicons name="mic-off" size={moderateScale(16)} color="#fff" />
                 </View>
               )}
             </View>
-            <Text style={styles.userName}>{other.name}</Text>
-            <Text style={styles.desc}>{other.bio || 'No bio'}</Text>
+            <AppText variant="h4" style={styles.userName}>{other.name}</AppText>
+            <AppText variant="caption" style={styles.desc}>{other.bio || 'No bio'}</AppText>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Controls */}
       <View style={styles.controls}>
         <TouchableOpacity
-          style={[
-            styles.circleBtn,
-            { backgroundColor: speakerOn ? PRIMARY : '#fff' },
-          ]}
+          style={[styles.circleBtn, { backgroundColor: speakerOn ? PRIMARY : '#fff' }]}
           onPress={toggleSpeaker}
         >
-          <Ionicons
-            name={speakerOn ? 'volume-high' : 'volume-mute'}
-            size={24}
-            color={speakerOn ? '#fff' : PRIMARY}
-          />
+          <Ionicons name={speakerOn ? 'volume-high' : 'volume-mute'} size={moderateScale(24)} color={speakerOn ? '#fff' : PRIMARY} />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.circleBtn,
-            { backgroundColor: micOn ? PRIMARY : '#fff' },
-          ]}
-          onPress={toggleMic}
-        >
-          <Ionicons
-            name={micOn ? 'mic' : 'mic-off'}
-            size={24}
-            color={micOn ? '#fff' : PRIMARY}
-          />
+        <TouchableOpacity style={[styles.circleBtn, { backgroundColor: micOn ? PRIMARY : '#fff' }]} onPress={toggleMic}>
+          <Ionicons name={micOn ? 'mic' : 'mic-off'} size={moderateScale(24)} color={micOn ? '#fff' : PRIMARY} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.endBtn}
           onPress={() => {
-            Alert.alert(
-              'End Call?',
-              'Are you sure you want to exit the call?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Exit', style: 'destructive', onPress: handleEndCall },
-              ],
-            );
+            Alert.alert('End Call?', 'Are you sure you want to exit the call?', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Exit', style: 'destructive', onPress: handleEndCall },
+            ]);
           }}
         >
-          <Ionicons name="call" size={22} color="#8f0a0a" />
+          <Ionicons name="call" size={moderateScale(22)} color="#8f0a0a" />
         </TouchableOpacity>
       </View>
 
       {remoteStream && (
-        <RTCView
-          key={remoteStream.toURL()}
-          streamURL={remoteStream.toURL()}
-          style={{ width: 1, height: 1 }}
-        />
+        <RTCView key={remoteStream.toURL()} streamURL={remoteStream.toURL()} style={{ width: 1, height: 1 }} />
       )}
     </LinearGradient>
   );
@@ -826,176 +695,95 @@ const AudiocallScreen = ({ route, navigation }) => {
 
 export default AudiocallScreen;
 
-const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 60, alignItems: 'center' },
+const createStyles = (theme, palette) => {
+  const { spacing, radius } = theme;
 
-  topheats: {
-    position: 'absolute',
-    top: 30,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 30,
-    zIndex: 10,
-  },
-  heartMask: {
-    position: 'absolute',
-    top: 420,
-    left: -50,
-    width: 220,
-    height: 220,
-    opacity: 0.5,
-  },
-  heartMaskSmall: {
-    position: 'absolute',
-    top: 120,
-    left: 20,
-    width: 100,
-    height: 100,
-    opacity: 0.4,
-  },
-  heartMaskRight: {
-    position: 'absolute',
-    top: 320,
-    right: -10,
-    width: 130,
-    height: 230,
-    opacity: 0.5,
-  },
-  heartMaskTopRight: {
-    position: 'absolute',
-    top: 80,
-    right: 20,
-    width: 80,
-    height: 100,
-    opacity: 0.35,
-  },
-  heartIcon: { fontSize: 200, color: 'black' },
-  heartIconSmall: { fontSize: 70, color: 'black' },
-  heartIconTiny: { fontSize: 80, color: 'black' },
-  heartGradient: { flex: 1 },
+  return StyleSheet.create({
+    container: { flex: 1, paddingTop: moderateScale(60), alignItems: 'center' },
 
-  // ── Pills ──
-  pillsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  timePill: {
-    backgroundColor: '#fb6b7c',
-    paddingHorizontal: 20,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  timeText: { color: '#fff', fontWeight: '600' },
-
-  coinPill: {
-    backgroundColor: 'rgba(130, 0, 230, 0.85)',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  coinPillLow: {
-    backgroundColor: 'rgba(220, 50, 50, 0.92)', // turns red when low
-  },
-  coinPillText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-
-  // ── Warning ──
-  warningBanner: {
-    position: 'absolute',
-    bottom: 140,
-    left: 15,
-    right: 15,
-    backgroundColor: '#FF6B35',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    zIndex: 9999,
-    elevation: 20,
-
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: {
-      width: 0,
-      height: 3,
+    topheats: {
+      position: 'absolute',
+      top: moderateScale(30),
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.xxl,
+      zIndex: 10,
     },
-  },
+    heartMask: { position: 'absolute', top: moderateScale(420), left: -moderateScale(50), width: moderateScale(220), height: moderateScale(220), opacity: 0.5 },
+    heartMaskSmall: { position: 'absolute', top: moderateScale(120), left: moderateScale(20), width: moderateScale(100), height: moderateScale(100), opacity: 0.4 },
+    heartMaskRight: { position: 'absolute', top: moderateScale(320), right: -moderateScale(10), width: moderateScale(130), height: moderateScale(230), opacity: 0.5 },
+    heartMaskTopRight: { position: 'absolute', top: moderateScale(80), right: moderateScale(20), width: moderateScale(80), height: moderateScale(100), opacity: 0.35 },
+    heartIcon: { fontSize: moderateScale(200), color: 'black' },
+    heartIconSmall: { fontSize: moderateScale(70), color: 'black' },
+    heartIconTiny: { fontSize: moderateScale(80), color: 'black' },
+    heartGradient: { flex: 1 },
 
-  warningTitle: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
+    pillsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    timePill: { backgroundColor: palette.timePillBg, paddingHorizontal: spacing.xl, paddingVertical: spacing.xs, borderRadius: radius.xl },
+    timeText: { color: '#fff' },
 
-  warningText: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 10,
-    lineHeight: 18,
-  },
-  // ── Users ──
-  usersRow: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '92%',
-    transform: [{ translateY: -200 }],
-  },
-  userCard: { width: '45%', alignItems: 'center' },
-  avatarWrapper: {
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  gradientRing: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 4,
-  },
-  avatar: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#ddd' },
-  userName: { fontSize: 18, fontWeight: 'bold' },
-  desc: { fontSize: 12, textAlign: 'center', color: '#444' },
-  muteIcon: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#FF4D4F',
-    borderRadius: 12,
-    padding: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-  },
+    coinPill: {
+      backgroundColor: 'rgba(130, 0, 230, 0.85)',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.xl,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    coinPillLow: { backgroundColor: 'rgba(220, 50, 50, 0.92)' },
+    coinPillText: { color: '#fff', fontWeight: '700' },
 
-  // ── Controls ──
-  controls: { position: 'absolute', bottom: 50, flexDirection: 'row', gap: 25 },
-  circleBtn: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-  },
-  endBtn: {
-    backgroundColor: '#FF4D4F',
-    width: 65,
-    height: 65,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 8,
-  },
-});
+    warningBanner: {
+      position: 'absolute',
+      bottom: moderateScale(140),
+      left: spacing.md,
+      right: spacing.md,
+      backgroundColor: '#FF6B35',
+      borderRadius: radius.lg,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      zIndex: 9999,
+      elevation: 20,
+      shadowColor: '#000',
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 3 },
+    },
+
+    warningText: { flex: 1, color: '#fff', marginLeft: spacing.sm, lineHeight: moderateScale(18) },
+
+    usersRow: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      width: '92%',
+      transform: [{ translateY: -moderateScale(200) }],
+    },
+    userCard: { width: '45%', alignItems: 'center' },
+    avatarWrapper: { position: 'relative', justifyContent: 'center', alignItems: 'center' },
+    gradientRing: { width: moderateScale(100), height: moderateScale(100), borderRadius: moderateScale(50), justifyContent: 'center', alignItems: 'center', padding: spacing.xxs },
+    avatar: { width: moderateScale(90), height: moderateScale(90), borderRadius: moderateScale(45), backgroundColor: '#ddd' },
+    userName: { textAlign: 'center' },
+    desc: { textAlign: 'center', color: '#444' },
+    muteIcon: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      backgroundColor: '#FF4D4F',
+      borderRadius: moderateScale(12),
+      padding: spacing.xxs,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 5,
+    },
+
+    controls: { position: 'absolute', bottom: moderateScale(50), flexDirection: 'row', gap: spacing.xl },
+    circleBtn: { width: moderateScale(60), height: moderateScale(60), borderRadius: moderateScale(30), alignItems: 'center', justifyContent: 'center', elevation: 6 },
+    endBtn: { backgroundColor: '#FF4D4F', width: moderateScale(65), height: moderateScale(65), borderRadius: moderateScale(32), alignItems: 'center', justifyContent: 'center', elevation: 8 },
+  });
+};

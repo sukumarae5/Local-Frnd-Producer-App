@@ -1,31 +1,53 @@
-import React, { useContext, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-  BackHandler,
-} from 'react-native';
+import React, { useContext, useEffect, useRef, useMemo } from 'react';
+import { View, TouchableOpacity, Image, BackHandler, StyleSheet, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { moderateScale } from 'react-native-size-matters';
 import LinearGradient from 'react-native-linear-gradient';
 import { SocketContext } from '../socket/SocketProvider';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { CommonActions } from '@react-navigation/native';
 import { useDispatch } from 'react-redux';
 import { clearCall } from '../features/calls/callAction';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
-// Module-level dedup — survives stale closures
 const handledSessions = new Set();
+const RING_TIMEOUT_MS = 31000;
 
-const RING_TIMEOUT_MS = 31000; // 1s more than server's 30s — catches server timeout + network delay
+// Theme-aware call-hero palette — light mode is your original pink/purple
+// design; dark mode swaps to a matched deep-purple set instead of staying
+// stuck light regardless of app theme.
+const getCallPalette = (theme) => {
+  if (theme.isDark) {
+    return {
+      gradient: ['#241530', '#2B1838', '#1A0F22'],
+      heartOpacity: 0.15,
+      titleColor: theme.colors.text,
+      subtitleColor: theme.colors.textSecondary,
+      avatarRing: '#A943FF',
+      avatarBg: theme.colors.card,
+    };
+  }
+  return {
+    gradient: ['#E9C9FF', '#F4C9F2', '#FFD1E8'],
+    heartOpacity: 0.25,
+    titleColor: '#5A0066',
+    subtitleColor: '#7a2a8a',
+    avatarRing: '#A943FF',
+    avatarBg: '#fff',
+  };
+};
 
 const IncomingCallScreen = ({ route, navigation }) => {
   const { session_id, call_type } = route.params;
   const { socketRef } = useContext(SocketContext);
   const dispatch = useDispatch();
-  const localTimerRef = useRef(null); // ✅ client-side fallback timer
+  const localTimerRef = useRef(null);
+  const { theme } = useAppTheme();
+  const { width } = useWindowDimensions();
+  const palette = useMemo(() => getCallPalette(theme), [theme]);
+  const styles = useMemo(() => createStyles(theme, width), [theme, width]);
 
-  // Clean up when screen unmounts
   useEffect(() => {
     return () => {
       handledSessions.delete(session_id);
@@ -35,18 +57,10 @@ const IncomingCallScreen = ({ route, navigation }) => {
     };
   }, [session_id]);
 
-  /* =============================================
-     CORE — single exit point for ALL cases:
-     - reject button pressed
-     - caller cancelled
-     - server timeout
-     - client-side fallback timeout
-  ============================================= */
   const navigateAway = (skipEmit = false) => {
     if (handledSessions.has(session_id)) return;
     handledSessions.add(session_id);
 
-    // Clear local fallback timer
     if (localTimerRef.current) {
       clearTimeout(localTimerRef.current);
       localTimerRef.current = null;
@@ -65,20 +79,14 @@ const IncomingCallScreen = ({ route, navigation }) => {
         CommonActions.reset({
           index: 0,
           routes: [{ name: 'ReceiverBottomTabs' }],
-        }),
+        })
       );
     }
   };
 
-  /* =============================================
-     CLIENT-SIDE FALLBACK TIMER
-     In case server timeout event never arrives
-     (network issue, socket disconnect, etc.)
-  ============================================= */
   useEffect(() => {
     localTimerRef.current = setTimeout(() => {
-      console.log('⏰ Client-side ring timeout — auto dismissing');
-      navigateAway(false); // emit reject so server cleans up
+      navigateAway(false);
     }, RING_TIMEOUT_MS);
 
     return () => {
@@ -88,29 +96,21 @@ const IncomingCallScreen = ({ route, navigation }) => {
     };
   }, [session_id]);
 
-  /* =============================================
-     SOCKET LISTENERS
-  ============================================= */
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
 
-    // Caller cancelled before receiver answered
-    const handleRejected = data => {
-      console.log('📵 call_rejected in IncomingCallScreen:', data);
+    const handleRejected = (data) => {
       if (data?.session_id !== session_id) return;
       navigateAway(true);
     };
 
-    // Server 30s timeout fired
-    const handleTimeout = data => {
-      console.log('⏰ call_timeout in IncomingCallScreen:', data);
+    const handleTimeout = (data) => {
       if (data?.session_id && data.session_id !== session_id) return;
-      navigateAway(true); // server already ended session — skip emit
+      navigateAway(true);
     };
 
-    // Call ended for any other reason
-    const handleCallEnded = data => {
+    const handleCallEnded = (data) => {
       if (data?.session_id && data.session_id !== session_id) return;
       navigateAway(true);
     };
@@ -126,9 +126,6 @@ const IncomingCallScreen = ({ route, navigation }) => {
     };
   }, [session_id]);
 
-  /* =============================================
-     HARDWARE BACK — treat as reject
-  ============================================= */
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       navigateAway(false);
@@ -137,14 +134,10 @@ const IncomingCallScreen = ({ route, navigation }) => {
     return () => sub.remove();
   }, [session_id]);
 
-  /* =============================================
-     ACCEPT
-  ============================================= */
   const accept = () => {
     if (handledSessions.has(session_id)) return;
     handledSessions.add(session_id);
 
-    // Clear timer — no longer needed
     if (localTimerRef.current) {
       clearTimeout(localTimerRef.current);
       localTimerRef.current = null;
@@ -162,121 +155,101 @@ const IncomingCallScreen = ({ route, navigation }) => {
             params: { call_type, role: 'friend_receiver', session_id },
           },
         ],
-      }),
+      })
     );
   };
 
-  /* =============================================
-     REJECT BUTTON
-  ============================================= */
   const reject = () => {
     navigateAway(false);
   };
 
   return (
-    <LinearGradient
-      colors={['#E9C9FF', '#F4C9F2', '#FFD1E8']}
-      style={styles.container}
-      pointerEvents="auto"
-    >
-      <Image
-        source={require('../assets/leftheart.png')}
-        style={styles.leftHeart}
-      />
-      <Image
-        source={require('../assets/rightheart.png')}
-        style={styles.rightHeart}
-      />
+    <LinearGradient colors={palette.gradient} style={styles.container} pointerEvents="auto">
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <Image source={require('../assets/leftheart.png')} style={[styles.leftHeart, { opacity: palette.heartOpacity }]} />
+        <Image source={require('../assets/rightheart.png')} style={[styles.rightHeart, { opacity: palette.heartOpacity }]} />
 
-      <Text style={styles.title}>Incoming {call_type} Call</Text>
+        <AppText variant="h3" style={[styles.title, { color: palette.titleColor }]}>
+          Incoming {call_type} Call
+        </AppText>
 
-      <View style={styles.avatarWrap}>
-        <Image source={require('../assets/girl2.jpg')} style={styles.avatar} />
-      </View>
+        <View style={[styles.avatarWrap, { borderColor: palette.avatarRing, backgroundColor: palette.avatarBg }]}>
+          <Image source={require('../assets/girl2.jpg')} style={styles.avatar} />
+        </View>
 
-      <Text style={styles.subtitle}>Someone is calling you…</Text>
+        <AppText variant="subtitle" style={[styles.subtitle, { color: palette.subtitleColor }]}>
+          Someone is calling you…
+        </AppText>
 
-      <View style={styles.row}>
-        <TouchableOpacity
-          style={[styles.actionBtn, styles.reject]}
-          onPress={reject}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="close" size={26} color="#fff" />
-          <Text style={styles.btnText}>Reject</Text>
-        </TouchableOpacity>
+        <View style={styles.row}>
+          <TouchableOpacity style={[styles.actionBtn, styles.reject]} onPress={reject} activeOpacity={0.8}>
+            <Ionicons name="close" size={moderateScale(26)} color="#fff" />
+            <AppText variant="caption" style={styles.btnText}>Reject</AppText>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionBtn, styles.accept]}
-          onPress={accept}
-          activeOpacity={0.8}
-        >
-          <Ionicons
-            name={call_type === 'VIDEO' ? 'videocam' : 'call'}
-            size={24}
-            color="#fff"
-          />
-          <Text style={styles.btnText}>Accept</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity style={[styles.actionBtn, styles.accept]} onPress={accept} activeOpacity={0.8}>
+            <Ionicons name={call_type === 'VIDEO' ? 'videocam' : 'call'} size={moderateScale(24)} color="#fff" />
+            <AppText variant="caption" style={styles.btnText}>Accept</AppText>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     </LinearGradient>
   );
 };
 
 export default IncomingCallScreen;
 
-const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  leftHeart: {
-    position: 'absolute',
-    left: -30,
-    top: 80,
-    width: 120,
-    height: 120,
-    opacity: 0.25,
-  },
-  rightHeart: {
-    position: 'absolute',
-    right: -20,
-    bottom: 120,
-    width: 110,
-    height: 110,
-    opacity: 0.25,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#5A0066',
-    marginBottom: 30,
-  },
-  avatarWrap: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    borderWidth: 6,
-    borderColor: '#A943FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    elevation: 8,
-  },
-  avatar: { width: 140, height: 140, borderRadius: 70 },
-  subtitle: {
-    marginTop: 20,
-    fontSize: 15,
-    color: '#7a2a8a',
-    fontWeight: '600',
-  },
-  row: { flexDirection: 'row', marginTop: 60, gap: 40 },
-  actionBtn: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-  },
-  accept: { backgroundColor: '#5BCF8E' },
-  reject: { backgroundColor: '#FF6A6A' },
-  btnText: { marginTop: 6, color: '#fff', fontSize: 12, fontWeight: '700' },
-});
+const createStyles = (theme, width) => {
+  const { colors, spacing, radius } = theme;
+
+  return StyleSheet.create({
+    container: { flex: 1 },
+    safe: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+    leftHeart: {
+      position: 'absolute',
+      left: -moderateScale(30),
+      top: moderateScale(80),
+      width: moderateScale(120),
+      height: moderateScale(120),
+    },
+    rightHeart: {
+      position: 'absolute',
+      right: -moderateScale(20),
+      bottom: moderateScale(120),
+      width: moderateScale(110),
+      height: moderateScale(110),
+    },
+
+    title: { marginBottom: spacing.xxl },
+
+    avatarWrap: {
+      width: moderateScale(160),
+      height: moderateScale(160),
+      borderRadius: moderateScale(80),
+      borderWidth: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
+      elevation: 8,
+    },
+    avatar: { width: moderateScale(140), height: moderateScale(140), borderRadius: moderateScale(70) },
+
+    subtitle: { marginTop: spacing.lg },
+
+    row: { flexDirection: 'row', marginTop: spacing.xxxl, gap: spacing.xxl },
+
+    actionBtn: {
+      width: moderateScale(90),
+      height: moderateScale(90),
+      borderRadius: moderateScale(45),
+      alignItems: 'center',
+      justifyContent: 'center',
+      elevation: 6,
+    },
+
+    accept: { backgroundColor: '#5BCF8E' },
+    reject: { backgroundColor: '#FF6A6A' },
+
+    btnText: { marginTop: spacing.xxs, color: '#fff' },
+  });
+};

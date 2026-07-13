@@ -1,36 +1,28 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  Dimensions,
-} from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, TouchableOpacity, TextInput, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { moderateScale } from 'react-native-size-matters';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
 import ContinueButton from '../components/Common/ContinueButton';
-
-const { width, height } = Dimensions.get('window');
-const scale = size => (width / 375) * size;
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 const FAQ_DATA = [
-  {
-    question: 'How to swipe & match?',
-    answer: 'I will give you a complete account.',
-  },
-  {
-    question: 'How do I edit my profile?',
-    answer: 'Edit from profile screen.',
-  },
+  { question: 'How to swipe & match?', answer: 'I will give you a complete account.' },
+  { question: 'How do I edit my profile?', answer: 'Edit from profile screen.' },
   { question: 'How to get more likes?', answer: 'Use better photos.' },
   { question: 'How to get more matches?', answer: 'Be active daily.' },
   { question: "I'm out of profiles?", answer: 'Expand distance.' },
 ];
 
 const HelpCenterScreen = ({ navigation }) => {
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const { height } = useWindowDimensions();
+  const styles = useMemo(() => createStyles(theme, height), [theme, height]);
+
   const [activeTab, setActiveTab] = useState('FAQ');
   const [openIndex, setOpenIndex] = useState(0);
 
@@ -42,117 +34,74 @@ const HelpCenterScreen = ({ navigation }) => {
 
   return (
     <WelcomeScreenbackgroungpage>
-      <View style={styles.container}>
-        {/* HEADER */}
+      <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Icon name="chevron-back" size={scale(24)} />
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={theme.hitSlop}>
+            <Icon name="chevron-back" size={moderateScale(24)} color={colors.icon} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Help Center</Text>
+          <AppText variant="h4" style={styles.headerTitle}>Help Center</AppText>
         </View>
 
-        {/* TABS */}
         <View style={styles.tabRow}>
-          {['FAQ', 'Support'].map(tab => (
-            <TouchableOpacity
-              key={tab}
-              style={styles.tab}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === tab && styles.activeTabText,
-                ]}
-              >
+          {['FAQ', 'Support'].map((tab) => (
+            <TouchableOpacity key={tab} style={styles.tab} onPress={() => setActiveTab(tab)}>
+              <AppText variant="bodySmall" style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
                 {tab}
-              </Text>
+              </AppText>
 
               {activeTab === tab && (
-                <LinearGradient
-                  colors={['#D51BF9', '#8C37F8']}
-                  style={styles.tabUnderline}
-                />
+                <LinearGradient colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]} style={styles.tabUnderline} />
               )}
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* CONTENT */}
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scroll}
-        >
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           {activeTab === 'FAQ' ? (
             <>
-              {/* SEARCH */}
-              <LinearGradient
-                colors={['#D51BF9', '#8C37F8']}
-                style={styles.searchGradient}
-              >
+              <LinearGradient colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]} style={styles.searchGradient}>
                 <View style={styles.searchBox}>
-                  <Icon name="search" size={scale(18)} color="#D51BF9" />
-                  <TextInput placeholder="Search" style={styles.searchInput} />
+                  <Icon name="search" size={moderateScale(18)} color={colors.gradientPurpleStart} />
+                  <TextInput
+                    placeholder="Search"
+                    placeholderTextColor={colors.placeholder}
+                    style={styles.searchInput}
+                  />
                 </View>
               </LinearGradient>
 
-              {/* FAQ */}
               {FAQ_DATA.map((item, index) => {
                 const isOpen = openIndex === index;
 
                 return (
                   <View key={index} style={styles.faqItem}>
-                    <TouchableOpacity
-                      style={styles.faqHeader}
-                      onPress={() => setOpenIndex(isOpen ? null : index)}
-                    >
-                      <Text style={styles.question}>{item.question}</Text>
-                      <Icon
-                        name={isOpen ? 'chevron-up' : 'chevron-down'}
-                        size={scale(18)}
-                        color="#999"
-                      />
+                    <TouchableOpacity style={styles.faqHeader} onPress={() => setOpenIndex(isOpen ? null : index)}>
+                      <AppText variant="subtitle" style={styles.question}>{item.question}</AppText>
+                      <Icon name={isOpen ? 'chevron-up' : 'chevron-down'} size={moderateScale(18)} color={colors.iconMuted} />
                     </TouchableOpacity>
 
-                    {isOpen && <Text style={styles.answer}>{item.answer}</Text>}
+                    {isOpen && <AppText variant="bodySmall" color="textMuted" style={styles.answer}>{item.answer}</AppText>}
                   </View>
                 );
               })}
             </>
           ) : (
             <>
-              {/* FORM */}
-              <Text style={styles.label}>Full Name</Text>
-              <Input
-                value={name}
-                onChangeText={setName}
-                placeholder="Michael Dam"
-              />
+              <AppText variant="bodySmall" style={styles.label}>Full Name</AppText>
+              <Input value={name} onChangeText={setName} placeholder="Michael Dam" styles={styles} colors={colors} />
 
-              <Text style={styles.label}>Email</Text>
-              <Input
-                value={email}
-                onChangeText={setEmail}
-                placeholder="info@gmail.com"
-              />
+              <AppText variant="bodySmall" style={styles.label}>Email</AppText>
+              <Input value={email} onChangeText={setEmail} placeholder="info@gmail.com" styles={styles} colors={colors} />
 
-              <Text style={styles.label}>Phone Number</Text>
-              <Input
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="+12678899911"
-              />
+              <AppText variant="bodySmall" style={styles.label}>Phone Number</AppText>
+              <Input value={phone} onChangeText={setPhone} placeholder="+12678899911" styles={styles} colors={colors} />
 
-              <Text style={styles.label}>Message</Text>
+              <AppText variant="bodySmall" style={styles.label}>Message</AppText>
 
-              <View
-                style={[
-                  styles.textAreaWrapper,
-                  (isMessageFocused || message) && styles.inputActive,
-                ]}
-              >
+              <View style={[styles.textAreaWrapper, (isMessageFocused || message) && styles.inputActive]}>
                 <TextInput
                   placeholder="Write Your Message"
+                  placeholderTextColor={colors.placeholder}
                   multiline
                   value={message}
                   onChangeText={setMessage}
@@ -165,168 +114,108 @@ const HelpCenterScreen = ({ navigation }) => {
           )}
         </ScrollView>
 
-        {/* 🔥 FIXED BUTTON */}
         {activeTab === 'Support' && (
           <View style={styles.bottomFixed}>
-            <ContinueButton
-              title="SUBMIT"
-              onPress={() => console.log('Submit')}
-            />
+            <ContinueButton title="SUBMIT" onPress={() => console.log('Submit')} />
           </View>
         )}
-      </View>
+      </SafeAreaView>
     </WelcomeScreenbackgroungpage>
   );
 };
 
 export default HelpCenterScreen;
 
-/* ================= SMALL COMPONENT ================= */
-
-const Input = ({ placeholder, value, onChangeText }) => {
+const Input = ({ placeholder, value, onChangeText, styles, colors }) => {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View style={[styles.inputBox, (isFocused || value) && styles.inputActive]}>
       <TextInput
         placeholder={placeholder}
+        placeholderTextColor={colors.placeholder}
         value={value}
         onChangeText={onChangeText}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
+        style={{ color: colors.text }}
       />
     </View>
   );
 };
-/* ================= STYLES ================= */
 
-const styles = StyleSheet.create({
-  container: { flex: 1,backgroundColor: '#fff', },
+const createStyles = (theme, height) => {
+  const { colors, spacing, radius } = theme;
 
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: scale(16),
-    paddingTop: height * 0.03, // 🔥 SafeArea replacement
-    marginBottom: scale(10),
-  },
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
 
-  headerTitle: {
-    fontSize: scale(18),
-    fontWeight: '600',
-    marginLeft: scale(10),
-     color: '#000',
-  },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+      marginBottom: spacing.sm,
+    },
 
-  tabRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
+    headerTitle: { marginLeft: spacing.sm },
 
-  tab: { paddingVertical: scale(12) },
+    tabRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
 
-  tabText: {
-    color: '#999',
-    fontSize: scale(14),
-  },
+    tab: { paddingVertical: spacing.md },
 
-  activeTabText: {
-    fontWeight: '600',
-     color: '#000',
-  },
+    tabText: { color: colors.textMuted },
 
-  tabUnderline: {
-    height: 2,
-    marginTop: scale(6),
-    borderRadius: 2,
-  },
-  scroll: {
-    padding: scale(16),
-    paddingBottom: scale(120), // 🔥 prevents overlap
-  },
+    activeTabText: { fontWeight: '600', color: colors.text },
 
-  searchGradient: {
-    borderRadius: scale(25),
-    padding: 1.5,
-    marginBottom: scale(20),
-  },
+    tabUnderline: { height: 2, marginTop: spacing.xs, borderRadius: 2 },
 
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: scale(25),
-    paddingHorizontal: scale(14),
-    height: scale(46),
-  },
-  searchInput: {
-    marginLeft: scale(10),
-    flex: 1,
-  },
+    scroll: { padding: spacing.lg, paddingBottom: moderateScale(120) },
 
-  faqItem: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    paddingVertical: scale(14),
-  },
+    searchGradient: { borderRadius: radius.xl, padding: 1.5, marginBottom: spacing.xl },
 
-  faqHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
+    searchBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderRadius: radius.xl,
+      paddingHorizontal: spacing.md,
+      height: moderateScale(46),
+    },
 
-  question: {
-    fontSize: scale(14),
-    fontWeight: '500',
-     color: '#000',
-  },
-  textAreaWrapper: {
-    borderRadius: scale(18),
-    borderWidth: 1,
-    borderColor: '#eee',
-    backgroundColor: '#FAFAFA',
-  },
+    searchInput: { marginLeft: spacing.sm, flex: 1, color: colors.text },
 
-  answer: {
-    marginTop: scale(8),
-    color: '#666',
-    fontSize: scale(13),
-  },
+    faqItem: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider, paddingVertical: spacing.md },
 
-  label: {
-    marginTop: scale(14),
-    marginBottom: scale(6),
-    color: '#444',
-  },
+    faqHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 
-  inputBox: {
-    backgroundColor: '#FAFAFA',
-    borderRadius: scale(25),
-    paddingHorizontal: scale(16),
-    height: scale(48),
-    borderWidth: 1,
-    borderColor: '#eee',
-    justifyContent: 'center',
-  },
-  inputActive: {
-    borderColor: '#D51BF9',
-    borderWidth: 1.5,
-  },
-  textArea: {
-    height: scale(110),
-    padding: scale(12),
-    textAlignVertical: 'top',
-      color: '#000',
-  },
+    question: {},
 
-  bottomFixed: {
-    position: 'absolute',
-    bottom: scale(25),
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-});
+    textAreaWrapper: { borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+
+    answer: { marginTop: spacing.xs },
+
+    label: { marginTop: spacing.md, marginBottom: spacing.xs },
+
+    inputBox: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.xl,
+      paddingHorizontal: spacing.md,
+      height: moderateScale(48),
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+    },
+
+    inputActive: { borderColor: colors.gradientPurpleStart, borderWidth: 1.5 },
+
+    textArea: { height: moderateScale(110), padding: spacing.sm, textAlignVertical: 'top', color: colors.text },
+
+    bottomFixed: { position: 'absolute', bottom: spacing.lg, left: 0, right: 0, alignItems: 'center' },
+  });
+};

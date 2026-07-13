@@ -1,46 +1,50 @@
-import React, { useContext, useEffect, useState, useCallback } from 'react';
+import React, {
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+} from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
-  Image,
   TouchableOpacity,
   Dimensions,
   TextInput,
   FlatList,
-  Platform,
   StatusBar,
+  StyleSheet,
 } from 'react-native';
+import { moderateScale, verticalScale, scale } from 'react-native-size-matters';
 
 import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
-import LinearGradient from 'react-native-linear-gradient';
 
 import { SocketContext } from '../socket/SocketProvider';
-
+import { useAppTheme } from '../theme';
+import LinearGradient from 'react-native-linear-gradient';
 import { userDatarequest } from '../features/user/userAction';
 import { randomUserRequest } from '../features/RandomUsers/randomuserAction';
 import { fetchUnreadCount } from '../features/notification/notificationAction';
 import { callRequest } from '../features/calls/callAction';
 import StoriesScreen from './StoriesScreen';
 import LikeMindedSectionScreen from './LikeMindedSectionScreen';
-import MaleOffersScreen from "./MaleOffersScreen"
+import MaleOffersScreen from './MaleOffersScreen';
 import ActiveDostSectionScreen from './ActiveDostSectionScreen';
 import BottomCallPills from '../components/BottomCallPills';
 import HomeHeader from '../components/HomeHeader';
 
+// Temporary shim only for HomeHeader's wp/hp props — remove once HomeHeader is themed.
 const { width, height } = Dimensions.get('window');
-
 const wp = value => (width * value) / 100;
 const hp = value => (height * value) / 100;
-
-const isSmallDevice = width < 360;
 
 const HomeScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
 
   const { socketRef, connected } = useContext(SocketContext);
   const socket = socketRef?.current;
@@ -51,7 +55,6 @@ const HomeScreen = () => {
 
   const [callingRandom, setCallingRandom] = useState(false);
   const [callingRandomVideo, setCallingRandomVideo] = useState(false);
-
   const [refreshing, setRefreshing] = useState(false);
 
   const refreshHomeData = useCallback(() => {
@@ -62,20 +65,14 @@ const HomeScreen = () => {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-
     refreshHomeData();
-
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    setTimeout(() => setRefreshing(false), 1000);
   }, [refreshHomeData]);
 
   const startRandomAudioCall = () => {
     if (!connected || callingRandom || callingRandomVideo) return;
-
     setCallingRandom(true);
     dispatch(callRequest({ call_type: 'AUDIO' }));
-
     navigation.navigate('CallStatusScreen', {
       call_type: 'AUDIO',
       role: 'male',
@@ -84,10 +81,8 @@ const HomeScreen = () => {
 
   const startRandomVideoCall = () => {
     if (!connected || callingRandom || callingRandomVideo) return;
-
     setCallingRandomVideo(true);
     dispatch(callRequest({ call_type: 'VIDEO' }));
-
     navigation.navigate('CallStatusScreen', {
       call_type: 'VIDEO',
       role: 'male',
@@ -107,21 +102,16 @@ const HomeScreen = () => {
 
   useEffect(() => {
     if (!socket) return;
-
     const onPresence = data => {
       console.log('👤 Presence:', data);
     };
-
     socket.on('presence_update', onPresence);
-
-    return () => {
-      socket.off('presence_update', onPresence);
-    };
+    return () => socket.off('presence_update', onPresence);
   }, [socket]);
 
   const imageUrl = userdata?.images?.display_profile_image
-  ? { uri: userdata.images.display_profile_image }
-  : require('../assets/boy2.jpg');
+    ? { uri: userdata.images.display_profile_image }
+    : require('../assets/boy2.jpg');
 
   const sections = [
     { id: 'stories' },
@@ -131,29 +121,33 @@ const HomeScreen = () => {
     { id: 'calls' },
   ];
 
+  const styles = useMemo(
+    () => createStyles(theme, width, height),
+    [theme, width, height],
+  );
   const renderItem = ({ item }) => {
     switch (item.id) {
       case 'stories':
         return <StoriesScreen />;
       case 'offers':
-        return <MaleOffersScreen/>;
+        return <MaleOffersScreen />;
       case 'like':
         return <LikeMindedSectionScreen />;
       case 'active':
         return <ActiveDostSectionScreen />;
       case 'calls':
-  return (
-    <View style={styles.callsWrapper}>
-      <BottomCallPills
-        callingRandom={callingRandom}
-        callingRandomVideo={callingRandomVideo}
-        onRandomAudio={startRandomAudioCall}
-        onRandomVideo={startRandomVideoCall}
-        coinBalance={coinBalance}
-        navigation={navigation}  // ✅ ADD
-      />
-    </View>
-  );
+        return (
+          <View style={styles.callsWrapper}>
+            <BottomCallPills
+              callingRandom={callingRandom}
+              callingRandomVideo={callingRandomVideo}
+              onRandomAudio={startRandomAudioCall}
+              onRandomVideo={startRandomVideoCall}
+              coinBalance={coinBalance}
+              navigation={navigation}
+            />
+          </View>
+        );
       default:
         return null;
     }
@@ -165,7 +159,7 @@ const HomeScreen = () => {
         <StatusBar
           translucent
           backgroundColor="transparent"
-          barStyle="dark-content"
+          barStyle={colors.statusBar}
         />
 
         <View style={styles.container}>
@@ -176,18 +170,30 @@ const HomeScreen = () => {
               userdata={userdata}
               unread={unread}
               imageUrl={imageUrl}
-              wp={wp}
-              hp={hp}
             />
 
-            <View style={styles.searchContainer}>
-              <Icon name="magnify" size={wp(5.5)} color="#999" />
-              <TextInput
-                placeholder="Search"
-                placeholderTextColor="#8E8E93"
-                style={styles.searchInput}
-              />
-            </View>
+            <LinearGradient
+              colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              angle={75.05}
+              useAngle
+              style={styles.searchGradient}
+            >
+              <View style={styles.searchContainer}>
+                <Icon
+                  name="magnify"
+                  size={moderateScale(22)}
+                  color={colors.gradientPurpleStart}
+                />
+
+                <TextInput
+                  placeholder="Search"
+                  placeholderTextColor={colors.placeholder}
+                  style={styles.searchInput}
+                />
+              </View>
+            </LinearGradient>
           </View>
 
           <FlatList
@@ -207,130 +213,125 @@ const HomeScreen = () => {
 
 export default HomeScreen;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+const createStyles = theme => {
+  const { colors, spacing, radius } = theme;
 
-  headerContainer: {
-    paddingHorizontal: wp(4),
-    paddingBottom: hp(1.2),
-  },
+  return StyleSheet.create({
+    container: { flex: 1 },
 
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: hp(1.5),
-  },
+    headerContainer: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.sm,
+    },
 
-  coinWrapper: {
-    flex: 1,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    marginRight: wp(2),
-  },
+    coinWrapper: {
+      flex: 1,
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      marginRight: spacing.sm,
+    },
 
-  coinBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: isSmallDevice ? wp(3.2) : wp(4),
-    height: isSmallDevice ? hp(5) : hp(5.2),
-    borderRadius: wp(8),
-    minWidth: isSmallDevice ? wp(24) : wp(26),
-    maxWidth: isSmallDevice ? wp(30) : wp(35),
-    elevation: 4,
-  },
+    coinBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      height: verticalScale(42),
+      borderRadius: radius.pill,
+      minWidth: scale(90),
+      maxWidth: scale(120),
+      ...theme.shadows.sm,
+    },
 
-  coinImage: {
-    width: isSmallDevice ? wp(6.2) : wp(7),
-    height: isSmallDevice ? wp(6.2) : wp(7),
-    resizeMode: 'contain',
-  },
+    coinImage: {
+      width: moderateScale(24),
+      height: moderateScale(24),
+      resizeMode: 'contain',
+    },
 
-  coinText: {
-    marginLeft: wp(2),
-    fontSize: isSmallDevice ? wp(3.5) : wp(3.8),
-    fontWeight: '800',
-    color: '#fff',
-  },
+    coinText: {
+      marginLeft: spacing.sm,
+      fontWeight: '800',
+      color: colors.textInverse,
+    },
 
-  rightIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    flexShrink: 0,
-  },
+    rightIcons: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      flexShrink: 0,
+    },
 
-  iconButton: {
-    marginLeft: isSmallDevice ? wp(1.5) : wp(2.2),
-    position: 'relative',
-  },
+    iconButton: {
+      marginLeft: spacing.sm,
+      position: 'relative',
+    },
 
-  profileButton: {
-    marginLeft: isSmallDevice ? wp(1.5) : wp(2.2),
-  },
+    profileButton: {
+      marginLeft: spacing.sm,
+    },
 
-  iconCircle: {
-    width: isSmallDevice ? wp(9) : wp(10),
-    height: isSmallDevice ? wp(9) : wp(10),
-    borderRadius: isSmallDevice ? wp(4.5) : wp(5),
-    backgroundColor: '#ce17fc',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+    iconCircle: {
+      width: moderateScale(38),
+      height: moderateScale(38),
+      borderRadius: moderateScale(19),
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  profilePic: {
-    width: isSmallDevice ? wp(9) : wp(10),
-    height: isSmallDevice ? wp(9) : wp(10),
-    borderRadius: isSmallDevice ? wp(4.5) : wp(5),
-    borderWidth: 2,
-    borderColor: '#A35DFE',
-  },
+    profilePic: {
+      width: moderateScale(38),
+      height: moderateScale(38),
+      borderRadius: moderateScale(19),
+      borderWidth: 2,
+      borderColor: colors.secondary,
+    },
 
-  badge: {
-    position: 'absolute',
-    top: -hp(0.5),
-    right: -wp(1),
-    backgroundColor: '#ff0044',
-    borderRadius: wp(3),
-    minWidth: isSmallDevice ? wp(5) : wp(5.5),
-    height: isSmallDevice ? wp(5) : wp(5.5),
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: wp(0.8),
-  },
+    badge: {
+      position: 'absolute',
+      top: -verticalScale(4),
+      right: -scale(4),
+      backgroundColor: colors.error,
+      borderRadius: radius.pill,
+      minWidth: moderateScale(20),
+      height: moderateScale(20),
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xxs,
+    },
 
-  badgeText: {
-    color: '#fff',
-    fontSize: isSmallDevice ? wp(2.2) : wp(2.4),
-    fontWeight: '700',
-  },
+    badgeText: {
+      color: colors.textInverse,
+      fontWeight: '700',
+    },
 
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#C084FC',
-    borderRadius: wp(4),
-    paddingHorizontal: wp(4),
-    height: hp(5.8),
-    backgroundColor: '#fff',
-  },
+    searchGradient: {
+      borderRadius: radius.lg,
+      padding: 1, // Border thickness
+    },
 
-  searchInput: {
-    flex: 1,
-    fontSize: wp(3.8),
-    marginLeft: wp(2),
-    color: '#000',
-    paddingVertical: 0,
-  },
+    searchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: radius.lg,
+      paddingHorizontal: spacing.lg,
+      height: verticalScale(46),
+      backgroundColor: colors.card,
+    },
+    searchInput: {
+      flex: 1,
+      marginLeft: spacing.sm,
+      color: colors.text,
+      paddingVertical: 0,
+      fontSize: theme.fontSizes.base,
+    },
 
-  listContent: {
-    paddingBottom: hp(2),
-  },
+    listContent: {
+      paddingBottom: spacing.xl,
+    },
 
-  callsWrapper: {
-    marginBottom: hp(0.5),
-  },
-});
+    callsWrapper: {
+      marginBottom: spacing.xs,
+    },
+  });
+};

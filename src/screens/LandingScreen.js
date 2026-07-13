@@ -8,15 +8,19 @@ import {
   ImageBackground,
   Animated,
   Easing,
+  useWindowDimensions,
 } from 'react-native';
 import MaskedView from '@react-native-masked-view/masked-view';
 import LinearGradient from 'react-native-linear-gradient';
 import { InteractionManager } from 'react-native';
+import { moderateScale } from 'react-native-size-matters';
 
-const LOGO_SIZE = 500;
 const SPLASH_TIME = 2500;
 
 const LandingScreen = ({ navigation }) => {
+  const { width } = useWindowDimensions();
+  const LOGO_SIZE = Math.min(width * 1.3, moderateScale(500));
+
   const shineAnim = useRef(new Animated.Value(-LOGO_SIZE)).current;
   const logoScale = useRef(new Animated.Value(0.9)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
@@ -25,7 +29,6 @@ const LandingScreen = ({ navigation }) => {
   useEffect(() => {
     startIntroAnimation();
     startShineEffect();
-    // handleNavigation();
 
     return () => {
       loopRef.current?.stop();
@@ -47,7 +50,7 @@ const LandingScreen = ({ navigation }) => {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      handleNavigation(); // ✅ call AFTER animation finishes
+      handleNavigation();
     });
   };
 
@@ -96,14 +99,14 @@ const LandingScreen = ({ navigation }) => {
       }
     } catch (error) {}
 
-    // ✅ ADD DELAY HERE
     await new Promise(resolve => setTimeout(resolve, SPLASH_TIME));
 
-    // ✅ SMOOTH NAVIGATION
     InteractionManager.runAfterInteractions(() => {
       navigation.replace(nextScreen);
     });
   };
+
+  const styles = createStyles(LOGO_SIZE);
 
   return (
     <ImageBackground
@@ -115,7 +118,6 @@ const LandingScreen = ({ navigation }) => {
         source={require('../assets/leftheart.png')}
         style={styles.leftHeart}
       />
-
       <Image
         source={require('../assets/rightheart.png')}
         style={styles.rightHeart}
@@ -125,10 +127,7 @@ const LandingScreen = ({ navigation }) => {
         <Animated.View
           style={[
             styles.logoBox,
-            {
-              opacity: logoOpacity,
-              transform: [{ scale: logoScale }],
-            },
+            { opacity: logoOpacity, transform: [{ scale: logoScale }] },
           ]}
         >
           <Image
@@ -148,9 +147,7 @@ const LandingScreen = ({ navigation }) => {
             <Animated.View
               style={[
                 styles.shineWrapper,
-                {
-                  transform: [{ translateX: shineAnim }, { rotate: '18deg' }],
-                },
+                { transform: [{ translateX: shineAnim }, { rotate: '18deg' }] },
               ]}
             >
               <LinearGradient
@@ -175,63 +172,51 @@ const LandingScreen = ({ navigation }) => {
 
 export default LandingScreen;
 
-const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-  },
+const createStyles = LOGO_SIZE =>
+  StyleSheet.create({
+    background: { flex: 1 },
+    container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+    logoBox: {
+      width: LOGO_SIZE,
+      height: LOGO_SIZE,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
 
-  logoBox: {
-    width: LOGO_SIZE,
-    height: LOGO_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
+    logo: { width: LOGO_SIZE, height: LOGO_SIZE, resizeMode: 'contain' },
 
-  logo: {
-    width: LOGO_SIZE,
-    height: LOGO_SIZE,
-    resizeMode: 'contain',
-  },
+    maskLayer: {
+      position: 'absolute',
+      width: LOGO_SIZE,
+      height: LOGO_SIZE,
+      top: 0,
+      left: 0,
+    },
 
-  maskLayer: {
-    position: 'absolute',
-    width: LOGO_SIZE,
-    height: LOGO_SIZE,
-    top: 0,
-    left: 0,
-  },
+    shineWrapper: {
+      width: moderateScale(140),
+      height: LOGO_SIZE * 1.5,
+      position: 'absolute',
+      top: -moderateScale(120),
+    },
 
-  shineWrapper: {
-    width: 140,
-    height: LOGO_SIZE * 1.5,
-    position: 'absolute',
-    top: -120,
-  },
+    shine: { flex: 1 },
 
-  shine: {
-    flex: 1,
-  },
+    leftHeart: {
+      position: 'absolute',
+      top: moderateScale(150),
+      left: -moderateScale(40),
+      resizeMode: 'contain',
+      opacity: 0.3,
+    },
 
-  leftHeart: {
-    position: 'absolute',
-    top: 150,
-    left: -40,
-    resizeMode: 'contain',
-    opacity: 0.3,
-  },
-
-  rightHeart: {
-    position: 'absolute',
-    top: 45,
-    right: -100,
-    resizeMode: 'contain',
-    opacity: 0.3,
-  },
-});
+    rightHeart: {
+      position: 'absolute',
+      top: moderateScale(45),
+      right: -moderateScale(100),
+      resizeMode: 'contain',
+      opacity: 0.3,
+    },
+  });

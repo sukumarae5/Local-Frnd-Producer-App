@@ -1,22 +1,21 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  Dimensions,
-} from 'react-native';
+import React, { useMemo } from 'react';
+import { View, TouchableOpacity, Image, StyleSheet, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { moderateScale } from 'react-native-size-matters';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import WelcomeScreenbackgroundgpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
 import { useSelector } from 'react-redux';
 import ContinueButton from '../components/Common/ContinueButton';
-
-const { width, height } = Dimensions.get('window');
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 const SelectYourIdealMatchScreen = ({ navigation }) => {
-  const { userdata } = useSelector(state => state.user);
+  const { userdata } = useSelector((state) => state.user);
+  const { theme } = useAppTheme();
+  const { colors, spacing } = theme;
+  const { width, height } = useWindowDimensions();
+  const styles = useMemo(() => createStyles(theme, width, height), [theme, width, height]);
 
   const handleContinue = () => {
     const gender = userdata?.user?.gender;
@@ -28,182 +27,112 @@ const SelectYourIdealMatchScreen = ({ navigation }) => {
 
     navigation.reset({
       index: 0,
-      routes: [
-        {
-          name: gender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs',
-        },
-      ],
+      routes: [{ name: gender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs' }],
     });
   };
 
   return (
     <WelcomeScreenbackgroundgpage>
-      <View style={styles.container}>
-        {/* HEADER */}
+      <SafeAreaView style={styles.container} edges={[]}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Icon name="chevron-back" size={width * 0.06} color="#000" />
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={theme.hitSlop}>
+            <Icon name="chevron-back" size={moderateScale(22)} color={colors.icon} />
           </TouchableOpacity>
-
-          <Text style={styles.headerTitle}>Select Your Ideal Match</Text>
+          <AppText variant="h4" style={styles.headerTitle}>Select Your Ideal Match</AppText>
         </View>
 
-        {/* MAIN CONTENT */}
         <View style={styles.mainWrapper}>
-          {/* TOP CARD */}
-          <LinearGradient
-            colors={['#D916F1', '#7E0FFF']}
-            style={styles.topCard}
-          >
-            <Image
-              source={require('../components/BackgroundPages/main_log1.png')}
-              style={styles.cardIcon}
-            />
-            <Text style={styles.cardText}>Love</Text>
+          <LinearGradient colors={['#D916F1', '#7E0FFF']} style={styles.topCard}>
+            <Image source={require('../components/BackgroundPages/main_log1.png')} style={styles.cardIcon} />
+            <AppText variant="h3" style={styles.cardText}>Love</AppText>
           </LinearGradient>
 
-          {/* FLOATING HEARTS */}
-
           <Icon
             name="heart"
-            size={width * 0.07}
+            size={moderateScale(25)}
             color="#D51BF9"
-            style={[
-              styles.heartIcon,
-              { top: height * 0.12, left: width * 0.1,transform: [{ rotate: '-20deg' }] },
-            ]}
+            style={[styles.heartIcon, { top: height * 0.12, left: width * 0.1, transform: [{ rotate: '-20deg' }] }]}
           />
 
           <Icon
             name="heart"
-            size={width * 0.12}
+            size={moderateScale(43)}
             color="#8C37F8"
-            style={[
-              styles.heartIcon,
-              { top: height * 0.13, right: width * 0.04 ,transform: [{ rotate: '20deg' }] },
-            ]}
-          />
-          {/* HAND IMAGE */}
-          <Image
-            source={require('../assets/lovehand.png')}
-            style={styles.handImage}
+            style={[styles.heartIcon, { top: height * 0.13, right: width * 0.04, transform: [{ rotate: '20deg' }] }]}
           />
 
-          {/* TEXT */}
-          <Text style={styles.bottomText}>
+          <Image source={require('../assets/lovehand.png')} style={styles.handImage} />
+
+          <AppText variant="h2" style={styles.bottomText}>
             Lets{'\n'}Make{'\n'}Friends
-          </Text>
+          </AppText>
         </View>
 
-        {/* BOTTOM HEARTS */}
         <Icon
           name="heart"
-          size={width * 0.15}
+          size={moderateScale(54)}
           color="#D51BF9"
-          style={[
-            styles.heartIcon,
-            { bottom: height * 0.33, left: -width * 0.065  },
-          ]}
+          style={[styles.heartIcon, { bottom: height * 0.33, left: -width * 0.065 }]}
         />
 
         <Icon
           name="heart"
-          size={width * 0.07}
+          size={moderateScale(25)}
           color="#8C37F8"
-          style={[
-            styles.heartIcon,
-            { bottom: height * 0.37, right: width * 0.1,transform: [{ rotate: '15deg' }]  },
-          ]}
+          style={[styles.heartIcon, { bottom: height * 0.37, right: width * 0.1, transform: [{ rotate: '15deg' }] }]}
         />
-        {/* BUTTON */}
+
         <View style={styles.bottomFixed}>
           <ContinueButton onPress={handleContinue} />
         </View>
-      </View>
+      </SafeAreaView>
     </WelcomeScreenbackgroundgpage>
   );
 };
 
 export default SelectYourIdealMatchScreen;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: width * 0.05,
-  },
+const createStyles = (theme, width, height) => {
+  const { colors, spacing } = theme;
 
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: height * 0.015,
-  },
+  return StyleSheet.create({
+    container: { flex: 1, paddingHorizontal: spacing.lg },
 
-  headerTitle: {
-    fontSize: width * 0.045,
-    fontWeight: '700',
-    marginLeft: width * 0.03,
-  },
+    header: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm },
+    headerTitle: { marginLeft: spacing.sm },
 
-  mainWrapper: {
-    flex: 1,
-    alignItems: 'center',
-    marginTop: height * 0.05,
-  },
+    mainWrapper: { flex: 1, alignItems: 'center', marginTop: spacing.xxl },
 
-  topCard: {
-    width: width * 0.4,
-    height: height * 0.22,
-    borderRadius: width * 0.05,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 3,
-  },
+    topCard: {
+      width: width * 0.4,
+      height: height * 0.22,
+      borderRadius: moderateScale(20),
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 3,
+    },
 
-  cardIcon: {
-    width: width * 0.15,
-    height: width * 0.15,
-    borderRadius: width * 0.2,
-    backgroundColor: 'white',
-    marginBottom: height * 0.01,
-  },
+    cardIcon: {
+      width: width * 0.15,
+      height: width * 0.15,
+      borderRadius: width * 0.2,
+      backgroundColor: 'white',
+      marginBottom: spacing.sm,
+    },
 
-  cardText: {
-    color: '#fff',
-    fontSize: width * 0.05,
-    fontWeight: '700',
-  },
+    cardText: { color: '#fff' },
 
-  smallHeart: {
-    width: width * 0.07,
-    height: width * 0.07,
-    position: 'absolute',
-    resizeMode: 'contain',
-  },
+    handImage: { marginTop: spacing.sm, width: width * 0.7, height: height * 0.22, resizeMode: 'contain' },
 
-  handImage: {
-    marginTop: height * 0.02,
-    width: width * 0.7,
-    height: height * 0.22,
-    resizeMode: 'contain',
-  },
+    bottomText: {
+      marginTop: spacing.sm,
+      color: colors.accentViolet,
+      textAlign: 'center',
+      lineHeight: height * 0.035,
+    },
 
-  bottomText: {
-    marginTop: height * 0.02,
-    fontSize: width * 0.055,
-    fontWeight: '700',
-    color: '#8A2DFF',
-    textAlign: 'center',
-    lineHeight: height * 0.035,
-  },
+    bottomFixed: { position: 'absolute', bottom: spacing.md, left: 0, right: 0, alignItems: 'center' },
 
-  bottomFixed: {
-    position: 'absolute',
-    bottom: height * 0.025,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  heartIcon: {
-    position: 'absolute',
-  },
-});
+    heartIcon: { position: 'absolute' },
+  });
+};

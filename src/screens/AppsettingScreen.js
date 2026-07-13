@@ -1,247 +1,153 @@
-import React, { useState, useContext } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  Modal,
-  ScrollView,
-  Dimensions,
-} from "react-native";
-import Icon from "react-native-vector-icons/Ionicons";
-import { useNavigation } from "@react-navigation/native";
-import { useDispatch } from "react-redux";
-import { SocketContext } from "../socket/SocketProvider";
-import WelcomeScreenbackgroungpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
-
-const { height } = Dimensions.get("window");
+import React, { useMemo } from 'react';
+import { View, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { moderateScale } from 'react-native-size-matters';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
+import LinearGradient from 'react-native-linear-gradient';
+import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 const AppsettingScreen = () => {
   const navigation = useNavigation();
-  const dispatch = useDispatch();
-  const { socketRef } = useContext(SocketContext);
+  const { theme } = useAppTheme();
+  const { colors, spacing } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-
-  
- return (
-  <WelcomeScreenbackgroungpage>
-    <View style={styles.container}>
-
+  return (
+    <WelcomeScreenbackgroungpage>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContainer}
       >
-
-        {/* HEADER */}
         <View style={styles.header}>
-          <Icon
-            name="arrow-back"
-            size={22}
+          <TouchableOpacity
             onPress={() => navigation.goBack()}
-          />
-          <Text style={styles.headerTitle}>App Settings</Text>
+            hitSlop={theme.hitSlop}
+          >
+            <Icon
+              name="arrow-back"
+              size={moderateScale(22)}
+              color={colors.icon}
+            />
+          </TouchableOpacity>
+          <AppText variant="h3" style={styles.headerTitle}>
+            App Settings
+          </AppText>
         </View>
 
-        {/* LIST */}
-      <View style={styles.listBox}>
-  <Item icon="shield-checkmark-outline" title="Privacy Policy" onPress={()=> navigation.navigate("PrivacyPolicyScreen")} />
-  <Item icon="document-text-outline" title="Terms of Use" onPress={()=>navigation.navigate("TermsofUseScreen")} />
-  <Item icon="people-outline" title="Community Guidelines" onPress={()=> navigation.navigate("CummunityGuidelineScreen")} />
-  <Item icon="language-outline" title="App Language" />
-  <Item icon="chatbubbles-outline" title="Customer Support Chat" />
-  <Item icon="information-circle-outline" title="About Local Frnd" />
-  <Item
-  icon="settings-outline"
-  title="Settings"
-  onPress={() => navigation.navigate("SettingScreen")}
-/>
-  <Item icon="card-outline" title="Payment Policy" />
-  <Item icon="shield-half-outline" title="Safety Center" />
-</View>
-
-        
-
+        <View style={styles.listBox}>
+          <Item
+            icon="shield-checkmark-outline"
+            title="Privacy Policy"
+            onPress={() => navigation.navigate('PrivacyPolicyScreen')}
+          />
+          <Item
+            icon="document-text-outline"
+            title="Terms of Use"
+            onPress={() => navigation.navigate('TermsofUseScreen')}
+          />
+          <Item
+            icon="people-outline"
+            title="Community Guidelines"
+            onPress={() => navigation.navigate('CummunityGuidelineScreen')}
+          />
+          <Item icon="language-outline" title="App Language" />
+          <Item icon="chatbubbles-outline" title="Customer Support Chat" />
+          <Item icon="information-circle-outline" title="About Local Frnd" />
+          <Item
+            icon="settings-outline"
+            title="Settings"
+            onPress={() => navigation.navigate('SettingScreen')}
+          />
+          <Item icon="card-outline" title="Payment Policy" />
+          <Item icon="shield-half-outline" title="Safety Center" />
+        </View>
       </ScrollView>
-
-     
-
-    </View>
-  </WelcomeScreenbackgroungpage>
-);
+    </WelcomeScreenbackgroungpage>
+  );
 };
 
 /* ---------- REUSABLE ITEM ---------- */
-const Item = ({ icon, title, onPress }) => (
-  <TouchableOpacity style={styles.item} onPress={onPress} activeOpacity={0.8}>
-    <View style={styles.iconCircle}>
-      <Icon name={icon} size={18} color="#fff" />
-    </View>
+const Item = ({ icon, title, onPress }) => {
+  const { theme } = useAppTheme();
+  const { colors, spacing } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
-    <Text style={styles.itemText}>{title}</Text>
+  return (
+    <TouchableOpacity style={styles.item} onPress={onPress} activeOpacity={0.8}>
+      <LinearGradient
+        colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]}
+        useAngle
+        angle={75.05}
+        style={styles.iconCircle}
+      >
+        <Icon name={icon} size={moderateScale(18)} color={colors.textInverse} />
+      </LinearGradient>
 
-    <Icon name="chevron-forward" size={18} color="#aaa" />
-  </TouchableOpacity>
-);
+      <AppText variant="subtitle" style={styles.itemText}>
+        {title}
+      </AppText>
 
+      <Icon
+        name="chevron-forward"
+        size={moderateScale(18)}
+        color={colors.textMuted}
+      />
+    </TouchableOpacity>
+  );
+};
 
 export default AppsettingScreen;
 
-/* ================= STYLES ================= */
-const styles = StyleSheet.create({
-  container: {
-  flex: 1,
-  
-},
+const createStyles = theme => {
+  const { colors, spacing, radius } = theme;
 
-scrollContainer: {
-  flexGrow: 1,
-  paddingBottom: height * 0.05,
-},
-  /* HEADER */
-  header: {
-  flexDirection: "row",
-  alignItems: "center",
-  paddingHorizontal: 16,
-  paddingTop: height * 0.01, 
-  marginBottom: 10,
-},
+  return StyleSheet.create({
+    container: { flex: 1 },
 
-headerTitle: {
-  fontSize: 20,
-  fontWeight: "600",
-  marginLeft: 10,
-  color: '#000', // ✅ ADD
-},
+    scrollContainer: {
+      flexGrow: 1,
+      paddingBottom: spacing.xxxl,
+    },
 
-  /* LIST */
-  listBox: {
-    marginTop: 20,
-  },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+      marginBottom: spacing.sm,
+    },
 
-  item: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
-  },
+    headerTitle: {
+      marginLeft: spacing.sm,
+    },
 
-  iconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#C44DFF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 14,
-  },
+    listBox: {
+      marginTop: spacing.xl,
+    },
 
-  itemText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "500",
-    color: '#000', // ✅ ADD
-  },
+    item: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.xl,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
 
-  /* LOGOUT ROW */
-  logoutItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    backgroundColor: "#fff",
-    marginTop: height * 0.1,
-  },
+    iconCircle: {
+      width: moderateScale(34),
+      height: moderateScale(34),
+      borderRadius: moderateScale(17),
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: spacing.md,
+      overflow: 'hidden',
+    },
 
-  logoutIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#C44DFF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 14,
-  },
-
-  logoutText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "500",
-    color: '#000', // ✅ ADD
-  },
-
-  /* MODAL */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  modalBox: {
-    width: "80%",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    alignItems: "center",
-  },
-
-  modalIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#C44DFF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 6,
-    color: '#000', // ✅ ADD
-  },
-
-  modalSub: {
-    fontSize: 13,
-    color: "#777",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-
-  modalButtons: {
-    flexDirection: "row",
-    width: "100%",
-  },
-
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: "#F4E6FF",
-    marginRight: 10,
-    alignItems: "center",
-  },
-
-  cancelText: {
-    color: "#C44DFF",
-    fontWeight: "600",
-  },
-
-  confirmBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: "#C44DFF",
-    alignItems: "center",
-  },
-
-  confirmText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-});
+    itemText: {
+      flex: 1,
+    },
+  });
+};

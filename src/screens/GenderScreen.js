@@ -1,36 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  Pressable,
-  StyleSheet,
-  Dimensions,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Image, Pressable, Alert, StyleSheet, useWindowDimensions } from 'react-native';
+import { moderateScale } from 'react-native-size-matters';
 import { useDispatch, useSelector } from 'react-redux';
 import { newUserDataRequest } from '../features/user/userAction';
 import { useravatarapifetchrequest } from '../features/Avatars/avatarsAction';
 import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
 import ContinueButton from '../components/Common/ContinueButton';
-import LinearGradient from 'react-native-linear-gradient';
-
-const { width, height } = Dimensions.get('window');
-
-const CARD_SIZE = width * 0.32;
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 const GenderScreen = ({ navigation }) => {
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const { width, height } = useWindowDimensions();
+  const styles = useMemo(() => createStyles(theme, width, height), [theme, width, height]);
+
+  const CARD_SIZE = width * 0.32;
 
   const [selectedGender, setSelectedGender] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResponseHandled, setIsResponseHandled] = useState(false);
 
-  // ✅ BACKEND RESPONSE FROM USER REDUCER
-  const { success, message } = useSelector(state => state.user);
+  const { success, message } = useSelector((state) => state.user);
 
-  /* ---------- HANDLE CONTINUE ---------- */
   const handleContinue = () => {
     if (!selectedGender) return;
 
@@ -40,18 +33,13 @@ const GenderScreen = ({ navigation }) => {
     dispatch(useravatarapifetchrequest(selectedGender));
   };
 
-  /* ---------- HANDLE BACKEND RESPONSE ---------- */
   useEffect(() => {
     if (!message || isResponseHandled) return;
 
     setIsSubmitting(false);
     setIsResponseHandled(true);
 
-    // ✅ FIX: normalize message (string only)
-    const alertMessage =
-      typeof message === 'string'
-        ? message
-        : message?.message || 'Something went wrong';
+    const alertMessage = typeof message === 'string' ? message : message?.message || 'Something went wrong';
 
     Alert.alert(success ? 'Success ✅' : 'Error ❌', alertMessage, [
       {
@@ -69,7 +57,6 @@ const GenderScreen = ({ navigation }) => {
     ]);
   }, [message, success, isResponseHandled, selectedGender, navigation]);
 
-  /* ---------- RESET ALERT WHEN SCREEN OPENS AGAIN ---------- */
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       setIsResponseHandled(false);
@@ -79,137 +66,111 @@ const GenderScreen = ({ navigation }) => {
 
   return (
     <WelcomeScreenbackgroungpage>
-      <View style={styles.container}>
-        {/* Logo */}
         <View style={styles.logoWrapper}>
-          <Image
-            source={require('../components/BackgroundPages/main_log1.png')}
-            style={styles.logo}
-          />
+          <Image source={require('../components/BackgroundPages/main_log1.png')} style={styles.logo} />
         </View>
 
-        {/* Title */}
-        <Text style={styles.title}>Select your gender</Text>
+        <AppText variant="h2" style={styles.title}>Select your gender</AppText>
 
-        {/* Gender Cards */}
         <View style={styles.cardRow}>
-          {/* MALE */}
           <Pressable onPress={() => setSelectedGender('Male')}>
             <View
               style={[
                 styles.card,
+                { width: CARD_SIZE, height: CARD_SIZE, borderRadius: width * 0.08 },
                 selectedGender === 'Male' && styles.selectedCard,
               ]}
             >
-              <Image
-                source={require('../assets/boy1.jpg')}
-                style={styles.avatar}
-              />
+              <Image source={require('../assets/boy1.jpg')} style={styles.avatar} />
             </View>
-            <Text style={styles.label}>Male</Text>
+            <AppText variant="subtitle" style={styles.label}>Male</AppText>
           </Pressable>
 
-          {/* FEMALE */}
           <Pressable onPress={() => setSelectedGender('Female')}>
             <View
               style={[
                 styles.card,
+                { width: CARD_SIZE, height: CARD_SIZE, borderRadius: width * 0.08 },
                 selectedGender === 'Female' && styles.selectedCard,
               ]}
             >
-              <Image
-                source={require('../assets/girl1.jpg')}
-                style={styles.avatar}
-              />
+              <Image source={require('../assets/girl1.jpg')} style={styles.avatar} />
             </View>
-            <Text style={styles.label}>Female</Text>
+            <AppText variant="subtitle" style={styles.label}>Female</AppText>
           </Pressable>
         </View>
 
-        {/* Continue Button */}
         <View style={styles.bottomFixed}>
-          <ContinueButton
-            disabled={!selectedGender}
-            loading={isSubmitting}
-            onPress={handleContinue}
-          />
+          <ContinueButton disabled={!selectedGender} loading={isSubmitting} onPress={handleContinue} />
         </View>
-      </View>
     </WelcomeScreenbackgroungpage>
   );
 };
 
 export default GenderScreen;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: width * 0.06,
-    
-  },
+const createStyles = (theme, width, height) => {
+  const { colors, spacing } = theme;
 
-  logoWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      paddingHorizontal: width * 0.06,
+    },
 
-  logo: {
-    width: width * 0.3,
-    height: width * 0.3,
-    resizeMode: 'contain',
-    marginBottom: height * 0.02,
-  },
+    logoWrapper: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
 
-  title: {
-    color: '#080808',
-    fontSize: width * 0.07,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: height * 0.05,
-  },
+    logo: {
+      width: width * 0.3,
+      height: width * 0.3,
+      resizeMode: 'contain',
+      marginBottom: spacing.md,
+    },
 
-  cardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: height * 0.01,
-  },
+    title: {
+      textAlign: 'center',
+      marginBottom: spacing.xxxl,
+    },
 
-  card: {
-    width: CARD_SIZE,
-    height: CARD_SIZE,
-    borderRadius: width * 0.08,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 6,
-  },
+    cardRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      marginTop: spacing.xs,
+    },
 
-  selectedCard: {
-    borderWidth: 3,
-    borderColor: '#db0afc',
-    borderRadius: width * 0.08,
-    transform: [{ scale: 1.05 }],
-  },
+    card: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 6,
+    },
 
-  avatar: {
-    width: '95%',
-    height: '95%',
-    resizeMode: 'contain',
-    borderRadius: width * 0.04,
-  },
+    selectedCard: {
+      borderWidth: 3,
+      borderColor: '#db0afc', // kept as fixed brand accent, matches avatar selection border elsewhere
+      transform: [{ scale: 1.05 }],
+    },
 
-  label: {
-    color: '#121111',
-    textAlign: 'center',
-    marginTop: height * 0.02,
-    fontSize: width * 0.045,
-    fontWeight: '500',
-  },
+    avatar: {
+      width: '95%',
+      height: '95%',
+      resizeMode: 'contain',
+      borderRadius: width * 0.04,
+    },
 
-  bottomFixed: {
-    position: 'absolute',
-    bottom: height * 0.03, // 🔥 responsive
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-});
+    label: {
+      textAlign: 'center',
+      marginTop: spacing.md,
+    },
+
+    bottomFixed: {
+      position: 'absolute',
+      bottom: height * 0.03,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+    },
+  });
+};

@@ -1,23 +1,24 @@
-import React, { useContext, useCallback } from 'react';
+import React, { useContext, useCallback, useMemo } from 'react';
 import {
   View,
-  Text,
   Image,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { moderateScale } from 'react-native-size-matters';
 import MaskedView from '@react-native-masked-view/masked-view';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Svg, { Path } from 'react-native-svg';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import { SocketContext } from '../socket/SocketProvider';
-import { useFocusEffect } from '@react-navigation/native';
 import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
-
-const { width } = Dimensions.get('window');
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 const GradientHeart = ({ size = 140, style }) => {
   return (
@@ -28,7 +29,7 @@ const GradientHeart = ({ size = 140, style }) => {
       <LinearGradient
         colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']}
         start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }} // 180deg
+        end={{ x: 0, y: 1 }}
         style={{ width: size, height: size }}
       />
     </MaskedView>
@@ -39,10 +40,12 @@ const ProfileScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const { socketRef } = useContext(SocketContext);
+  const { theme } = useAppTheme();
+  const { colors, spacing } = theme;
+  const { width } = useWindowDimensions();
+  const styles = useMemo(() => createStyles(theme, width), [theme, width]);
 
   const { userdata } = useSelector(state => state.user);
-
-  console.log(userdata);
 
   useFocusEffect(
     useCallback(() => {
@@ -51,64 +54,84 @@ const ProfileScreen = () => {
   );
 
   return (
-    <WelcomeScreenbackgroungpage>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="dark-content"
+      />
       <View style={styles.container}>
-        {/* ================= TOP PURPLE SECTION ================= */}
+        {/* ================= TOP HERO SECTION (fixed illustration colors) ================= */}
         <LinearGradient
           colors={['#F3D1FF', '#E9C9FF', '#F8D4F4']}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={styles.topBg}
         >
-          {/* HEART BACKGROUND */}
-          <GradientHeart size={140} style={styles.leftHeart} />
-          <GradientHeart size={220} style={styles.rightHeart} />
+          <GradientHeart size={moderateScale(140)} style={styles.leftHeart} />
+          <GradientHeart size={moderateScale(220)} style={styles.rightHeart} />
 
-          {/* HEADER */}
           <View style={styles.header}>
-            <Icon
-              name="arrow-back"
-              size={22}
-              onPress={() => navigation.goBack()}
-            />
-            <Text style={styles.headerTitle}>Profile</Text>
-          </View>
-
-          {/* AVATAR */}
-          <View style={styles.avatarWrap}>
-            <View style={styles.avatarRing}>
-              <Image
-                pointerEvents="none"
-                source={{
-                  uri:
-                    userdata?.images?.display_profile_image ||
-                    'https://i.pravatar.cc/150?img=12',
-                }}
-                style={styles.avatar}
-              />
-            </View>
-          </View>
-
-          {/* NAME */}
-          <View style={styles.nameRow}>
             <TouchableOpacity
-              style={styles.editCircle}
-              onPress={() => navigation.navigate('EditProfileScreen')}
+              onPress={() => navigation.goBack()}
+              hitSlop={theme.hitSlop}
             >
-              <Icon name="pencil" size={14} color="#fff" />
+              <Icon
+                name="arrow-back"
+                size={moderateScale(22)}
+                color={colors.icon}
+              />
             </TouchableOpacity>
 
-            <Text style={styles.username}>
-              {userdata?.name || userdata?.user?.name || 'User'}
-            </Text>
+            <AppText variant="h3" style={styles.headerTitle}>
+              Profile
+            </AppText>
+          </View>
+          <View style={styles.avatarWrap}>
+            <LinearGradient
+              colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]}
+              useAngle
+              angle={75.05}
+              style={styles.avatarRing}
+            >
+              <View style={styles.avatarInner}>
+                <Image
+                  source={{
+                    uri:
+                      userdata?.images?.display_profile_image ||
+                      'https://i.pravatar.cc/150?img=12',
+                  }}
+                  style={styles.avatar}
+                />
+              </View>
+            </LinearGradient>
           </View>
 
-          {/* CURVE */}
+          <View style={styles.nameRow}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('EditProfileScreen')}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]}
+                useAngle
+                angle={75.05}
+                style={styles.editCircle}
+              >
+                <Icon name="pencil" size={moderateScale(15)} color="#fff" />
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <AppText variant="h3" style={styles.username}>
+              {userdata?.name || userdata?.user?.name || 'User'}
+            </AppText>
+          </View>
+
           <Svg
             pointerEvents="none"
             width={width}
-            height={140}
-            style={{ position: 'absolute', bottom: -1 }}
+            height={moderateScale(140)}
+            style={styles.curveSvg}
           >
             <Path
               d={`
@@ -118,10 +141,11 @@ const ProfileScreen = () => {
               L 0 140
               Z
             `}
-              fill="#FFFFFF"
+              fill={colors.background}
             />
           </Svg>
         </LinearGradient>
+
         {/* ================= CONTENT ================= */}
         <View style={styles.content}>
           <View style={styles.listBox}>
@@ -130,6 +154,8 @@ const ProfileScreen = () => {
               color="#F6A623"
               title="Favorites"
               sub="you sent them a flashnote!"
+              styles={styles}
+              iconColors={colors}
             />
 
             <Item
@@ -137,14 +163,18 @@ const ProfileScreen = () => {
               color="#FF5A5A"
               title="Invite Friends"
               sub="Invite your friends and earn Flashnotes!"
+              styles={styles}
+              iconColors={colors}
             />
 
             <Item
               icon="settings-outline"
-              color="#999"
+              color={colors.textMuted}
               title="App Settings"
               sub="Manage your notifications, connected accounts.."
               onPress={() => navigation.navigate('AppsettingScreen')}
+              styles={styles}
+              iconColors={colors}
             />
 
             <Item
@@ -153,26 +183,35 @@ const ProfileScreen = () => {
               title="Need Help?"
               sub="FAQ, tutorial and contact"
               onPress={() => navigation.navigate('HelpCenterScreen')}
+              styles={styles}
+              iconColors={colors}
             />
           </View>
         </View>
       </View>
-    </WelcomeScreenbackgroungpage>
+    </SafeAreaView>
   );
 };
 
 /* ================= LIST ITEM ================= */
-
-const Item = ({ icon, color, title, sub, onPress }) => (
+// Pure presentational component — receives styles/colors as props rather than
+// calling useAppTheme() itself, avoiding redundant context reads per row.
+const Item = ({ icon, color, title, sub, onPress, styles, iconColors }) => (
   <TouchableOpacity style={styles.item} onPress={onPress} activeOpacity={0.7}>
-    <Icon name={icon} size={22} color={color} />
+    <Icon name={icon} size={moderateScale(22)} color={color} />
 
-    <View style={{ flex: 1, marginLeft: 12 }}>
-      <Text style={styles.itemTitle}>{title}</Text>
-      <Text style={styles.itemSub}>{sub}</Text>
+    <View style={styles.itemTextWrap}>
+      <AppText variant="subtitle">{title}</AppText>
+      <AppText variant="caption" color="textMuted" style={styles.itemSub}>
+        {sub}
+      </AppText>
     </View>
 
-    <Icon name="chevron-forward" size={18} color="#aaa" />
+    <Icon
+      name="chevron-forward"
+      size={moderateScale(18)}
+      color={iconColors.textMuted}
+    />
   </TouchableOpacity>
 );
 
@@ -180,120 +219,134 @@ export default ProfileScreen;
 
 /* ================= STYLES ================= */
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff', // ✅ ADD
-  },
-  topBg: {
-    height: 300,
-    paddingTop: 10,
-    overflow: 'hidden', // 👈 important for curve + hearts
-  },
+const createStyles = (theme, width) => {
+  const { colors, spacing, radius } = theme;
 
-  leftHeart: {
-    position: 'absolute',
-    left: -50,
-    top: 90,
-    width: 150,
-    height: 150,
-    resizeMode: 'contain',
-  },
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  rightHeart: {
-    position: 'absolute',
-    right: -20,
-    top: 20,
-    width: 170,
-    height: 170,
-    resizeMode: 'contain',
-  },
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-  },
+    // Fixed decorative hero — intentionally not theme-driven, same reasoning
+    // as promo card overlays: this is illustration, not surface UI.
+    topBg: {
+      height: moderateScale(300),
+      paddingTop: spacing.sm,
+      overflow: 'hidden',
+    },
 
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginLeft: 10,
-    color: '#000', // ✅ ADD
-  },
+    leftHeart: {
+      position: 'absolute',
+      left: -moderateScale(50),
+      top: moderateScale(90),
+      width: moderateScale(150),
+      height: moderateScale(150),
+      resizeMode: 'contain',
+    },
 
-  avatarWrap: {
-    alignItems: 'center',
-    marginTop: 5,
-  },
+    rightHeart: {
+      position: 'absolute',
+      right: -moderateScale(20),
+      top: moderateScale(20),
+      width: moderateScale(170),
+      height: moderateScale(170),
+      resizeMode: 'contain',
+    },
 
-  avatarRing: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 6,
-    borderColor: '#C44DFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+    },
 
-  avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-  },
+    headerTitle: {
+      marginLeft: spacing.sm,
+    },
 
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-  },
+    avatarWrap: {
+      alignItems: 'center',
+      marginTop: spacing.xxs,
+    },
 
-  editCircle: {
-    backgroundColor: '#C44DFF',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
+    avatarRing: {
+      width: moderateScale(120),
+      height: moderateScale(120),
+      borderRadius: moderateScale(60),
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 4,
+    },
 
-  username: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#000', // ✅ ADD
-  },
+    avatarInner: {
+      flex: 1,
+      width: '100%',
+      borderRadius: moderateScale(56),
+      overflow: 'hidden',
+      backgroundColor: '#fff',
+    },
 
-  content: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    paddingTop: 20,
-  },
+    avatar: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'cover',
+    },
+    nameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: spacing.md,
+    },
 
-  listBox: {
-    backgroundColor: '#FFFFFF',
-  },
+    editCircle: {
+      width: moderateScale(34),
+      height: moderateScale(34),
+      borderRadius: moderateScale(17),
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.sm,
+    },
 
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#eee',
-  },
+    username: {
+      color: '#000', // sits on the fixed pastel hero, kept fixed to match
+    },
 
-  itemTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#000', // ✅ ADD
-  },
+    curveSvg: {
+      position: 'absolute',
+      bottom: -1,
+    },
 
-  itemSub: {
-    fontSize: 11,
-    color: '#777',
-    marginTop: 2,
-  },
-});
+    content: {
+      flex: 1,
+      backgroundColor: colors.background,
+      marginTop: -moderateScale(8),
+    },
+
+    listBox: {
+      backgroundColor: colors.background,
+    },
+
+    item: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.xl,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
+
+    itemTextWrap: {
+      flex: 1,
+      marginLeft: spacing.md,
+    },
+
+    itemSub: {
+      marginTop: spacing.xxs,
+    },
+  });
+};

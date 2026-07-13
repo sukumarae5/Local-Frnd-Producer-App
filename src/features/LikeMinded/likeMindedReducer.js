@@ -25,15 +25,13 @@ const likeMindedReducer = (
       };
 
     case GET_LIKE_MINDED_SUCCESS:
-      return {
-        ...state,
-        loading: false,
-        data: Array.isArray(action.payload)
-          ? action.payload
-          : [],
-        error: null,
-      };
-
+  return {
+    ...state,
+    loading: false,
+    data: action.payload.users || [],
+    error: null,
+  };
+  
     case GET_LIKE_MINDED_FAILURE:
       return {
         ...state,

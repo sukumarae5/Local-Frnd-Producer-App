@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   StyleSheet,
-  Dimensions,
   TouchableOpacity,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -14,77 +14,136 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
+import { useAppTheme } from '../../theme';
 
-const { width, height } = Dimensions.get('window');
-
-const GradientHeart = ({ size, style, rotate = '0deg' }) => {
-  return (
-    <MaskedView
-      style={[{ width: size, height: size }, style]}
-      renderToHardwareTextureAndroid
-      shouldRasterizeIOS
-      maskElement={
-        <View style={{ justifyContent: 'center', alignItems: 'center' }}>
-          <Icon name="heart" size={size} color="#fff" />
-        </View>
-      }
-    >
-      <LinearGradient
-        colors={['rgba(255,255,255,0.6)', 'rgba(168,85,247,0.25)']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
+const GradientHeart = ({ size, style, rotate = '0deg' }) => (
+  <MaskedView
+    style={[{ width: size, height: size }, style]}
+    maskElement={
+      <View
         style={{
-          width: size,
-          height: size,
-          transform: [{ rotate }],
-        }}
-      />
-    </MaskedView>
-  );
-};
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+        <Icon
+          name="heart"
+          size={size}
+          color="#000"
+        />
+      </View>
+    }>
+    <LinearGradient
+      colors={[
+        'rgba(255,255,255,0.65)',
+        'rgba(168,85,247,0.25)',
+      ]}
+      start={{ x: 0.5, y: 0 }}
+      end={{ x: 0.5, y: 1 }}
+      style={{
+        flex: 1,
+        transform: [{ rotate }],
+      }}
+    />
+  </MaskedView>
+);
 
-const AuthLayout = ({ children, showBack = false, onBack }) => {
+const AuthLayout = ({
+  children,
+  showBack = false,
+  onBack,
+}) => {
+  const { theme } = useAppTheme();
+  const { spacing, radius, colors } = theme;
+
   const insets = useSafeAreaInsets();
+
+  const { width, height } =
+    useWindowDimensions();
+
+  const styles = useMemo(
+    () =>
+      createStyles(
+        theme,
+        width,
+        height,
+      ),
+    [theme, width, height],
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* TOP BACKGROUND */}
-        <View style={styles.topWrapper}>
-          {/* ✅ BACK BUTTON */}
+        {/* Header */}
+        <View style={styles.header}>
+
           {showBack && (
             <TouchableOpacity
-              style={[styles.backButton, { top: insets.top + 10 }]}
               onPress={onBack}
-            >
-              <Icon name="chevron-back" size={26} color="#000" />
+              hitSlop={theme.hitSlop}
+              style={[
+                styles.backButton,
+                {
+                  top:
+                    insets.top +
+                    spacing.sm,
+                },
+              ]}>
+              <Icon
+                name="chevron-back"
+                size={26}
+                color="#000"
+              />
             </TouchableOpacity>
           )}
 
-          {/* BACKGROUND */}
           <LinearGradient
-            colors={['#F3D1FF', '#E9C9FF', '#F8D4F4']}
-            style={{ flex: 1 }}
-          >
-            <GradientHeart size={150} rotate="-20deg" style={styles.leftIcon} />
-            <GradientHeart size={250} rotate="20deg" style={styles.rightIcon} />
+            colors={[
+              '#F3D1FF',
+              '#E9C9FF',
+              '#F8D4F4',
+            ]}
+            style={styles.gradient}>
+
+            <GradientHeart
+              size={styles.leftHeart.width}
+              rotate="-18deg"
+              style={styles.leftHeart}
+            />
+
+            <GradientHeart
+              size={styles.rightHeart.width}
+              rotate="18deg"
+              style={styles.rightHeart}
+            />
           </LinearGradient>
 
-          {/* CURVE */}
-          <Svg width={width} height={160} style={styles.curve}>
+          {/* Curve */}
+          <Svg
+            width={width}
+            height={styles.curve.height}
+            style={styles.curve}>
             <Path
               d={`
-                M0 150
-                C ${width * 0.2} 20, ${width * 0.8} 220, ${width} 90
-                L ${width} 160
-                L 0 160
+                M0 ${styles.curveHeight}
+                C ${width * 0.22} 20,
+                  ${width * 0.78} ${
+                styles.curveHeight + 70
+              },
+                  ${width} 70
+                L ${width} ${
+                styles.curve.height
+              }
+                L 0 ${
+                styles.curve.height
+              }
                 Z
               `}
-              fill="#fff"
+              fill={colors.background}
             />
           </Svg>
 
-          {/* LOGO */}
+          {/* Logo */}
           <View style={styles.logoWrapper}>
             <Image
               source={require('../../components/BackgroundPages/main_log1.png')}
@@ -93,8 +152,10 @@ const AuthLayout = ({ children, showBack = false, onBack }) => {
           </View>
         </View>
 
-        {/* CONTENT */}
-        <View style={styles.content}>{children}</View>
+        {/* Content */}
+        <View style={styles.content}>
+          {children}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -102,73 +163,116 @@ const AuthLayout = ({ children, showBack = false, onBack }) => {
 
 export default AuthLayout;
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F3D1FF',
-  },
+const createStyles = (
+  theme,
+  width,
+  height,
+) => {
+  const {
+    spacing,
+    radius,
+    colors,
+  } = theme;
 
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
+  const logoSize = Math.min(
+    width * 0.28,
+    120,
+  );
 
-  backButton: {
-    position: 'absolute',
-    left: 15,
-    zIndex: 999,
-    elevation: 999,
-    backgroundColor: '#b41313', // 👈 makes it visible
-    padding: 8,
-    borderRadius: 20,
-  },
+  const leftHeart = Math.min(
+    width * 0.42,
+    170,
+  );
 
-  topWrapper: {
-    width: '100%',
-    height: height * 0.35,
-  },
+  const rightHeart = Math.min(
+    width * 0.62,
+    260,
+  );
 
-  topPurple: {
-    flex: 1,
-    backgroundColor: '#F3D1FF',
-    overflow: 'hidden',
-  },
+  const headerHeight = height * 0.34;
 
-  leftIcon: {
-    position: 'absolute',
-    top: height * 0.15,
-    left: -width * 0.1,
-  },
+  const curveHeight = 120;
 
-  rightIcon: {
-    position: 'absolute',
-    top: height * 0.05,
-    right: -width * 0.2,
-  },
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: '#F3D1FF',
+    },
 
-  logoWrapper: {
-    position: 'absolute',
+    container: {
+      flex: 1,
+      backgroundColor:
+        colors.background,
+    },
 
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 10,
-    elevation: 10,
-  },
+    header: {
+      width: '100%',
+      height: headerHeight,
+      overflow: 'hidden',
+    },
 
-  logo: {
-    width: 120,
-    height: 120,
-    resizeMode: 'contain',
-  },
+    gradient: {
+      flex: 1,
+    },
 
-  curve: {
-    position: 'absolute',
-    bottom: -1,
-  },
+    backButton: {
+      position: 'absolute',
+      left: spacing.lg,
+      zIndex: 100,
+      backgroundColor:
+        'rgba(255,255,255,0.9)',
+      padding: spacing.sm,
+      borderRadius:
+        radius.pill,
+    },
 
-  content: {
-    flex: 1,
-    paddingHorizontal: 24,
-  },
-});
+    leftHeart: {
+      width: leftHeart,
+      height: leftHeart,
+      position: 'absolute',
+      left: -leftHeart * 0.25,
+      bottom: 20,
+    },
+
+    rightHeart: {
+      width: rightHeart,
+      height: rightHeart,
+      position: 'absolute',
+      right: -rightHeart * 0.22,
+      top: 30,
+    },
+
+    logoWrapper: {
+      position: 'absolute',
+      width: '100%',
+      alignItems: 'center',
+      top: headerHeight * 0.12,
+    },
+
+    logo: {
+      width: logoSize,
+      height: logoSize,
+      resizeMode: 'contain',
+    },
+
+    curve: {
+      position: 'absolute',
+      bottom: -1,
+      height: 140,
+    },
+
+    curveHeight,
+
+    content: {
+      flex: 1,
+      paddingHorizontal:
+        spacing.xl,
+
+      // IMPORTANT:
+      // removes the small separator look
+      marginTop: -1,
+      backgroundColor:
+        colors.background,
+    },
+  });
+};

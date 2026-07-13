@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
-  Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Dimensions,
   Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { moderateScale } from 'react-native-size-matters';
 import Icon from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -20,17 +21,20 @@ import { languageApiFetchRequest } from '../features/language/languageAction';
 import { fetchCitiesRequest } from '../features/Countries/locationActions';
 import { newUserDataRequest } from '../features/user/userAction';
 import ContinueButton from '../components/Common/ContinueButton';
-
-const { width, height } = Dimensions.get('window');
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 const FillYourProfileScreen = ({ navigation, route }) => {
   const country_id = route?.params?.country_id ?? null;
-
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const { height } = useWindowDimensions();
+  const styles = useMemo(() => createStyles(theme, height), [theme, height]);
 
   const { languages } = useSelector(state => state.language);
   const { states, cities } = useSelector(state => state.location);
-const apiResponse = useSelector(state => state.user.userDataResponse);
+  const apiResponse = useSelector(state => state.user.userDataResponse);
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -115,249 +119,298 @@ const apiResponse = useSelector(state => state.user.userDataResponse);
     );
   };
 
-useEffect(() => {
-  if (!apiResponse || isResponseHandled) return;
+  useEffect(() => {
+    if (!apiResponse || isResponseHandled) return;
 
-  setIsResponseHandled(true);
+    setIsResponseHandled(true);
 
-  Alert.alert(
-    apiResponse?.success ? 'Success ✅' : 'Error ❌',
-    apiResponse?.message || 'Something went wrong',
-    [
-      {
-        text: 'OK',
-        onPress: () => {
-          if (apiResponse?.success) {
-            navigation.navigate('LifeStyleScreen');
-          }
+    Alert.alert(
+      apiResponse?.success ? 'Success ✅' : 'Error ❌',
+      apiResponse?.message || 'Something went wrong',
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            if (apiResponse?.success) {
+              navigation.navigate('LifeStyleScreen');
+            }
+          },
         },
-      },
-    ],
-  );
-}, [apiResponse]);
+      ],
+    );
+  }, [apiResponse]);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      setIsResponseHandled(false);
-    });
+    const unsubscribe = navigation.addListener('focus', () =>
+      setIsResponseHandled(false),
+    );
     return unsubscribe;
   }, [navigation]);
 
   return (
     <WelcomeScreenbackgroundgpage>
-      <View style={{ flex: 1 }}>
-      <KeyboardAvoidingView
-  style={{ flex: 1 }}
-  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
->
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Icon name="chevron-back" size={24} color="#000" />
-            </TouchableOpacity>
+      <View style={styles.flex}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <SafeAreaView style={styles.container} edges={[]}>
+            <View style={styles.header}>
+              <TouchableOpacity
+                onPress={() => navigation.goBack()}
+                hitSlop={theme.hitSlop}
+              >
+                <Icon
+                  name="chevron-back"
+                  size={moderateScale(24)}
+                  color={colors.icon}
+                />
+              </TouchableOpacity>
+              <AppText variant="h3" style={styles.headerTitle}>
+                Fill Your Profile
+              </AppText>
+            </View>
 
-            <Text style={styles.headerTitle}>Fill Your Profile</Text>
-          </View>
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-      
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: height * 0.1  }}
-          >
-            {showMandatoryMsg && (
-              <Text style={styles.mandatoryText}>
-                * All fields are mandatory
-              </Text>
-            )}
-
-            <Text style={styles.label}>Full Name</Text>
-            <TextInput
-              style={[
-                styles.input,
-                focusedInput === 'name' && styles.inputActive,
-              ]}
-              onFocus={() => setFocusedInput('name')}
-              onBlur={() => setFocusedInput(null)}
-              placeholder="Full Name"
-              value={name}
-              onChangeText={setName}
-            />
-
-            <Text style={styles.label}>Username</Text>
-            <TextInput
-              style={[
-                styles.input,
-                focusedInput === 'username' && styles.inputActive,
-              ]}
-              onFocus={() => setFocusedInput('username')}
-              onBlur={() => setFocusedInput(null)}
-              placeholder="Username"
-              value={username}
-              onChangeText={setUsername}
-            />
-
-            {/* DOB */}
-            <Text style={styles.label}>Date of Birth</Text>
-            <TouchableOpacity
-              style={[
-                styles.inputIconBox,
-                focusedInput === 'dob' && styles.inputActive,
-              ]}
-              onPress={() => {
-                setFocusedInput('dob');
-                setShowDatePicker(true);
-              }}
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: height * 0.1 }}
             >
-              <Text style={{ flex: 1 }}>{dob || 'DD/MM/YYYY'}</Text>
-              <Icon name="calendar-outline" size={width * 0.05} />
-            </TouchableOpacity>
+              {showMandatoryMsg && (
+                <AppText
+                  variant="bodySmall"
+                  color="error"
+                  style={styles.mandatoryText}
+                >
+                  * All fields are mandatory
+                </AppText>
+              )}
 
-            {showDatePicker && (
-              <DateTimePicker
-                value={date}
-                mode="date"
-                display={Platform.OS === 'android' ? 'default' : 'spinner'}
-                maximumDate={new Date()}
-              onChange={(event, selectedDate) => {
-  setShowDatePicker(false);
-
-  if (!selectedDate) return; // 🔥 important
-
-  setDate(selectedDate);
-
-  const day = selectedDate.getDate().toString().padStart(2, '0');
-  const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
-  const year = selectedDate.getFullYear();
-
-  setDob(`${day}-${month}-${year}`);
-}}
+              <AppText variant="subtitle" style={styles.label}>
+                Full Name
+              </AppText>
+              <TextInput
+                style={[
+                  styles.input,
+                  focusedInput === 'name' && styles.inputActive,
+                ]}
+                onFocus={() => setFocusedInput('name')}
+                onBlur={() => setFocusedInput(null)}
+                placeholder="Full Name"
+                placeholderTextColor={colors.placeholder}
+                value={name}
+                onChangeText={setName}
               />
-            )}
 
-            <Text style={styles.sectionTitle}>General Information</Text>
+              <AppText variant="subtitle" style={styles.label}>
+                Username
+              </AppText>
+              <TextInput
+                style={[
+                  styles.input,
+                  focusedInput === 'username' && styles.inputActive,
+                ]}
+                onFocus={() => setFocusedInput('username')}
+                onBlur={() => setFocusedInput(null)}
+                placeholder="Username"
+                placeholderTextColor={colors.placeholder}
+                value={username}
+                onChangeText={setUsername}
+              />
 
-            {/* LANGUAGE */}
-            <Text style={styles.label}>Language</Text>
-            <TouchableOpacity
-              style={styles.dropdown}
-              onPress={() => {
-                setShowLanguageDrop(!showLanguageDrop);
-                setShowStateDrop(false);
-                setShowCityDrop(false);
-              }}
-            >
-              <Text style={styles.dropdownText}>
-                {language?.native_name || 'Select Language'}
-              </Text>
-              <Icon name="chevron-down" size={width * 0.05} />
-            </TouchableOpacity>
-
-            {showLanguageDrop && (
-              <ScrollView
-                style={styles.dropdownList}
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
+              <AppText variant="subtitle" style={styles.label}>
+                Date of Birth
+              </AppText>
+              <TouchableOpacity
+                style={[
+                  styles.inputIconBox,
+                  focusedInput === 'dob' && styles.inputActive,
+                ]}
+                onPress={() => {
+                  setFocusedInput('dob');
+                  setShowDatePicker(true);
+                }}
               >
-                {(languages || []).map(item => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.dropdownItem}
-                    onPress={() => {
-                      setLanguage(item);
-                      setShowLanguageDrop(false);
-                    }}
-                  >
-                    <Text style={styles.dropdownItemText}>{item.name_en}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
+                <AppText variant="body" style={styles.dobText}>
+                  {dob || 'DD/MM/YYYY'}
+                </AppText>
+                <Icon
+                  name="calendar-outline"
+                  size={moderateScale(20)}
+                  color={colors.iconMuted}
+                />
+              </TouchableOpacity>
 
-            {/* STATE */}
-            <Text style={styles.label}>State</Text>
-            <TouchableOpacity
-              style={styles.dropdown}
-              onPress={() => {
-                setShowStateDrop(!showStateDrop);
-                setShowLanguageDrop(false);
-                setShowCityDrop(false);
-              }}
-            >
-              <Text style={styles.dropdownText}>
-                {stateValue?.name || 'Select State'}
-              </Text>
-              <Icon name="chevron-down" size={width * 0.05} />
-            </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={date}
+                  mode="date"
+                  display={Platform.OS === 'android' ? 'default' : 'spinner'}
+                  maximumDate={new Date()}
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (!selectedDate) return;
 
-            {showStateDrop && (
-              <ScrollView
-                style={styles.dropdownList}
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
+                    setDate(selectedDate);
+
+                    const day = selectedDate
+                      .getDate()
+                      .toString()
+                      .padStart(2, '0');
+                    const month = (selectedDate.getMonth() + 1)
+                      .toString()
+                      .padStart(2, '0');
+                    const year = selectedDate.getFullYear();
+
+                    setDob(`${day}-${month}-${year}`);
+                  }}
+                />
+              )}
+
+              <AppText variant="h4" style={styles.sectionTitle}>
+                General Information
+              </AppText>
+
+              <AppText variant="subtitle" style={styles.label}>
+                Language
+              </AppText>
+              <TouchableOpacity
+                style={styles.dropdown}
+                onPress={() => {
+                  setShowLanguageDrop(!showLanguageDrop);
+                  setShowStateDrop(false);
+                  setShowCityDrop(false);
+                }}
               >
-                {(states || []).map(item => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.dropdownItem}
-                    onPress={() => {
-                      setStateValue(item);
-                      dispatch(fetchCitiesRequest(item.id));
-                      setCityValue(null);
-                      setShowStateDrop(false);
-                    }}
-                  >
-                    <Text style={styles.dropdownItemText}>{item.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
+                <AppText variant="body" style={styles.dropdownText}>
+                  {language?.native_name || 'Select Language'}
+                </AppText>
+                <Icon
+                  name="chevron-down"
+                  size={moderateScale(20)}
+                  color={colors.iconMuted}
+                />
+              </TouchableOpacity>
 
-            {/* CITY */}
-            <Text style={styles.label}>City</Text>
-            <TouchableOpacity
-              style={styles.dropdown}
-              onPress={() => {
-                setShowCityDrop(!showCityDrop);
-                setShowStateDrop(false);
-                setShowLanguageDrop(false);
-              }}
-            >
-              <Text style={styles.dropdownText}>
-                {cityValue?.name || 'Select City'}
-              </Text>
-              <Icon name="chevron-down" size={width * 0.05} />
-            </TouchableOpacity>
+              {showLanguageDrop && (
+                <ScrollView
+                  style={styles.dropdownList}
+                  nestedScrollEnabled
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {(languages || []).map(item => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setLanguage(item);
+                        setShowLanguageDrop(false);
+                      }}
+                    >
+                      <AppText variant="body" style={styles.dropdownItemText}>
+                        {item.name_en}
+                      </AppText>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
 
-            {showCityDrop && (
-              <ScrollView
-                style={styles.dropdownList}
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
+              <AppText variant="subtitle" style={styles.label}>
+                State
+              </AppText>
+              <TouchableOpacity
+                style={styles.dropdown}
+                onPress={() => {
+                  setShowStateDrop(!showStateDrop);
+                  setShowLanguageDrop(false);
+                  setShowCityDrop(false);
+                }}
               >
-                {(cities || []).map(item => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.dropdownItem}
-                    onPress={() => {
-                      setCityValue(item);
-                      setShowCityDrop(false);
-                    }}
-                  >
-                    <Text style={styles.dropdownItemText}>{item.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-        
-          </ScrollView>
-          </View>
-</KeyboardAvoidingView>
-          <View style={styles.bottomFixed}>
-            <ContinueButton disabled={!isFormValid} onPress={handleSubmit} />
-          </View>
-      
-      
+                <AppText variant="body" style={styles.dropdownText}>
+                  {stateValue?.name || 'Select State'}
+                </AppText>
+                <Icon
+                  name="chevron-down"
+                  size={moderateScale(20)}
+                  color={colors.iconMuted}
+                />
+              </TouchableOpacity>
+
+              {showStateDrop && (
+                <ScrollView
+                  style={styles.dropdownList}
+                  nestedScrollEnabled
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {(states || []).map(item => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setStateValue(item);
+                        dispatch(fetchCitiesRequest(item.id));
+                        setCityValue(null);
+                        setShowStateDrop(false);
+                      }}
+                    >
+                      <AppText variant="body" style={styles.dropdownItemText}>
+                        {item.name}
+                      </AppText>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+
+              <AppText variant="subtitle" style={styles.label}>
+                City
+              </AppText>
+              <TouchableOpacity
+                style={styles.dropdown}
+                onPress={() => {
+                  setShowCityDrop(!showCityDrop);
+                  setShowStateDrop(false);
+                  setShowLanguageDrop(false);
+                }}
+              >
+                <AppText variant="body" style={styles.dropdownText}>
+                  {cityValue?.name || 'Select City'}
+                </AppText>
+                <Icon
+                  name="chevron-down"
+                  size={moderateScale(20)}
+                  color={colors.iconMuted}
+                />
+              </TouchableOpacity>
+
+              {showCityDrop && (
+                <ScrollView
+                  style={styles.dropdownList}
+                  nestedScrollEnabled
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {(cities || []).map(item => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setCityValue(item);
+                        setShowCityDrop(false);
+                      }}
+                    >
+                      <AppText variant="body" style={styles.dropdownItemText}>
+                        {item.name}
+                      </AppText>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+            </ScrollView>
+          </SafeAreaView>
+        </KeyboardAvoidingView>
+
+        <View style={styles.bottomFixed}>
+          <ContinueButton disabled={!isFormValid} onPress={handleSubmit} />
+        </View>
       </View>
     </WelcomeScreenbackgroundgpage>
   );
@@ -365,98 +418,89 @@ useEffect(() => {
 
 export default FillYourProfileScreen;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+const createStyles = (theme, height) => {
+  const { colors, spacing, radius } = theme;
 
-    paddingHorizontal: width * 0.05,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: height * 0.025,
-  marginTop: height * 0.015,
-  },
+  return StyleSheet.create({
+    flex: { flex: 1 },
+    container: { flex: 1, paddingHorizontal: spacing.lg },
 
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginLeft: 10,
-  },
-  input: {
-    backgroundColor: '#fff',
-    height: height * 0.06,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E3D8FF',
-    paddingHorizontal: width * 0.03,
-    marginBottom: height * 0.02,
-  },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+      marginTop: spacing.sm,
+    },
+    headerTitle: { marginLeft: spacing.sm },
 
-  inputIconBox: {
-    backgroundColor: '#fff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: height * 0.06,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E3D8FF',
-    paddingHorizontal: width * 0.03,
-    marginBottom: height * 0.02,
-  },
+    input: {
+      backgroundColor: colors.card,
+      height: moderateScale(48),
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: '#E3D8FF',
+      paddingHorizontal: spacing.sm,
+      marginBottom: spacing.sm,
+      color: colors.text,
+    },
 
-  sectionTitle: {
-    fontSize: width * 0.045,
-    fontWeight: '600',
-    marginTop: height * 0.015,
-  },
+    inputIconBox: {
+      backgroundColor: colors.card,
+      flexDirection: 'row',
+      alignItems: 'center',
+      height: moderateScale(48),
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: '#E3D8FF',
+      paddingHorizontal: spacing.sm,
+      marginBottom: spacing.sm,
+    },
 
-  dropdown: {
-    backgroundColor: '#fff',
-    height: height * 0.06,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E3D8FF',
-    paddingHorizontal: width * 0.03,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: height * 0.015,
-  },
-  inputActive: {
-    borderColor: '#D51BF9',
-    borderWidth: 1.5,
-  },
+    dobText: { flex: 1, color: colors.text },
 
-  label: { fontSize: width * 0.035, marginTop: 15, fontWeight: '600' },
+    sectionTitle: { marginTop: spacing.sm },
 
-  dropdownText: { flex: 1, fontSize: width * 0.04 },
+    dropdown: {
+      backgroundColor: colors.card,
+      height: moderateScale(48),
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: '#E3D8FF',
+      paddingHorizontal: spacing.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
 
-  dropdownList: {
-    maxHeight: height * 0.25,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E3D8FF',
-    marginBottom: height * 0.01,
-  },
+    inputActive: { borderColor: colors.gradientPurpleStart, borderWidth: 1.5 },
 
-  dropdownItem: {
-    paddingVertical: height * 0.015,
-    paddingHorizontal: width * 0.03,
-  },
+    label: { marginTop: spacing.md },
 
-  dropdownItemText: { fontSize: width * 0.04 },
+    dropdownText: { flex: 1, color: colors.text },
+    dropdownItemText: { color: colors.text },
 
-  mandatoryText: {
-    color: 'red',
-    textAlign: 'center',
-    marginBottom: height * 0.01,
-  },
-  bottomFixed: {
-    position: 'absolute',
-    bottom: height * 0.03,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-});
+    dropdownList: {
+      maxHeight: height * 0.25,
+      backgroundColor: colors.card,
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: '#E3D8FF',
+      marginBottom: spacing.xs,
+    },
+
+    dropdownItem: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.sm,
+    },
+
+    mandatoryText: { textAlign: 'center', marginBottom: spacing.xs },
+
+    bottomFixed: {
+      position: 'absolute',
+      bottom: spacing.md,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+    },
+  });
+};

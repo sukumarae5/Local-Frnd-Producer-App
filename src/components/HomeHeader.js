@@ -1,77 +1,59 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import Icon from "react-native-vector-icons/Ionicons";
+import Icon from 'react-native-vector-icons/Ionicons';
+import { moderateScale, verticalScale } from 'react-native-size-matters';
+import { useAppTheme } from '../theme';
+import { AppText } from './index'; // adjust path to wherever your components barrel lives
 
-const HomeHeader = ({
-  navigation,
-  userdata,
-  unread,
-  imageUrl,
-  withSpacing,
-  
-}) => {
+const HomeHeader = ({ navigation, userdata, unread, imageUrl, withSpacing }) => {
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
+
   return (
-    <View
-      style={[styles.headerContainer, { paddingTop: withSpacing ? 10 : 0 }]}
-    >
-      
+    <View style={[styles.headerContainer, { paddingTop: withSpacing ? spacing.sm : 0 }]}>
       <View style={styles.headerRow}>
-        {/* Coin */}
         <TouchableOpacity onPress={() => navigation.navigate('PlanScreen')}>
-          <LinearGradient
-            colors={['#FFA726', '#FF7043']}
-            style={styles.coinBox}
-          >
-            <Image
-              source={require('../assets/coin1.png')}
-              style={styles.coinImage}
-            />
-            <Text style={styles.coinText}>
+          <LinearGradient colors={['#FFA726', '#FF7043']} style={styles.coinBox}>
+            <Image source={require('../assets/coin1.png')} style={styles.coinImage} />
+            <AppText variant="subtitle" style={styles.coinText}>
               {userdata?.user?.coin_balance ?? 0}
-            </Text>
+            </AppText>
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* Right icons */}
         <View style={styles.rightIcons}>
           <TouchableOpacity onPress={() => navigation.navigate('MessagesScreen')}>
-            <LinearGradient
-              colors={["#D51BF9", "#8C37F8"]} // Standard Purple Gradient
-              style={styles.iconCircle}
-            >
-              {/* Exact icon match for image_bcee61.png */}
-              <Icon name="chatbubbles-outline" size={22} color="#fff" />
+            <LinearGradient colors={['#D51BF9', '#8C37F8']} style={styles.iconCircle}>
+              <Icon name="chatbubbles-outline" size={moderateScale(22)} color={colors.textInverse} />
             </LinearGradient>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => navigation.navigate('NotificationScreen')}>
-            <LinearGradient
-              colors={["#D51BF9", "#8C37F8"]}
-              style={styles.iconCircle}
-            >
-              <Icon name="notifications-outline" size={22} color="#fff" />
+            <LinearGradient colors={['#D51BF9', '#8C37F8']} style={styles.iconCircle}>
+              <Icon name="notifications-outline" size={moderateScale(22)} color={colors.textInverse} />
             </LinearGradient>
 
             {unread > 0 && (
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>
+                <AppText variant="caption" style={styles.badgeText}>
                   {unread > 99 ? '99+' : unread}
-                </Text>
+                </AppText>
               </View>
             )}
           </TouchableOpacity>
 
-<TouchableOpacity
-  onPress={() =>
-    navigation.navigate('AboutScreen', {
-      userId: userdata?.user?.user_id,
-      isMyProfile: true,
-    })
-  }
->
-  <Image source={imageUrl} style={styles.profilePic} />
-</TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('AboutScreen', {
+                userId: userdata?.user?.user_id,
+                isMyProfile: true,
+              })
+            }
+          >
+            <Image source={imageUrl} style={styles.profilePic} />
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -80,73 +62,75 @@ const HomeHeader = ({
 
 export default HomeHeader;
 
-const styles = StyleSheet.create({
-  headerContainer: {
-    paddingBottom: 10,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  coinBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    height: 40,
-    borderRadius: 20, // Pill shape
-  },
-  coinImage: {
-    width: 22,
-    height: 22,
-    resizeMode: 'contain',
-  },
-  coinText: {
-    marginLeft: 6,
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#f7efd9', // Gold text to match image_bd5777.png
-    textShadowColor: '#634011',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 1,
-  },
-  rightIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconCircle: {
-    width: 38, // Slightly larger to match TabIcon scale
-    height: 38,
-    borderRadius: 19,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 10,
-  },
-  profilePic: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    marginLeft: 10,
-    borderWidth: 2,
-    borderColor: '#D51BF9',
-  },
-  badge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    backgroundColor: '#FF3B3B',
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 1.5,
-    borderColor: '#fff',
-  },
-  badgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-});
+const createStyles = (theme) => {
+  const { colors, spacing, radius } = theme;
+
+  return StyleSheet.create({
+    headerContainer: {
+      paddingBottom: spacing.sm,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    coinBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      height: verticalScale(40),
+      borderRadius: radius.pill,
+    },
+    coinImage: {
+      width: moderateScale(22),
+      height: moderateScale(22),
+      resizeMode: 'contain',
+    },
+    coinText: {
+      marginLeft: spacing.sm,
+      color: '#f7efd9', // kept as-is: intentional gold-on-gradient, not a theme surface color
+      fontWeight: '800',
+      textShadowColor: '#634011',
+      textShadowOffset: { width: 1, height: 1 },
+      textShadowRadius: 1,
+    },
+    rightIcons: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    iconCircle: {
+      width: moderateScale(38),
+      height: moderateScale(38),
+      borderRadius: moderateScale(19),
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: spacing.sm,
+    },
+    profilePic: {
+      width: moderateScale(38),
+      height: moderateScale(38),
+      borderRadius: moderateScale(19),
+      marginLeft: spacing.sm,
+      borderWidth: 2,
+      borderColor: colors.secondary,
+    },
+    badge: {
+      position: 'absolute',
+      top: -verticalScale(2),
+      right: -moderateScale(2),
+      backgroundColor: colors.error,
+      borderRadius: radius.pill,
+      minWidth: moderateScale(18),
+      height: moderateScale(18),
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xxs,
+      borderWidth: 1.5,
+      borderColor: colors.textInverse,
+    },
+    badgeText: {
+      color: colors.textInverse,
+      fontWeight: '700',
+    },
+  });
+};

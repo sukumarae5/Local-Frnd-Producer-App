@@ -1,35 +1,29 @@
-import React, { useEffect, useState, useRef } from "react";
-import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-  Animated,
-  ActivityIndicator
-} from "react-native";
-import Ionicons from "react-native-vector-icons/Ionicons";
-import { useDispatch, useSelector } from "react-redux";
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { View, Modal, TouchableOpacity, StyleSheet, Image, Animated, ActivityIndicator } from 'react-native';
+import { moderateScale } from 'react-native-size-matters';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useDispatch, useSelector } from 'react-redux';
 
-import {
-  friendRequest,
-  friendAcceptRequest,
-  friendStatusRequest
-} from "../features/friend/friendAction";
+import { friendRequest, friendAcceptRequest, friendStatusRequest } from '../features/friend/friendAction';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
-const EndCallConfirmModal = ({
-  visible,
-  onCancel,
-  onConfirm,
-  otherUser
-}) => {
+// One-off accents specific to this modal's avatar glow and confirm action.
+const modalAccents = {
+  avatarGlow: '#c77dff',
+  confirmBg: '#ff5b77',
+  followBg: '#7e00ff',
+};
 
+const EndCallConfirmModal = ({ visible, onCancel, onConfirm, otherUser }) => {
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const friendStatus = useSelector(s => s.friends.friendStatus);
-  const incoming = useSelector(s => s.friends.incoming);
-  const { loading } = useSelector(state => state.rating);
+  const friendStatus = useSelector((s) => s.friends.friendStatus);
+  const incoming = useSelector((s) => s.friends.incoming);
+  const { loading } = useSelector((state) => state.rating);
 
   const [rating, setRating] = useState(0);
   const [localPending, setLocalPending] = useState(false);
@@ -37,9 +31,7 @@ const EndCallConfirmModal = ({
   const userId = otherUser?.user_id;
 
   const rotateAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim  = useRef(new Animated.Value(1)).current;
-
-  /* ---------------- FETCH FRIEND STATUS ---------------- */
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (userId && visible) {
@@ -49,8 +41,6 @@ const EndCallConfirmModal = ({
     }
   }, [userId, visible]);
 
-  /* ---------------- ANIMATION ---------------- */
-
   useEffect(() => {
     if (!visible) return;
 
@@ -59,56 +49,41 @@ const EndCallConfirmModal = ({
 
     const anim = Animated.loop(
       Animated.parallel([
-        Animated.timing(rotateAnim, {
-          toValue: 1,
-          duration: 6000,
-          useNativeDriver: true,
-        }),
+        Animated.timing(rotateAnim, { toValue: 1, duration: 6000, useNativeDriver: true }),
         Animated.sequence([
-          Animated.timing(scaleAnim, {
-            toValue: 1.06,
-            duration: 1200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 1200,
-            useNativeDriver: true,
-          }),
-        ])
+          Animated.timing(scaleAnim, { toValue: 1.06, duration: 1200, useNativeDriver: true }),
+          Animated.timing(scaleAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
+        ]),
       ])
     );
 
     anim.start();
     return () => anim.stop();
-
   }, [visible]);
-
-  /* ---------------- FOLLOW BUTTON ---------------- */
 
   const renderFollowButton = () => {
     if (!userId) return null;
 
     const status = friendStatus[userId]?.state;
 
-    if (status === "FRIEND") {
+    if (status === 'FRIEND') {
       return (
         <View style={styles.followingBtn}>
-          <Text style={styles.followingText}>✓ Following</Text>
+          <AppText variant="bodySmall" style={styles.followingText}>✓ Following</AppText>
         </View>
       );
     }
 
-    if (status === "PENDING_SENT" || localPending) {
+    if (status === 'PENDING_SENT' || localPending) {
       return (
         <View style={styles.pendingBtn}>
-          <Text style={styles.followText}>Pending</Text>
+          <AppText variant="bodySmall" style={styles.followText}>Pending</AppText>
         </View>
       );
     }
 
-    if (status === "PENDING_RECEIVED") {
-      const req = incoming.find(r => r.sender_id === userId);
+    if (status === 'PENDING_RECEIVED') {
+      const req = incoming.find((r) => r.sender_id === userId);
       if (!req) return null;
 
       return (
@@ -116,12 +91,10 @@ const EndCallConfirmModal = ({
           style={styles.followBtn}
           onPress={() => {
             dispatch(friendAcceptRequest(req.request_id));
-            setTimeout(() => {
-              dispatch(friendStatusRequest(userId));
-            }, 300);
+            setTimeout(() => dispatch(friendStatusRequest(userId)), 300);
           }}
         >
-          <Text style={styles.followText}>Accept</Text>
+          <AppText variant="bodySmall" style={styles.followText}>Accept</AppText>
         </TouchableOpacity>
       );
     }
@@ -134,62 +107,39 @@ const EndCallConfirmModal = ({
           dispatch(friendRequest(userId));
         }}
       >
-        <Text style={styles.followText}>➕ Follow</Text>
+        <AppText variant="bodySmall" style={styles.followText}>➕ Follow</AppText>
       </TouchableOpacity>
     );
   };
-
-  /* ---------------- RENDER ---------------- */
 
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.backdrop}>
         <View style={styles.card}>
-
-          {/* Avatar (NO fallback image) */}
           {otherUser?.avatar && (
             <Animated.View
               style={[
                 styles.avatarOuter,
                 {
                   transform: [
-                    {
-                      rotate: rotateAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: ["0deg", "360deg"]
-                      })
-                    },
-                    { scale: scaleAnim }
-                  ]
-                }
+                    { rotate: rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) },
+                    { scale: scaleAnim },
+                  ],
+                },
               ]}
             >
               <View style={styles.avatarRing}>
-                <Image
-                  source={{ uri: otherUser.avatar }}
-                  style={styles.avatar}
-                />
+                <Image source={{ uri: otherUser.avatar }} style={styles.avatar} />
               </View>
             </Animated.View>
           )}
 
-          <Text style={styles.name}>
-            {otherUser?.name || ""}
-          </Text>
+          <AppText variant="h4" style={styles.name}>{otherUser?.name || ''}</AppText>
 
-          {/* ⭐ Rating */}
           <View style={styles.ratingRow}>
-            {[1,2,3,4,5].map(i => (
-              <TouchableOpacity
-                key={i}
-                disabled={loading}
-                onPress={() => setRating(i)}
-              >
-                <Ionicons
-                  name={i <= rating ? "star" : "star-outline"}
-                  size={26}
-                  color="#ffb300"
-                />
+            {[1, 2, 3, 4, 5].map((i) => (
+              <TouchableOpacity key={i} disabled={loading} onPress={() => setRating(i)}>
+                <Ionicons name={i <= rating ? 'star' : 'star-outline'} size={moderateScale(26)} color="#ffb300" />
               </TouchableOpacity>
             ))}
           </View>
@@ -197,30 +147,22 @@ const EndCallConfirmModal = ({
           {renderFollowButton()}
 
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              disabled={loading}
-              onPress={onCancel}
-            >
-              <Text style={styles.cancelText}>Cancel</Text>
+            <TouchableOpacity style={styles.cancelBtn} disabled={loading} onPress={onCancel}>
+              <AppText variant="subtitle" style={styles.cancelText}>Cancel</AppText>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[
-                styles.confirmBtn,
-                (loading || rating === 0) && { opacity: 0.6 }
-              ]}
+              style={[styles.confirmBtn, (loading || rating === 0) && { opacity: 0.6 }]}
               disabled={loading || rating === 0}
               onPress={() => onConfirm(rating)}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.confirmText}>Confirm</Text>
+                <AppText variant="subtitle" style={styles.confirmText}>Confirm</AppText>
               )}
             </TouchableOpacity>
           </View>
-
         </View>
       </View>
     </Modal>
@@ -229,123 +171,102 @@ const EndCallConfirmModal = ({
 
 export default EndCallConfirmModal;
 
+const createStyles = (theme) => {
+  const { colors, spacing, radius } = theme;
 
+  return StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-/* ---------------- styles ---------------- */
+    card: {
+      width: '85%',
+      backgroundColor: colors.card,
+      borderRadius: radius.xl,
+      padding: spacing.xl,
+      alignItems: 'center',
+    },
 
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "center",
-    alignItems: "center"
-  },
+    avatarOuter: {
+      width: moderateScale(112),
+      height: moderateScale(112),
+      borderRadius: moderateScale(56),
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
 
-  card: {
-    width: "85%",
-    backgroundColor: "#fff",
-    borderRadius: 18,
-    padding: 20,
-    alignItems: "center"
-  },
+    avatarRing: {
+      width: moderateScale(102),
+      height: moderateScale(102),
+      borderRadius: moderateScale(51),
+      borderWidth: 3,
+      borderColor: modalAccents.avatarGlow,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: modalAccents.avatarGlow,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.8,
+      shadowRadius: 12,
+      elevation: 12,
+    },
 
-  avatarOuter: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
-  },
+    avatar: { width: moderateScale(86), height: moderateScale(86), borderRadius: moderateScale(43), backgroundColor: colors.surface },
 
-  avatarRing: {
-    width: 102,
-    height: 102,
-    borderRadius: 51,
-    borderWidth: 3,
-    borderColor: "#c77dff",
-    justifyContent: "center",
-    alignItems: "center",
+    name: { marginBottom: spacing.sm },
 
-    shadowColor: "#c77dff",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 12,
-    elevation: 12,
-  },
+    ratingRow: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md },
 
-  avatar: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
-    backgroundColor: "#ddd",
-  },
+    actions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
 
-  name: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 8
-  },
+    cancelBtn: {
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.xl,
+      backgroundColor: colors.surface,
+    },
 
-  ratingRow: {
-    flexDirection: "row",
-    gap: 6,
-    marginBottom: 12
-  },
+    confirmBtn: {
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.xl,
+      backgroundColor: modalAccents.confirmBg,
+    },
 
-  actions: {
-    flexDirection: "row",
-    gap: 14,
-    marginTop: 16
-  },
+    cancelText: { color: colors.textSecondary },
+    confirmText: { color: '#fff' },
 
-  cancelBtn: {
-    paddingHorizontal: 22,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: "#eee"
-  },
+    followBtn: {
+      marginTop: spacing.xxs,
+      backgroundColor: modalAccents.followBg,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.lg,
+    },
 
-  confirmBtn: {
-    paddingHorizontal: 22,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: "#ff5b77"
-  },
+    followText: { color: '#fff', fontWeight: '700' },
 
-  cancelText: { fontWeight: "700", color: "#333" },
-  confirmText: { fontWeight: "700", color: "#fff" },
+    pendingBtn: {
+      marginTop: spacing.xxs,
+      backgroundColor: colors.disabled,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.lg,
+    },
 
-  followBtn: {
-    marginTop: 6,
-    backgroundColor: "#7e00ff",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16
-  },
+    followingBtn: {
+      marginTop: spacing.xxs,
+      backgroundColor: `${colors.info}1A`,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.info,
+    },
 
-  followText: { color: "#fff", fontWeight: "700" },
-
-  pendingBtn: {
-    marginTop: 6,
-    backgroundColor: "#aaa",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16
-  },
-
-  followingBtn: {
-    marginTop: 6,
-    backgroundColor: "#e6f4ff",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#4da3ff"
-  },
-
-  followingText: {
-    color: "#1e88e5",
-    fontWeight: "700"
-  }
-});
+    followingText: { color: colors.info, fontWeight: '700' },
+  });
+};

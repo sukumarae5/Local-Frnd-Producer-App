@@ -1,92 +1,69 @@
-import React from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  Dimensions,
-} from "react-native";
-import LinearGradient from "react-native-linear-gradient";
-import Icon from "react-native-vector-icons/Ionicons";
+import React, { useMemo } from 'react';
+import { View, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { moderateScale } from 'react-native-size-matters';
+import { useAppTheme } from '../theme';
+import { AppText } from './index';
 
-const { width } = Dimensions.get("window");
-const scale = (size) => (width / 375) * size;
+const GradientIcon = ({ name, style }) => {
+  const { theme } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
-const GradientIcon = ({ name }) => (
-  <LinearGradient
-    colors={["#D51BF9", "#8C37F8"]}
-    style={styles.iconWrap}
-  >
-    <Icon name={name} size={22} color="#fff" />
-  </LinearGradient>
-);
+  return (
+    <LinearGradient colors={['#D51BF9', '#8C37F8']} style={[styles.iconWrap, style]}>
+      <Icon name={name} size={moderateScale(22)} color="#fff" />
+    </LinearGradient>
+  );
+};
 
-const ReceiverHeader = ({
-  navigation,
-  coins,
-  avatar,
-  unread,
-  userdata,
-}) => {
+const ReceiverHeader = ({ navigation, coins, avatar, unread, userdata }) => {
+  const { theme } = useAppTheme();
+  const { colors, spacing } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   return (
     <View style={styles.topBar}>
-      {/* COINS */}
-     <TouchableOpacity
-  style={styles.coinWrapper}
-  onPress={() => navigation.navigate("ReciverWalletScreen")}
->
-  <LinearGradient
-    // Matches the light purple to medium purple gradient in image_bd5777.png
-    colors={['#FFA726', '#FF7043']}
-    // colors={["#E199FF", "#D16BFF"]} 
-    style={styles.coinGradient}
-    start={{ x: 0, y: 0.5 }}
-    end={{ x: 1, y: 0.5 }}
-  >
-    <Image 
-      source={require('../assets/ring.png')} // Replace with your ring asset
-      style={styles.coinImage} 
-    />
-    <Text style={styles.coinText}>{coins}</Text>
-  </LinearGradient>
-</TouchableOpacity>
-
-      {/* RIGHT ICONS */}
-      <View style={styles.rightIcons}>
-        <TouchableOpacity>
-          <GradientIcon name="gift-outline" />
-        </TouchableOpacity>
-
-          <TouchableOpacity
-          onPress={() => navigation.navigate("MessagesScreen")}
+      <TouchableOpacity style={styles.coinWrapper} onPress={() => navigation.navigate('ReciverWalletScreen')}>
+        <LinearGradient
+          colors={['#FFA726', '#FF7043']}
+          style={styles.coinGradient}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
         >
+          <Image source={require('../assets/ring.png')} style={styles.coinImage} />
+          <AppText variant="subtitle" style={styles.coinText}>{coins}</AppText>
+        </LinearGradient>
+      </TouchableOpacity>
+
+      <View style={styles.rightIcons}>
+        {/* <TouchableOpacity>
+          <GradientIcon name="gift-outline" />
+        </TouchableOpacity> */}
+
+        <TouchableOpacity onPress={() => navigation.navigate('MessagesScreen')}>
           <GradientIcon name="chatbubbles-outline" />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate("NotificationScreen")}
-        >
+        <TouchableOpacity onPress={() => navigation.navigate('NotificationScreen')}>
           <View>
             <GradientIcon name="notifications-outline" />
             {unread > 0 && (
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unread}</Text>
+                <AppText variant="caption" style={styles.badgeText}>{unread}</AppText>
               </View>
             )}
           </View>
         </TouchableOpacity>
 
-      
-
         <TouchableOpacity
-  onPress={() =>
-    navigation.navigate("AboutScreen", {
-      userId: userdata?.user?.user_id,
-      isMyProfile: true,
-    })
-  }
->
+          onPress={() =>
+            navigation.navigate('AboutScreen', {
+              userId: userdata?.user?.user_id,
+              isMyProfile: true,
+            })
+          }
+        >
           {avatar ? (
             <Image source={{ uri: avatar }} style={styles.avatar} />
           ) : (
@@ -100,80 +77,73 @@ const ReceiverHeader = ({
 
 export default ReceiverHeader;
 
-const styles = StyleSheet.create({
-  topBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    
-    marginBottom: scale(10),
-  },
+const createStyles = (theme) => {
+  const { colors, spacing, radius } = theme;
 
-  coinWrapper: {
-    borderRadius: 30,
-    overflow: "hidden",
-  },
-
-coinGradient: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  paddingHorizontal: 12,
-  height: 40,              // ✅ match HomeHeader
-  borderRadius: 20,        // ✅ same pill shape
-},
-
-  coinImage: {
-    width: 22,
-    height: 22,
-    resizeMode: 'contain',
-  },
-  coinText: {
-  marginLeft: 6,           // ✅ match HomeHeader
-  fontSize: 16,            // ✅ match HomeHeader
-  fontWeight: '800',
-  color: '#f7efd9',
-  textShadowColor: '#634011',
-  textShadowOffset: { width: 1, height: 1 },
-  textShadowRadius: 1,
-},
-
-  rightIcons: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: scale(10),
-  },
-
-  iconWrap: {
-    width: scale(38),
-    height: scale(38),
-    borderRadius: scale(19),
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  avatar: {
-    width: scale(38),
-    height: scale(38),
-    borderRadius: scale(19),
-    borderWidth: 2,
-    borderColor: "#D51BF9",
-  },
-
-  badge: {
-    position: "absolute",
-    top: -3,
-    right: -3,
-    backgroundColor: "#FF3B3B",
-    borderRadius: 10,
-    minWidth: 16,
-    height: 16,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  badgeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-});
+  return StyleSheet.create({
+    topBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    coinWrapper: {
+      borderRadius: radius.pill,
+      overflow: 'hidden',
+    },
+    coinGradient: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      height: moderateScale(40),
+      borderRadius: radius.pill,
+    },
+    coinImage: {
+      width: moderateScale(22),
+      height: moderateScale(22),
+      resizeMode: 'contain',
+    },
+    coinText: {
+      marginLeft: spacing.sm,
+      color: '#f7efd9',
+      fontWeight: '800',
+      textShadowColor: '#634011',
+      textShadowOffset: { width: 1, height: 1 },
+      textShadowRadius: 1,
+    },
+    rightIcons: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    iconWrap: {
+      width: moderateScale(38),
+      height: moderateScale(38),
+      borderRadius: moderateScale(19),
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatar: {
+      width: moderateScale(38),
+      height: moderateScale(38),
+      borderRadius: moderateScale(19),
+      borderWidth: 2,
+      borderColor: '#D51BF9',
+    },
+    badge: {
+      position: 'absolute',
+      top: -moderateScale(3),
+      right: -moderateScale(3),
+      backgroundColor: colors.error,
+      borderRadius: radius.pill,
+      minWidth: moderateScale(16),
+      height: moderateScale(16),
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    badgeText: {
+      color: colors.textInverse,
+      fontWeight: '700',
+    },
+  });
+};

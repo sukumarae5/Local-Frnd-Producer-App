@@ -1,14 +1,6 @@
-import React, {
-  useEffect,
-  useRef,
-  useState,
-  useContext,
-  useCallback,
-} from 'react';
+import React, { useEffect, useRef, useState, useContext, useCallback, useMemo } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   TouchableOpacity,
   Platform,
   PermissionsAndroid,
@@ -16,7 +8,9 @@ import {
   Animated,
   Alert,
   ToastAndroid,
+  StyleSheet,
 } from 'react-native';
+import { NativeEventEmitter } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { RTCView, mediaDevices, RTCIceCandidate } from 'react-native-webrtc';
@@ -24,43 +18,45 @@ import { CommonActions } from '@react-navigation/native';
 import InCallManager from 'react-native-incall-manager';
 import { useDispatch, useSelector } from 'react-redux';
 import Svg, { Path, Circle } from 'react-native-svg';
+import { moderateScale } from 'react-native-size-matters';
 import FaceDetectionOverlay from '../components/FaceDetectionOverlay';
 import { useFaceDetection } from '../hooks/useFaceDetection';
 import { clearCall, callDetailsRequest } from '../features/calls/callAction';
 import { SocketContext } from '../socket/SocketProvider';
 import { createPC } from '../utils/webrtc';
 import callManager from '../utils/callManager';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
-const showToast = msg => {
+const showToast = (msg) => {
   if (Platform.OS === 'android') {
     ToastAndroid.show(msg, ToastAndroid.SHORT);
   }
 };
 
-const PRIMARY = '#A020F0';
+// Accent color follows the theme (matches AudiocallScreen), but the video
+// surface/controls stay black regardless of theme — standard for any
+// video-call UI, required for camera contrast.
+const getVideoPrimary = (theme) => (theme.isDark ? '#B85CF9' : '#A020F0');
 
 const VideocallScreen = ({ route, navigation }) => {
   const { session_id, caller_id: routeCallerId } = route.params;
   const { socketRef, connected } = useContext(SocketContext);
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const PRIMARY = useMemo(() => getVideoPrimary(theme), [theme]);
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const { userdata } = useSelector(s => s.user);
-  const myGender = useSelector(s => s.user?.userdata?.user?.gender);
-  const connectedCallDetails = useSelector(s => s?.calls?.connectedCallDetails);
-  const myId = useSelector(s => s.user.userdata?.user?.user_id);
-  const coinBalance = useSelector(
-    s => s.user?.userdata?.user?.coin_balance ?? 0,
-  );
+  const { userdata } = useSelector((s) => s.user);
+  const myGender = useSelector((s) => s.user?.userdata?.user?.gender);
+  const connectedCallDetails = useSelector((s) => s?.calls?.connectedCallDetails);
+  const myId = useSelector((s) => s.user.userdata?.user?.user_id);
+  const coinBalance = useSelector((s) => s.user?.userdata?.user?.coin_balance ?? 0);
 
   const callType = route?.params?.call_type || 'VIDEO';
   const isMale = myGender === 'Male';
   const RATE = callType === 'VIDEO' ? 60 : 10;
 
-  /* ── me / other — derived the SAME way as AudiocallScreen ──
-     IMPORTANT: this is based on connectedCallDetails.caller.user_id
-     (the actual server data), NOT on routeCallerId (a nav param).
-     Using routeCallerId here was the root cause of avatars being
-     swapped / showing "my" avatar in the "other user" slots. */
   const [me, setMe] = useState(null);
   const [other, setOther] = useState(null);
 
@@ -78,7 +74,6 @@ const VideocallScreen = ({ route, navigation }) => {
     }
   }, [connectedCallDetails, myId]);
 
-  /* ── State ── */
   const [localURL, setLocalURL] = useState(null);
   const [remoteURL, setRemoteURL] = useState(null);
   const [connectedUI, setConnectedUI] = useState(false);
@@ -92,11 +87,9 @@ const VideocallScreen = ({ route, navigation }) => {
   const [otherCameraOff, setOtherCameraOff] = useState(false);
   const [coinSecondsLeft, setCoinSecondsLeft] = useState(null);
   const [warningMsg, setWarningMsg] = useState('');
-  // Mic badge position — measured from PiP onLayout so it sits exactly
-  // on the bottom-right corner of PiP regardless of screen size
   const [micBadgePos, setMicBadgePos] = useState(null);
+const [audioDevice, setAudioDevice] = useState('speaker');
 
-  /* ── Refs ── */
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
   const pendingIceRef = useRef([]);
@@ -129,21 +122,12 @@ const VideocallScreen = ({ route, navigation }) => {
     otherRef.current = other;
   }, [other]);
 
-  /* ── Face detection ── */
   const onFaceGone = useCallback(() => {
-    socketRef.current?.emit('face_status', {
-      session_id,
-      user_id: myId,
-      face_visible: false,
-    });
+    socketRef.current?.emit('face_status', { session_id, user_id: myId, face_visible: false });
   }, [session_id, myId]);
 
   const onFaceBack = useCallback(() => {
-    socketRef.current?.emit('face_status', {
-      session_id,
-      user_id: myId,
-      face_visible: true,
-    });
+    socketRef.current?.emit('face_status', { session_id, user_id: myId, face_visible: true });
   }, [session_id, myId]);
 
   const { faceStatus, faceCount } = useFaceDetection({
@@ -153,43 +137,24 @@ const VideocallScreen = ({ route, navigation }) => {
     onFaceBack,
   });
 
-  // Guard with cameraOn — face guide must never show when camera is off
-  const myFaceGone =
-    cameraOn && (faceStatus === 'no_face' || faceStatus === 'multiple_faces');
-  const isFaceCentered =
-    (faceStatus === 'face_found' || faceStatus === 'single_face') &&
-    faceCount === 1;
+  const myFaceGone = cameraOn && (faceStatus === 'no_face' || faceStatus === 'multiple_faces');
+  const isFaceCentered = (faceStatus === 'face_found' || faceStatus === 'single_face') && faceCount === 1;
 
-  /* ── Dash animation for face guide oval ── */
   useEffect(() => {
     dashOffset.setValue(0);
     Animated.loop(
       Animated.sequence([
-        Animated.timing(dashOffset, {
-          toValue: 20,
-          duration: 800,
-          useNativeDriver: false,
-        }),
-        Animated.timing(dashOffset, {
-          toValue: 0,
-          duration: 0,
-          useNativeDriver: false,
-        }),
-      ]),
+        Animated.timing(dashOffset, { toValue: 20, duration: 800, useNativeDriver: false }),
+        Animated.timing(dashOffset, { toValue: 0, duration: 0, useNativeDriver: false }),
+      ])
     ).start();
   }, []);
 
-  /* ── Camera toggle — notify other user ── */
   useEffect(() => {
     if (!connectedUI) return;
-    socketRef.current?.emit('camera_status', {
-      session_id,
-      user_id: myId,
-      camera_on: cameraOn,
-    });
+    socketRef.current?.emit('camera_status', { session_id, user_id: myId, camera_on: cameraOn });
   }, [cameraOn, connectedUI]);
 
-  /* ── Other user face + camera status ── */
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
@@ -214,22 +179,13 @@ const VideocallScreen = ({ route, navigation }) => {
     if (session_id) dispatch(callDetailsRequest());
   }, [session_id]);
 
-  /* ── Permissions ── */
   const requestPermission = async () => {
     if (Platform.OS !== 'android') return true;
-    const mic = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-    );
-    const cam = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.CAMERA,
-    );
-    return (
-      mic === PermissionsAndroid.RESULTS.GRANTED &&
-      cam === PermissionsAndroid.RESULTS.GRANTED
-    );
+    const mic = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
+    const cam = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA);
+    return mic === PermissionsAndroid.RESULTS.GRANTED && cam === PermissionsAndroid.RESULTS.GRANTED;
   };
 
-  /* ── Coin countdown helpers ── */
   const clearCoinCountdown = useCallback(() => {
     if (coinCountdownRef.current) {
       clearInterval(coinCountdownRef.current);
@@ -237,6 +193,35 @@ const VideocallScreen = ({ route, navigation }) => {
     }
   }, []);
 
+  // ── Audio device listener — same pattern as AudiocallScreen ──
+useEffect(() => {
+  const incallEmitter = new NativeEventEmitter();
+
+  const subscription = incallEmitter.addListener('onAudioDeviceChanged', (data) => {
+    const device = data.audioDevice;
+
+    if (device === 'WIRED_HEADSET' || device === 'BLUETOOTH') {
+      setAudioDevice(device === 'BLUETOOTH' ? 'bluetooth' : 'headset');
+      setSpeakerOn(false);
+      setTimeout(() => {
+        InCallManager.setForceSpeakerphoneOn(false);
+        InCallManager.setSpeakerphoneOn(false);
+      }, 100);
+    } else if (device === 'SPEAKER') {
+      setAudioDevice('speaker');
+      setSpeakerOn(true);
+    } else {
+      // EARPIECE / default — video calls fall back to speaker, not earpiece,
+      // since there's no earpiece-appropriate use case for video
+      setAudioDevice('speaker');
+      setSpeakerOn(true);
+      InCallManager.setForceSpeakerphoneOn(true);
+      InCallManager.setSpeakerphoneOn(true);
+    }
+  });
+
+  return () => subscription.remove();
+}, []);
   const handleCoinExhausted = useCallback(() => {
     if (coinEndedRef.current) return;
     coinEndedRef.current = true;
@@ -277,61 +262,45 @@ const VideocallScreen = ({ route, navigation }) => {
             },
           },
         ],
-      }),
+      })
     );
-    
-  }, [
-    session_id,
-    myId,
-    myGender,
-    callType,
-    clearCoinCountdown,
-    dispatch,
-    navigation,
-  ]);
+  }, [session_id, myId, myGender, callType, clearCoinCountdown, dispatch, navigation]);
 
   useEffect(() => {
     handleCoinExhaustedRef.current = handleCoinExhausted;
   }, [handleCoinExhausted]);
 
   const startCoinCountdown = useCallback(
-    initialSeconds => {
+    (initialSeconds) => {
       clearCoinCountdown();
       setCoinSecondsLeft(initialSeconds);
 
       coinCountdownRef.current = setInterval(() => {
-        setCoinSecondsLeft(prev => {
+        setCoinSecondsLeft((prev) => {
           if (prev === null) return null;
 
           if (prev <= 0) {
             clearCoinCountdown();
-
             setTimeout(() => {
               handleCoinExhaustedRef.current?.();
             }, 1000);
-
             return 0;
           }
           const next = prev - 1;
 
-          // ✅ same as AudiocallScreen: 30s warning via alertShownRef
-         if (next === 30 && !alertShownRef.current) {
-    alertShownRef.current = true;
-
-    setWarningMsg(
-        'Low Balance\nRecharge now. Your call will end in 30 seconds.'
-    );
-
-    setTimeout(() => {
-        setWarningMsg('');
-    }, 15000);
-}
+          if (next === 30 && !alertShownRef.current) {
+            alertShownRef.current = true;
+            setWarningMsg('Low Balance\nRecharge now. Your call will end in 30 seconds.');
+            setTimeout(() => {
+              setWarningMsg('');
+            }, 15000);
+          }
 
           return next;
         });
       }, 1000);
     },
-    [clearCoinCountdown],
+    [clearCoinCountdown]
   );
 
   useEffect(() => {
@@ -341,18 +310,13 @@ const VideocallScreen = ({ route, navigation }) => {
 
     const onMinutesUpdate = ({ remainingCoins, ratePerMinute }) => {
       if (!isMale) return;
-
       const effectiveRate = ratePerMinute || RATE;
-
       const newSeconds = Math.floor((remainingCoins / effectiveRate) * 60);
-
-      // Synchronize the timer with the backend value.
       setCoinSecondsLeft(newSeconds);
     };
 
     const onLowBalanceWarning = ({ remainingCoins }) => {
       if (!isMale) return;
-      // ✅ same as AudiocallScreen: show banner, no dedup gate
       const msg = `Less than 1 minute left! (${remainingCoins} coins)`;
       setWarningMsg(msg);
       showToast(msg);
@@ -361,7 +325,6 @@ const VideocallScreen = ({ route, navigation }) => {
 
     const onInsufficientBalance = () => {
       if (!isMale) return;
-      // ✅ same as AudiocallScreen: end call immediately
       setWarningMsg('Coins finished!');
       clearCoinCountdown();
       handleCoinExhaustedRef.current?.();
@@ -387,7 +350,7 @@ const VideocallScreen = ({ route, navigation }) => {
     lastMinuteAlertShownRef.current = false;
     alertShownRef.current = false;
     InCallManager.stop();
-    localStreamRef.current?.getTracks().forEach(t => t.stop());
+    localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
     pcRef.current?.close();
     pcRef.current = null;
@@ -396,7 +359,6 @@ const VideocallScreen = ({ route, navigation }) => {
     setRemoteURL(null);
   }, [clearCoinCountdown]);
 
-  /* ── End call ── */
   const handleEndCall = useCallback(() => {
     if (isExitingRef.current) return;
     isExitingRef.current = true;
@@ -434,33 +396,32 @@ const VideocallScreen = ({ route, navigation }) => {
             },
           },
         ],
-      }),
+      })
     );
-  }, [
-    session_id,
-    myId,
-    myGender,
-    callType,
-    stopCallMedia,
-    dispatch,
-    navigation,
-  ]);
+  }, [session_id, myId, myGender, callType, stopCallMedia, dispatch, navigation]);
 
   useEffect(() => {
     handleEndCallRef.current = handleEndCall;
   }, [handleEndCall]);
 
-  /* ── On connected ── */
   const onConnected = useCallback(() => {
     if (timerRef.current) return;
     connectedRef.current = true;
     connectedUIRef.current = true;
     setConnectedUI(true);
     setSeconds(0);
-    timerRef.current = setInterval(() => setSeconds(s => s + 1), 1000);
-    setSpeakerOn(true);
-    InCallManager.setForceSpeakerphoneOn(true);
-    InCallManager.setSpeakerphoneOn(true);
+    timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
+    // Respect whatever audio route is already active (headset/bluetooth
+// plugged in before connect) instead of always forcing speaker.
+if (audioDevice === 'headset' || audioDevice === 'bluetooth') {
+  setSpeakerOn(false);
+  InCallManager.setForceSpeakerphoneOn(false);
+  InCallManager.setSpeakerphoneOn(false);
+} else {
+  setSpeakerOn(true);
+  InCallManager.setForceSpeakerphoneOn(true);
+  InCallManager.setSpeakerphoneOn(true);
+}
 
     endedRef.current = false;
     isExitingRef.current = false;
@@ -481,17 +442,11 @@ const VideocallScreen = ({ route, navigation }) => {
       }
       if (!localCoinStartedRef.current) {
         localCoinStartedRef.current = true;
-
-        // ✅ same as AudiocallScreen: seed immediately and start countdown immediately
         const initialSeconds = Math.floor((coinBalance / RATE) * 60);
-
         startCoinCountdown(initialSeconds);
-
-        // DO NOT start countdown here.
-        // Wait for backend's first deduction (after 3 seconds).
       }
     }
-  }, [isMale, coinBalance, RATE, startCoinCountdown, clearCoinCountdown]);
+  }, [isMale, coinBalance, RATE, startCoinCountdown, clearCoinCountdown , audioDevice]);
 
   const onOfferRef = useRef(null);
   const onAnswerRef = useRef(null);
@@ -547,27 +502,20 @@ const VideocallScreen = ({ route, navigation }) => {
     };
   }, [session_id, flushIce]);
 
-  /* ── WebRTC init ──
-     NOTE: routeCallerId is still used here — and only here — to decide
-     which peer sends the initial WebRTC offer. That's a signaling-role
-     decision, separate from "who do I display as the other user", which
-     now comes from connectedCallDetails via the me/other effect above. */
   useEffect(() => {
     if (!connected || !socketRef.current || startedRef.current) return;
     startedRef.current = true;
     const socket = socketRef.current;
-    const offerHandler = data => onOfferRef.current?.(data);
-    const answerHandler = data => onAnswerRef.current?.(data);
-    const iceHandler = data => onIceRef.current?.(data);
+    const offerHandler = (data) => onOfferRef.current?.(data);
+    const answerHandler = (data) => onAnswerRef.current?.(data);
+    const iceHandler = (data) => onIceRef.current?.(data);
 
-    const navigateAfterRemoteEnd = currentOther => {
+    const navigateAfterRemoteEnd = (currentOther) => {
       navigation.dispatch(
         CommonActions.reset({
           index: 1,
           routes: [
-            {
-              name: myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs',
-            },
+            { name: myGender === 'Male' ? 'MaleHomeTabs' : 'ReceiverBottomTabs' },
             {
               name: 'CallStatusScreen',
               params: {
@@ -584,11 +532,11 @@ const VideocallScreen = ({ route, navigation }) => {
               },
             },
           ],
-        }),
+        })
       );
     };
 
-    const handleRemoteEnd = data => {
+    const handleRemoteEnd = (data) => {
       if (String(data?.endedBy) === String(myId)) return;
       const currentOther = otherRef.current;
       showToast(`${currentOther?.name || 'User'} ended the call`);
@@ -616,14 +564,13 @@ const VideocallScreen = ({ route, navigation }) => {
         InCallManager.setMicrophoneMute(false);
 
         pcRef.current = createPC({
-          onIceCandidate: c =>
-            socket.emit('video_ice_candidate', { session_id, candidate: c }),
-          onTrack: stream => {
+          onIceCandidate: (c) => socket.emit('video_ice_candidate', { session_id, candidate: c }),
+          onTrack: (stream) => {
             if (!stream) return;
-            stream.getAudioTracks().forEach(t => {
+            stream.getAudioTracks().forEach((t) => {
               t.enabled = true;
             });
-            stream.getVideoTracks().forEach(t => {
+            stream.getVideoTracks().forEach((t) => {
               t.enabled = true;
             });
             setRemoteURL(stream.toURL());
@@ -637,17 +584,13 @@ const VideocallScreen = ({ route, navigation }) => {
         });
 
         const stream = await mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
           video: { facingMode: 'user', width: 640, height: 480, frameRate: 30 },
         });
 
         localStreamRef.current = stream;
         setLocalURL(stream.toURL());
-        stream.getTracks().forEach(t => {
+        stream.getTracks().forEach((t) => {
           t.enabled = true;
           pcRef.current.addTrack(t, stream);
         });
@@ -664,7 +607,7 @@ const VideocallScreen = ({ route, navigation }) => {
           const isCaller = String(myId) === String(routeCallerId);
           if (!isCaller) return;
           try {
-            await new Promise(r => setTimeout(r, 300));
+            await new Promise((r) => setTimeout(r, 300));
             const offer = await pcRef.current.createOffer();
             await pcRef.current.setLocalDescription(offer);
             socket.emit('video_offer', { session_id, offer });
@@ -692,7 +635,6 @@ const VideocallScreen = ({ route, navigation }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected]);
 
-  /* ── Other user mic status ── */
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
@@ -703,15 +645,9 @@ const VideocallScreen = ({ route, navigation }) => {
     return () => socket.off('mic_status_update', handle);
   }, [myId]);
 
-  /* ── Back button guard ── */
   useEffect(() => {
-    const unsub = navigation.addListener('beforeRemove', e => {
-      if (
-        forceExitRef.current ||
-        remoteEndedRef.current ||
-        disableExitRef.current ||
-        manualExitRef.current
-      ) {
+    const unsub = navigation.addListener('beforeRemove', (e) => {
+      if (forceExitRef.current || remoteEndedRef.current || disableExitRef.current || manualExitRef.current) {
         navigation.dispatch(e.data.action);
         return;
       }
@@ -722,25 +658,17 @@ const VideocallScreen = ({ route, navigation }) => {
       e.preventDefault();
       Alert.alert('Exit from Call', 'Are you sure you want to exit the call?', [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Exit',
-          style: 'destructive',
-          onPress: () => handleEndCallRef.current?.(),
-        },
+        { text: 'Exit', style: 'destructive', onPress: () => handleEndCallRef.current?.() },
       ]);
     });
     return unsub;
   }, [navigation]);
 
-  /* ── Cleanup on unmount ── */
   useEffect(() => {
     return () => {
       if (startedRef.current && !endedRef.current && !manualExitRef.current) {
         socketRef.current?.emit('call_end', { session_id, user_id: myId });
-        socketRef.current?.emit('video_call_hangup', {
-          session_id,
-          user_id: myId,
-        });
+        socketRef.current?.emit('video_call_hangup', { session_id, user_id: myId });
         stopCallMedia();
         callManager.reset();
         dispatch(clearCall());
@@ -749,112 +677,57 @@ const VideocallScreen = ({ route, navigation }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── Derived display values ── */
   const showOtherBlur = !myFaceGone && otherFaceGone && !otherCameraOff;
   const showOtherAvatar = !myFaceGone && otherCameraOff;
   const coinM = coinSecondsLeft !== null ? Math.floor(coinSecondsLeft / 60) : 0;
   const coinS = coinSecondsLeft !== null ? coinSecondsLeft % 60 : 0;
-  const coinDisplay =
-    coinSecondsLeft !== null
-      ? `${coinM}:${String(coinS).padStart(2, '0')}`
-      : null;
+  const coinDisplay = coinSecondsLeft !== null ? `${coinM}:${String(coinS).padStart(2, '0')}` : null;
   const coinIsLow = coinSecondsLeft !== null && coinSecondsLeft <= 60;
   const guideColor = faceStatus === 'multiple_faces' ? '#FFA940' : '#FF4D4F';
 
-  // ── My own avatar for camera-off states — single consistent source,
-  //    same field used everywhere (display_profile_image), matching
-  //    what's used for "other" and matching AudiocallScreen.
-const myAvatar = userdata?.images?.display_profile_image;
-console.log(myAvatar)
+  const myAvatar = userdata?.images?.display_profile_image;
+
   return (
     <View style={styles.container}>
-      {/* ── Hidden capture view for face detection ──
-          top:0 left:-320 keeps it within vertical bounds so Android GPU
-          composites the SurfaceView. opacity:0.01 = invisible but capturable.
-          Only mounted when camera is ON. */}
-
-
       {localURL && connectedUI && cameraOn && (
-        <View
-          ref={captureViewRef}
-          collapsable={false}
-          renderToHardwareTextureAndroid
-          style={styles.hiddenCapture}
-        >
-          <RTCView
-            streamURL={localURL}
-            style={{ width: 320, height: 240 }}
-            objectFit="cover"
-            mirror
-            zOrder={2}
-          />
+        <View ref={captureViewRef} collapsable={false} renderToHardwareTextureAndroid style={styles.hiddenCapture}>
+          <RTCView streamURL={localURL} style={{ width: moderateScale(320), height: moderateScale(240) }} objectFit="cover" mirror zOrder={2} />
         </View>
       )}
 
-      {/* ── Main video area ── */}
       {!connectedCallDetails ? (
         <View style={styles.waiting}>
-          <Text style={styles.waitText}>Loading call...</Text>
+          <AppText variant="body" style={styles.waitText}>Loading call...</AppText>
         </View>
       ) : !localURL ? (
         <View style={styles.waiting}>
-          <Text style={styles.waitText}>Starting camera...</Text>
+          <AppText variant="body" style={styles.waitText}>Starting camera...</AppText>
         </View>
       ) : !remoteURL ? (
         <>
-          <RTCView
-            streamURL={localURL}
-            style={styles.bigVideo}
-            objectFit="cover"
-            mirror
-            zOrder={0}
-          />
+          <RTCView streamURL={localURL} style={styles.bigVideo} objectFit="cover" mirror zOrder={0} />
           <View style={styles.waitingOverlay}>
-            <Text style={styles.waitText}>Waiting for other user...</Text>
+            <AppText variant="body" style={styles.waitText}>Waiting for other user...</AppText>
           </View>
         </>
       ) : (
         <>
-          {/* ── Big video ── */}
           <View style={styles.bigVideo}>
             {myFaceGone ? (
-              /* Face guide — show local video behind oval */
               <>
                 {cameraOn ? (
-                  <RTCView
-                    streamURL={localURL}
-                    style={StyleSheet.absoluteFill}
-                    objectFit="cover"
-                    mirror
-                    zOrder={0}
-                  />
+                  <RTCView streamURL={localURL} style={StyleSheet.absoluteFill} objectFit="cover" mirror zOrder={0} />
                 ) : (
-                  /* Camera off — blurred avatar instead of frozen frame */
                   <View style={StyleSheet.absoluteFill}>
                     {myAvatar ? (
-                      <Image
-                        source={{ uri: myAvatar }}
-                        style={StyleSheet.absoluteFill}
-                        blurRadius={18}
-                      />
+                      <Image source={{ uri: myAvatar }} style={StyleSheet.absoluteFill} blurRadius={18} />
                     ) : (
-                      <View
-                        style={[
-                          StyleSheet.absoluteFill,
-                          { backgroundColor: '#111' },
-                        ]}
-                      />
+                      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#111' }]} />
                     )}
-                    <View
-                      style={[
-                        StyleSheet.absoluteFill,
-                        { backgroundColor: 'rgba(0,0,0,0.55)' },
-                      ]}
-                    />
+                    <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.55)' }]} />
                   </View>
                 )}
 
-                {/* Oval guide SVG */}
                 <View style={styles.userGuide} pointerEvents="none">
                   <Svg height="100%" width="100%" viewBox="0 0 220 300">
                     <Circle cx="110" cy="120" r="3" fill={guideColor} />
@@ -879,99 +752,60 @@ console.log(myAvatar)
                   </Svg>
                 </View>
 
-                {/* Hint text */}
                 <View style={styles.faceHintBox} pointerEvents="none">
-                  <Ionicons name="scan-outline" size={16} color={guideColor} />
-                  <Text style={[styles.faceHintText, { color: guideColor }]}>
-                    {faceStatus === 'multiple_faces'
-                      ? 'Only one face allowed 🚫'
-                      : 'Position your face in the frame'}
-                  </Text>
+                  <Ionicons name="scan-outline" size={moderateScale(16)} color={guideColor} />
+                  <AppText variant="caption" style={[styles.faceHintText, { color: guideColor }]}>
+                    {faceStatus === 'multiple_faces' ? 'Only one face allowed 🚫' : 'Position your face in the frame'}
+                  </AppText>
                 </View>
               </>
             ) : (
-              /* Normal — remote video */
               <>
-                {/* {isFaceCentered && (
-                  <View style={styles.successBox} pointerEvents="none">
-                    <Text style={styles.successText}>Perfect 👍</Text>
-                  </View>
-                )} */}
+                <RTCView streamURL={remoteURL} style={StyleSheet.absoluteFill} objectFit="cover" zOrder={0} />
 
-                <RTCView
-                  streamURL={remoteURL}
-                  style={StyleSheet.absoluteFill}
-                  objectFit="cover"
-                  zOrder={0}
-                />
-
-                {/* Other user mic-off — pinned to bottom-left of remote video */}
                 {!otherMicOn && (
                   <View style={styles.otherMicBadge} pointerEvents="none">
-                    <Ionicons name="mic-off" size={14} color="#fff" />
+                    <Ionicons name="mic-off" size={moderateScale(14)} color="#fff" />
                   </View>
                 )}
 
-                {/* Other user face gone — blur overlay */}
                 {showOtherBlur && (
                   <View style={styles.blurOverlay} pointerEvents="none">
                     {other?.display_profile_image ? (
-                      <Image
-                        source={{ uri: other.display_profile_image }}
-                        style={styles.blurBg}
-                        blurRadius={25}
-                      />
+                      <Image source={{ uri: other.display_profile_image }} style={styles.blurBg} blurRadius={25} />
                     ) : (
-                      <View
-                        style={[styles.blurBg, { backgroundColor: '#111' }]}
-                      />
+                      <View style={[styles.blurBg, { backgroundColor: '#111' }]} />
                     )}
                     <View style={styles.blurTint} />
                     <View style={styles.blurMsgBox}>
                       <View style={styles.blurIconRing}>
-                        <Ionicons
-                          name="eye-off-outline"
-                          size={28}
-                          color="#FF4D4F"
-                        />
+                        <Ionicons name="eye-off-outline" size={moderateScale(28)} color="#FF4D4F" />
                       </View>
-                      <Text style={styles.blurMsgTitle}>Face Not Visible</Text>
-                      <Text style={styles.blurMsgSub}>
-                        Waiting for the other user to show their face
-                      </Text>
+                      <AppText variant="subtitle" style={styles.blurMsgTitle}>Face Not Visible</AppText>
+                      <AppText variant="caption" style={styles.blurMsgSub}>Waiting for the other user to show their face</AppText>
                     </View>
                   </View>
                 )}
 
-                {/* Other user camera off — avatar overlay */}
                 {showOtherAvatar && (
                   <View style={styles.blurOverlay} pointerEvents="none">
                     {other?.display_profile_image ? (
-                      <Image
-                        source={{ uri: other.display_profile_image }}
-                        style={styles.blurBg}
-                        blurRadius={25}
-                      />
+                      <Image source={{ uri: other.display_profile_image }} style={styles.blurBg} blurRadius={25} />
                     ) : (
-                      <View
-                        style={[styles.blurBg, { backgroundColor: '#0a0a0a' }]}
-                      />
+                      <View style={[styles.blurBg, { backgroundColor: '#0a0a0a' }]} />
                     )}
                     <View style={styles.blurTint} />
                     <View style={styles.avatarBox}>
                       {other?.display_profile_image ? (
-                        <Image
-                          source={{ uri: other.display_profile_image }}
-                          style={styles.avatarImg}
-                        />
+                        <Image source={{ uri: other.display_profile_image }} style={styles.avatarImg} />
                       ) : (
                         <View style={styles.avatarFallback}>
-                          <Ionicons name="person" size={48} color="#555" />
+                          <Ionicons name="person" size={moderateScale(48)} color="#555" />
                         </View>
                       )}
                       <View style={styles.camOffPill}>
-                        <Ionicons name="videocam-off" size={12} color="#fff" />
-                        <Text style={styles.camOffText}>Camera off</Text>
+                        <Ionicons name="videocam-off" size={moderateScale(12)} color="#fff" />
+                        <AppText variant="caption" style={styles.camOffText}>Camera off</AppText>
                       </View>
                     </View>
                   </View>
@@ -980,64 +814,36 @@ console.log(myAvatar)
             )}
           </View>
 
-          {/* ── PiP — local video (top-right) ──
-              onLayout measures exact screen position so the mic badge
-              can be placed at screen level (above SurfaceView) at the
-              correct coordinates regardless of device screen size. */}
           {!myFaceGone && (
             <View
               style={styles.pip}
-              onLayout={e => {
-                const { x, y, width, height } = e.nativeEvent.layout;
-                setMicBadgePos({
-                  top: y + height - 16, // bottom edge of PiP minus half badge
-                  right: 10, // slight overlap on right edge
-                });
+              onLayout={(e) => {
+                const { y, height } = e.nativeEvent.layout;
+                setMicBadgePos({ top: y + height - 16, right: 10 });
               }}
             >
               <View style={styles.pipInner}>
                 {cameraOn ? (
-                  <RTCView
-                    streamURL={localURL}
-                    style={StyleSheet.absoluteFill}
-                    objectFit="cover"
-                    mirror
-                    surfaceView={false}
-                  />
+                  <RTCView streamURL={localURL} style={StyleSheet.absoluteFill} objectFit="cover" mirror surfaceView={false} />
                 ) : (
                   <View style={styles.pipCameraOff}>
                     {myAvatar ? (
                       <>
-                        <Image
-                          source={{ uri: myAvatar }}
-                          style={styles.pipBlurBg}
-                          blurRadius={20}
-                        />
-
+                        <Image source={{ uri: myAvatar }} style={styles.pipBlurBg} blurRadius={20} />
                         <View style={styles.pipTint} />
-
                         <View style={styles.pipAvatarBox}>
-                          <Image
-                            source={{ uri: myAvatar }}
-                            style={styles.pipAvatar}
-                          />
-
+                          <Image source={{ uri: myAvatar }} style={styles.pipAvatar} />
                           <View style={styles.pipCamOffPill}>
-                            <Ionicons
-                              name="videocam-off"
-                              size={10}
-                              color="#fff"
-                            />
-                            <Text style={styles.pipCamOffText}>Camera off</Text>
+                            <Ionicons name="videocam-off" size={moderateScale(10)} color="#fff" />
+                            <AppText variant="caption" style={styles.pipCamOffText}>Camera off</AppText>
                           </View>
                         </View>
                       </>
                     ) : (
                       <>
                         <View style={styles.pipTint} />
-
                         <View style={styles.pipAvatarFallback}>
-                          <Ionicons name="person" size={28} color="#666" />
+                          <Ionicons name="person" size={moderateScale(28)} color="#666" />
                         </View>
                       </>
                     )}
@@ -1046,7 +852,7 @@ console.log(myAvatar)
 
                 {!micOn && (
                   <View style={styles.myMicBadge}>
-                    <Ionicons name="mic-off" size={14} color="#fff" />
+                    <Ionicons name="mic-off" size={moderateScale(14)} color="#fff" />
                   </View>
                 )}
               </View>
@@ -1055,62 +861,60 @@ console.log(myAvatar)
         </>
       )}
 
-      {/* Other face gone — top-left banner */}
       {showOtherBlur && connectedUI && (
         <View style={styles.otherBanner}>
-          <Ionicons name="eye-off-outline" size={12} color="#fff" />
-          <Text style={styles.otherBannerText}>
-            Other user's face not visible
-          </Text>
+          <Ionicons name="eye-off-outline" size={moderateScale(12)} color="#fff" />
+          <AppText variant="caption" style={styles.otherBannerText}>Other user's face not visible</AppText>
         </View>
       )}
 
-      {/* Timer + coin pill — centred top */}
       <View style={styles.timerStack} pointerEvents="none">
         <View style={styles.durationPill}>
-          <Text style={styles.durationText}>
-            {connectedUI
-              ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(
-                  2,
-                  '0',
-                )}`
-              : 'Connecting…'}
-          </Text>
+          <AppText variant="caption" style={styles.durationText}>
+            {connectedUI ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : 'Connecting…'}
+          </AppText>
         </View>
         {connectedUI && isMale && coinDisplay !== null && (
           <View style={[styles.coinPill, coinIsLow && styles.coinPillLow]}>
-            <Text style={styles.coinPillText}>🪙 {coinDisplay}</Text>
+            <AppText variant="caption" style={styles.coinPillText}>🪙 {coinDisplay}</AppText>
           </View>
         )}
       </View>
 
-      {/* Warning banner */}
       {warningMsg !== '' && (
         <View style={styles.warningBanner} pointerEvents="none">
-          <Ionicons name="warning-outline" size={14} color="#fff" />
-          <Text style={styles.warningText}>{warningMsg}</Text>
+          <Ionicons name="warning-outline" size={moderateScale(14)} color="#fff" />
+          <AppText variant="caption" style={styles.warningText}>{warningMsg}</AppText>
         </View>
       )}
 
-      {/* Bottom controls */}
       <LinearGradient colors={['#1b1b1b', '#101010']} style={styles.bottomBar}>
-        <RoundBtn
-          id="speaker"
-          activeBtn={activeBtn}
-          setActiveBtn={setActiveBtn}
-          icon={speakerOn ? 'volume-high' : 'volume-mute'}
-          onPress={() =>
-            setSpeakerOn(p => {
-              InCallManager.setSpeakerphoneOn(!p);
-              return !p;
-            })
-          }
-        />
+       <RoundBtn
+  id="speaker"
+  activeBtn={activeBtn}
+  setActiveBtn={setActiveBtn}
+  icon={audioDevice === 'headset' ? 'headset' : audioDevice === 'bluetooth' ? 'bluetooth' : speakerOn ? 'volume-high' : 'volume-mute'}
+  primary={PRIMARY}
+  styles={styles}
+  disabled={audioDevice === 'headset' || audioDevice === 'bluetooth'}
+  onPress={() => {
+    if (audioDevice === 'headset' || audioDevice === 'bluetooth') return;
+    setSpeakerOn((p) => {
+      const next = !p;
+      setAudioDevice(next ? 'speaker' : 'earpiece');
+      InCallManager.setForceSpeakerphoneOn(false);
+      setTimeout(() => InCallManager.setSpeakerphoneOn(next), 150);
+      return next;
+    });
+  }}
+/>
         <RoundBtn
           id="mic"
           activeBtn={activeBtn}
           setActiveBtn={setActiveBtn}
           icon={micOn ? 'mic' : 'mic-off'}
+          primary={PRIMARY}
+          styles={styles}
           onPress={() => {
             const t = localStreamRef.current?.getAudioTracks()[0];
             if (!t) return;
@@ -1118,8 +922,7 @@ console.log(myAvatar)
             t.enabled = next;
             setMicOn(next);
             const s = socketRef.current;
-            if (s?.connected)
-              s.emit('mic_status', { session_id, user_id: myId, micOn: next });
+            if (s?.connected) s.emit('mic_status', { session_id, user_id: myId, micOn: next });
           }}
         />
         <RoundBtn
@@ -1127,6 +930,8 @@ console.log(myAvatar)
           activeBtn={activeBtn}
           setActiveBtn={setActiveBtn}
           icon={cameraOn ? 'videocam' : 'videocam-off'}
+          primary={PRIMARY}
+          styles={styles}
           onPress={() => {
             const t = localStreamRef.current?.getVideoTracks()[0];
             if (!t) return;
@@ -1140,37 +945,28 @@ console.log(myAvatar)
           setActiveBtn={setActiveBtn}
           icon="call"
           large
+          primary={PRIMARY}
+          styles={styles}
           onPress={() => {
-            Alert.alert(
-              'End Call?',
-              'Are you sure you want to exit the call?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Exit',
-                  style: 'destructive',
-                  onPress: () => handleEndCallRef.current?.(),
-                },
-              ],
-            );
+            Alert.alert('End Call?', 'Are you sure you want to exit the call?', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Exit', style: 'destructive', onPress: () => handleEndCallRef.current?.() },
+            ]);
           }}
         />
       </LinearGradient>
 
-      <FaceDetectionOverlay
-        faceStatus={faceStatus}
-        faceCount={faceCount}
-        visible={connectedUI}
-      />
+      <FaceDetectionOverlay faceStatus={faceStatus} faceCount={faceCount} visible={connectedUI} />
     </View>
   );
 };
 
-const RoundBtn = ({ id, icon, onPress, large, activeBtn, setActiveBtn }) => {
+const RoundBtn = ({ id, icon, onPress, large, activeBtn, setActiveBtn, primary, styles, disabled }) => {
   const isActive = activeBtn === id;
   const isEnd = id === 'end';
   return (
     <TouchableOpacity
+      disabled={disabled}
       onPress={() => {
         setActiveBtn(id);
         onPress?.();
@@ -1179,358 +975,193 @@ const RoundBtn = ({ id, icon, onPress, large, activeBtn, setActiveBtn }) => {
         styles.roundBtn,
         large && styles.endBtn,
         {
-          backgroundColor: isEnd ? '#FF4D4F' : isActive ? PRIMARY : '#fff',
+          backgroundColor: isEnd ? '#FF4D4F' : isActive ? primary : '#fff',
           borderWidth: isActive || isEnd ? 0 : 2,
-          borderColor: PRIMARY,
+          borderColor: primary,
+          opacity: disabled ? 0.5 : 1,
         },
       ]}
     >
-      <Ionicons
-        name={icon}
-        size={large ? 30 : 22}
-        color={isEnd ? '#fff' : isActive ? '#fff' : PRIMARY}
-      />
+      <Ionicons name={icon} size={large ? moderateScale(30) : moderateScale(22)} color={isEnd ? '#fff' : isActive ? '#fff' : primary} />
     </TouchableOpacity>
   );
 };
 
 export default VideocallScreen;
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
-  bigVideo: { flex: 1 },
+// Video surface + controls stay black regardless of theme — required
+// for camera contrast, matching any standard video-call UI.
+const createStyles = (theme) => {
+  const { spacing, radius } = theme;
 
-  hiddenCapture: {
-    position: 'absolute',
-    width: 320,
-    height: 240,
-    top: 0,
-    left: -320,
-    opacity: 0.01,
-    zIndex: -1,
-    overflow: 'hidden',
-  },
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#000' },
+    bigVideo: { flex: 1 },
 
-  /* Face guide */
-  userGuide: {
-    position: 'absolute',
-    top: '16%',
-    width: 220,
-    height: 300,
-    alignSelf: 'center',
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 20,
-  },
-  faceHintBox: {
-    position: 'absolute',
-    bottom: '14%',
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  faceHintText: { fontSize: 13, fontWeight: '600' },
-  successBox: {
-    position: 'absolute',
-    top: '30%',
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0,255,157,0.15)',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    zIndex: 5,
-  },
-  successText: { color: '#00FF9D', fontWeight: '600', fontSize: 13 },
+    hiddenCapture: {
+      position: 'absolute',
+      width: moderateScale(320),
+      height: moderateScale(240),
+      top: 0,
+      left: -moderateScale(320),
+      opacity: 0.01,
+      zIndex: -1,
+      overflow: 'hidden',
+    },
 
-  /* Blur overlays */
-  blurOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  blurBg: { position: 'absolute', width: '100%', height: '100%' },
-  blurTint: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  blurMsgBox: { alignItems: 'center', gap: 10, paddingHorizontal: 32 },
-  blurIconRing: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(255,77,79,0.15)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,77,79,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  blurMsgTitle: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  blurMsgSub: {
-    color: '#888',
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  avatarBox: { alignItems: 'center', gap: 14 },
-  avatarImg: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 2.5,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  avatarFallback: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: '#1e1e1e',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  camOffPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-  },
-  camOffText: { color: '#bbb', fontSize: 12, fontWeight: '500' },
+    userGuide: {
+      position: 'absolute',
+      top: '16%',
+      width: moderateScale(220),
+      height: moderateScale(300),
+      alignSelf: 'center',
+      alignItems: 'center',
+      justifyContent: 'center',
+      elevation: 20,
+    },
+    faceHintBox: {
+      position: 'absolute',
+      bottom: '14%',
+      alignSelf: 'center',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      backgroundColor: 'rgba(0,0,0,0.75)',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.xl,
+    },
+    faceHintText: { fontWeight: '600' },
 
-  /* PiP */
-  pip: {
-    position: 'absolute',
-    top: 70,
-    right: 16,
-    zIndex: 10,
-    elevation: 10,
-    borderRadius: 14,
-    overflow: 'visible', // must be visible so mic badge isn't clipped
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-  pipInner: {
-    width: 108,
-    height: 156,
-    borderRadius: 14,
-    overflow: 'hidden', // clip video content inside PiP
-  },
-  pipCameraOff: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#111',
-  },
-  pipBlurBg: { position: 'absolute', width: '100%', height: '100%' },
-  pipTint: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0,0,0,0.52)',
-  },
-  myMicBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#FF3B30',
+    blurOverlay: { ...StyleSheet.absoluteFillObject, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+    blurBg: { position: 'absolute', width: '100%', height: '100%' },
+    blurTint: { position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)' },
+    blurMsgBox: { alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xxl },
+    blurIconRing: {
+      width: moderateScale(64),
+      height: moderateScale(64),
+      borderRadius: moderateScale(32),
+      backgroundColor: 'rgba(255,77,79,0.15)',
+      borderWidth: 1.5,
+      borderColor: 'rgba(255,77,79,0.4)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.xxs,
+    },
+    blurMsgTitle: { color: '#fff', letterSpacing: 0.2 },
+    blurMsgSub: { color: '#888', textAlign: 'center', lineHeight: moderateScale(18) },
+    avatarBox: { alignItems: 'center', gap: spacing.md },
+    avatarImg: { width: moderateScale(96), height: moderateScale(96), borderRadius: moderateScale(48), borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.15)' },
+    avatarFallback: { width: moderateScale(96), height: moderateScale(96), borderRadius: moderateScale(48), backgroundColor: '#1e1e1e', alignItems: 'center', justifyContent: 'center' },
+    camOffPill: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.lg },
+    camOffText: { color: '#bbb', fontWeight: '500' },
 
-    justifyContent: 'center',
-    alignItems: 'center',
+    pip: {
+      position: 'absolute',
+      top: moderateScale(70),
+      right: spacing.md,
+      zIndex: 10,
+      elevation: 10,
+      borderRadius: radius.md,
+      overflow: 'visible',
+      borderWidth: 1.5,
+      borderColor: 'rgba(255,255,255,0.12)',
+    },
+    pipInner: { width: moderateScale(108), height: moderateScale(156), borderRadius: radius.md, overflow: 'hidden' },
+    pipCameraOff: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', backgroundColor: '#111' },
+    pipBlurBg: { position: 'absolute', width: '100%', height: '100%' },
+    pipTint: { position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.52)' },
+    myMicBadge: {
+      position: 'absolute',
+      top: spacing.xs,
+      right: spacing.xs,
+      width: moderateScale(24),
+      height: moderateScale(24),
+      borderRadius: moderateScale(12),
+      backgroundColor: '#FF3B30',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000,
+      elevation: 1000,
+    },
+    pipAvatarBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
+    pipAvatar: { width: moderateScale(46), height: moderateScale(46), borderRadius: moderateScale(23), borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.18)' },
+    pipAvatarFallback: { width: moderateScale(46), height: moderateScale(46), borderRadius: moderateScale(23), backgroundColor: '#2a2a2a', alignItems: 'center', justifyContent: 'center' },
+    pipCamOffPill: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: spacing.xs, paddingVertical: 3, borderRadius: radius.sm },
+    pipCamOffText: { color: '#bbb', fontSize: moderateScale(9), fontWeight: '500' },
 
-    zIndex: 1000,
-    elevation: 1000,
-  },
-  pipAvatarBox: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  pipAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.18)',
-  },
-  pipAvatarFallback: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#2a2a2a',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pipCamOffPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  pipCamOffText: { color: '#bbb', fontSize: 9, fontWeight: '500' },
+    otherMicBadge: {
+      position: 'absolute',
+      top: moderateScale(50),
+      left: spacing.md,
+      width: moderateScale(28),
+      height: moderateScale(28),
+      borderRadius: moderateScale(14),
+      backgroundColor: 'rgba(255,77,79,0.95)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 20,
+      elevation: 20,
+    },
 
-  /* MY mic badge — screen level, position set dynamically via onLayout.
-     No top/right here — injected inline from micBadgePos state. */
-  myMicScreenBadge: {
-    position: 'absolute',
-    backgroundColor: '#FF4D4F',
-    borderRadius: 12,
-    padding: 5,
-    zIndex: 999,
-    elevation: 999,
-  },
+    otherBanner: {
+      position: 'absolute',
+      top: moderateScale(44),
+      left: spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xxs,
+      backgroundColor: 'rgba(255,77,79,0.88)',
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xxs,
+      borderRadius: radius.lg,
+      zIndex: 30,
+    },
+    otherBannerText: { color: '#fff', fontWeight: '600' },
 
-  /* OTHER user mic badge — inside bigVideo, bottom-left of remote feed */
-  otherMicBadge: {
-    position: 'absolute',
-    top: 50,
-    left: 14,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,77,79,0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 20,
-    elevation: 20,
-  },
+    waiting: { flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
+    waitText: { color: '#fff' },
+    waitingOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.35)' },
 
-  otherBanner: {
-    position: 'absolute',
-    top: 44,
-    left: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255,77,79,0.88)',
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    borderRadius: 16,
-    zIndex: 30,
-  },
-  otherBannerText: { color: '#fff', fontSize: 11, fontWeight: '600' },
+    timerStack: { position: 'absolute', top: moderateScale(44), left: 0, right: 0, alignItems: 'center', gap: spacing.xs, zIndex: 20 },
+    durationPill: { backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, borderRadius: radius.xl },
+    durationText: { color: '#fff' },
+    coinPill: { backgroundColor: 'rgba(130,0,230,0.85)', paddingHorizontal: spacing.md, paddingVertical: spacing.xxs, borderRadius: radius.xl, flexDirection: 'row', alignItems: 'center' },
+    coinPillLow: { backgroundColor: 'rgba(220,50,50,0.92)' },
+    coinPillText: { color: '#fff', fontWeight: '700' },
 
-  waiting: {
-    flex: 1,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  waitText: { color: '#fff', fontSize: 14 },
-  waitingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-  },
+    warningBanner: {
+      position: 'absolute',
+      bottom: moderateScale(125),
+      left: spacing.md,
+      right: spacing.md,
+      backgroundColor: '#FF6B35',
+      borderRadius: radius.lg,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      zIndex: 9999,
+      elevation: 20,
+      shadowColor: '#000',
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 3 },
+    },
+    warningText: { flex: 1, color: '#fff', marginLeft: spacing.sm, lineHeight: moderateScale(18) },
 
-  timerStack: {
-    position: 'absolute',
-    top: 44,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    gap: 6,
-    zIndex: 20,
-  },
-  durationPill: {
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  durationText: { color: '#fff', fontSize: 13 },
-  coinPill: {
-    backgroundColor: 'rgba(130,0,230,0.85)',
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  coinPillLow: { backgroundColor: 'rgba(220,50,50,0.92)' },
-  coinPillText: { color: '#fff', fontWeight: '700', fontSize: 12 },
-
-warningBanner: {
-  position: 'absolute',
- bottom: 125,
-  left: 15,
-  right: 15,
-  backgroundColor: '#FF6B35',
-  borderRadius: 12,
-  paddingHorizontal: 14,
-  paddingVertical: 12,
-  flexDirection: 'row',
-  alignItems: 'center',
-  zIndex: 9999,
-  elevation: 20,
-
-  shadowColor: '#000',
-  shadowOpacity: 0.25,
-  shadowRadius: 8,
-  shadowOffset: {
-    width: 0,
-    height: 3,
-  },
-},
-
-warningTitle: {
-  color: '#fff',
-  fontSize: 15,
-  fontWeight: '700',
-},
-
-warningText: {
-  flex: 1,
-  color: '#fff',
-  fontSize: 12,
-  fontWeight: '600',
-  marginLeft: 10,
-  lineHeight: 18,
-},
-  bottomBar: {
-    position: 'absolute',
-    bottom: 24,
-    left: 16,
-    right: 16,
-    height: 84,
-    borderRadius: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-evenly',
-  },
-  roundBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  endBtn: { width: 64, height: 64, borderRadius: 32 },
-});
+    bottomBar: {
+      position: 'absolute',
+      bottom: moderateScale(24),
+      left: spacing.md,
+      right: spacing.md,
+      height: moderateScale(84),
+      borderRadius: moderateScale(40),
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-evenly',
+    },
+    roundBtn: { width: moderateScale(52), height: moderateScale(52), borderRadius: moderateScale(26), alignItems: 'center', justifyContent: 'center' },
+    endBtn: { width: moderateScale(64), height: moderateScale(64), borderRadius: moderateScale(32) },
+  });
+};

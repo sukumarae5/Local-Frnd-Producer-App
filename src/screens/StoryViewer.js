@@ -1,37 +1,47 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Image,
   StyleSheet,
-  Dimensions,
   TouchableWithoutFeedback,
   Animated,
   TouchableOpacity,
   Alert,
-  Text,
-  FlatList
-} from "react-native";
-import { useDispatch, useSelector } from "react-redux";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+  useWindowDimensions,
+  FlatList,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { moderateScale } from 'react-native-size-matters';
+import { useDispatch, useSelector } from 'react-redux';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import {
   deleteStatusRequest,
   viewStatusRequest,
-  getViewersRequest
-} from "../features/Status/statusActions";
+  getViewersRequest,
+} from '../features/Status/statusActions';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
-const { width, height } = Dimensions.get("window");
+// Intentionally fixed dark palette — story viewers stay dark regardless of
+// app theme, for image/video contrast, matching platform conventions.
+const viewerColors = {
+  background: '#000000',
+  text: '#FFFFFF',
+  textMuted: '#AAAAAA',
+  textFaint: '#888888',
+  sheet: '#111111',
+  progressTrack: 'rgba(255,255,255,0.3)',
+};
 
-/* 🔥 TIME FORMAT FUNCTION */
-const formatTimeAgo = (time) => {
-  if (!time) return "";
+const formatTimeAgo = time => {
+  if (!time) return '';
 
   const now = new Date();
   const viewedTime = new Date(time);
-
   const diff = Math.floor((now - viewedTime) / 1000);
 
-  if (diff < 60) return "Just now";
+  if (diff < 60) return 'Just now';
 
   const minutes = Math.floor(diff / 60);
   if (minutes < 60) return `${minutes} min ago`;
@@ -40,7 +50,7 @@ const formatTimeAgo = (time) => {
   if (hours < 24) return `${hours} hr ago`;
 
   const days = Math.floor(hours / 24);
-  if (days === 1) return "Yesterday";
+  if (days === 1) return 'Yesterday';
 
   return `${days} days ago`;
 };
@@ -49,8 +59,15 @@ const StoryViewer = ({ route, navigation }) => {
   const { stories, index, isMyStatus } = route.params;
 
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const { spacing, radius } = theme;
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const styles = React.useMemo(
+    () => createStyles(theme, width, height),
+    [theme, width, height],
+  );
 
-  // ✅ REDUX VIEWERS
   const viewers = useSelector(state => state.status.viewers);
 
   const [currentIndex, setCurrentIndex] = useState(index);
@@ -61,49 +78,39 @@ const StoryViewer = ({ route, navigation }) => {
   const animation = useRef(null);
   const viewedStories = useRef(new Set());
 
-  /* DELETE */
   const handleDelete = () => {
     if (!isMyStatus) return;
 
     const currentStory = stories[currentIndex];
 
-    Alert.alert("Delete", "Delete this story?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert('Delete', 'Delete this story?', [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: "Delete",
+        text: 'Delete',
         onPress: () => {
           dispatch(deleteStatusRequest(currentStory?.status_id));
           navigation.goBack();
-        }
-      }
+        },
+      },
     ]);
   };
 
-  /* VIEW TRACKING */
   useEffect(() => {
     if (!stories.length) return;
 
     const currentStory = stories[currentIndex];
-
     if (isMyStatus) return;
-
     if (viewedStories.current.has(currentStory?.status_id)) return;
 
     viewedStories.current.add(currentStory?.status_id);
-
-    dispatch(
-      viewStatusRequest({
-        status_id: currentStory?.status_id
-      })
-    );
+    dispatch(viewStatusRequest({ status_id: currentStory?.status_id }));
   }, [currentIndex]);
 
-  /* ANIMATION */
   const startAnimation = () => {
     animation.current = Animated.timing(progress, {
       toValue: 1,
       duration: 3000,
-      useNativeDriver: false
+      useNativeDriver: false,
     });
 
     animation.current.start(({ finished }) => {
@@ -141,26 +148,22 @@ const StoryViewer = ({ route, navigation }) => {
 
   const progressWidth = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: ["0%", "100%"]
+    outputRange: ['0%', '100%'],
   });
 
-  /* 👁 VIEWERS CLICK */
   const handleViewers = () => {
     if (!isMyStatus) return;
 
     const currentStory = stories[currentIndex];
-
     setIsPaused(true);
-
     dispatch(getViewersRequest(currentStory?.status_id));
-
     setShowViewers(true);
   };
 
   return (
     <TouchableWithoutFeedback
       disabled={showViewers}
-      onPress={(e) => {
+      onPress={e => {
         const x = e.nativeEvent.locationX;
         if (x < width / 2) prevStory();
         else nextStory();
@@ -169,38 +172,45 @@ const StoryViewer = ({ route, navigation }) => {
       onPressOut={() => setIsPaused(false)}
     >
       <View style={styles.container}>
-
-        {/* HEADER */}
-        <View style={styles.header}>
+        <View style={[styles.header, { top: insets.top + spacing.sm }]}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Icon name="arrow-left" size={26} color="#fff" />
+            <Icon
+              name="arrow-left"
+              size={moderateScale(26)}
+              color={viewerColors.text}
+            />
           </TouchableOpacity>
 
           {isMyStatus && (
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-
-              {/* 👁 VIEW COUNT */}
+            <View style={styles.headerRight}>
               <TouchableOpacity
                 onPress={handleViewers}
-                style={{ marginRight: 15, flexDirection: "row", alignItems: "center" }}
+                style={styles.viewCountBtn}
               >
-                <Icon name="eye-outline" size={26} color="#fff" />
-                <Text style={{ color: "#fff", marginLeft: 5 }}>
+                <Icon
+                  name="eye-outline"
+                  size={moderateScale(26)}
+                  color={viewerColors.text}
+                />
+                <AppText variant="bodySmall" style={styles.viewCountText}>
                   {viewers?.length || 0}
-                </Text>
+                </AppText>
               </TouchableOpacity>
 
-              {/* DELETE */}
               <TouchableOpacity onPress={handleDelete}>
-                <Icon name="delete" size={26} color="#fff" />
+                <Icon
+                  name="delete"
+                  size={moderateScale(26)}
+                  color={viewerColors.text}
+                />
               </TouchableOpacity>
-
             </View>
           )}
         </View>
 
-        {/* PROGRESS */}
-        <View style={styles.progressContainer}>
+        <View
+          style={[styles.progressContainer, { top: insets.top - spacing.xs }]}
+        >
           {stories.map((_, i) => (
             <View key={i} style={styles.progressBarBackground}>
               {i === currentIndex ? (
@@ -211,7 +221,7 @@ const StoryViewer = ({ route, navigation }) => {
                 <View
                   style={[
                     styles.progressBarFill,
-                    { width: i < currentIndex ? "100%" : "0%" }
+                    { width: i < currentIndex ? '100%' : '0%' },
                   ]}
                 />
               )}
@@ -219,15 +229,18 @@ const StoryViewer = ({ route, navigation }) => {
           ))}
         </View>
 
-        {/* IMAGE */}
         <Image
           source={{ uri: stories[currentIndex]?.media_url }}
           style={styles.image}
         />
 
-        {/* VIEWERS LIST */}
         {showViewers && (
-          <View style={styles.viewerContainer}>
+          <View
+            style={[
+              styles.viewerContainer,
+              { paddingBottom: insets.bottom + spacing.md },
+            ]}
+          >
             <TouchableOpacity
               style={styles.closeBtn}
               onPress={() => {
@@ -235,37 +248,44 @@ const StoryViewer = ({ route, navigation }) => {
                 setIsPaused(false);
               }}
             >
-              <Icon name="close" size={26} color="#fff" />
+              <Icon
+                name="close"
+                size={moderateScale(26)}
+                color={viewerColors.text}
+              />
             </TouchableOpacity>
 
             <FlatList
               data={viewers || []}
-              keyExtractor={(item, index) => index.toString()}
+              keyExtractor={(item, i) => i.toString()}
               renderItem={({ item }) => (
                 <View style={styles.viewerItem}>
-                  <Icon name="account-circle" size={40} color="#fff" />
-                  <View style={{ marginLeft: 10 }}>
-                    <Text style={styles.viewerName}>{item?.name}</Text>
-                    <Text style={styles.viewerUsername}>
+                  <Icon
+                    name="account-circle"
+                    size={moderateScale(40)}
+                    color={viewerColors.text}
+                  />
+                  <View style={styles.viewerInfo}>
+                    <AppText variant="body" style={styles.viewerName}>
+                      {item?.name}
+                    </AppText>
+                    <AppText variant="bodySmall" style={styles.viewerUsername}>
                       @{item?.username}
-                    </Text>
-
-                    {/* ⏱ TIME */}
-                    <Text style={styles.viewerTime}>
+                    </AppText>
+                    <AppText variant="caption" style={styles.viewerTime}>
                       {formatTimeAgo(item?.viewed_at)}
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
               )}
               ListEmptyComponent={
-                <Text style={{ color: "#fff", textAlign: "center" }}>
+                <AppText variant="body" style={styles.emptyViewers}>
                   No viewers yet
-                </Text>
+                </AppText>
               }
             />
           </View>
         )}
-
       </View>
     </TouchableWithoutFeedback>
   );
@@ -273,84 +293,78 @@ const StoryViewer = ({ route, navigation }) => {
 
 export default StoryViewer;
 
-/* STYLES */
+const createStyles = (theme, width, height) => {
+  const { spacing, radius } = theme;
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000" },
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: viewerColors.background },
 
-  image: {
-    width: width,
-    height: height,
-    resizeMode: "cover"
-  },
+    image: { width, height, resizeMode: 'cover' },
 
-  header: {
-    position: "absolute",
-    top: 50,
-    width: "100%",
-    paddingHorizontal: 15,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    zIndex: 20
-  },
+    header: {
+      position: 'absolute',
+      width: '100%',
+      paddingHorizontal: spacing.lg,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      zIndex: 20,
+    },
 
-  progressContainer: {
-    position: "absolute",
-    top: 40,
-    flexDirection: "row",
-    width: "100%",
-    paddingHorizontal: 10,
-    zIndex: 10
-  },
+    headerRight: { flexDirection: 'row', alignItems: 'center' },
 
-  progressBarBackground: {
-    flex: 1,
-    height: 3,
-    backgroundColor: "rgba(255,255,255,0.3)",
-    marginHorizontal: 2,
-    borderRadius: 2,
-    overflow: "hidden"
-  },
+    viewCountBtn: {
+      marginRight: spacing.lg,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
 
-  progressBarFill: {
-    height: "100%",
-    backgroundColor: "#fff"
-  },
+    viewCountText: { color: viewerColors.text, marginLeft: spacing.xs },
 
-  viewerContainer: {
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
-    maxHeight: height * 0.5,
-    backgroundColor: "#111",
-    padding: 15,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20
-  },
+    progressContainer: {
+      position: 'absolute',
+      flexDirection: 'row',
+      width: '100%',
+      paddingHorizontal: spacing.sm,
+      zIndex: 10,
+    },
 
-  viewerItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 15
-  },
+    progressBarBackground: {
+      flex: 1,
+      height: moderateScale(3),
+      backgroundColor: viewerColors.progressTrack,
+      marginHorizontal: spacing.xxs,
+      borderRadius: radius.xs,
+      overflow: 'hidden',
+    },
 
-  viewerName: {
-    color: "#fff",
-    fontSize: 16
-  },
+    progressBarFill: { height: '100%', backgroundColor: viewerColors.text },
 
-  viewerUsername: {
-    color: "#aaa"
-  },
+    viewerContainer: {
+      position: 'absolute',
+      bottom: 0,
+      width: '100%',
+      maxHeight: height * 0.5,
+      backgroundColor: viewerColors.sheet,
+      padding: spacing.lg,
+      borderTopLeftRadius: radius.xl,
+      borderTopRightRadius: radius.xl,
+    },
 
-  viewerTime: {
-    color: "#888",
-    fontSize: 12,
-    marginTop: 2
-  },
+    viewerItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
 
-  closeBtn: {
-    alignSelf: "flex-end",
-    marginBottom: 10
-  }
-});
+    viewerInfo: { marginLeft: spacing.sm },
+
+    viewerName: { color: viewerColors.text },
+    viewerUsername: { color: viewerColors.textMuted },
+    viewerTime: { color: viewerColors.textFaint, marginTop: spacing.xxs },
+
+    closeBtn: { alignSelf: 'flex-end', marginBottom: spacing.sm },
+
+    emptyViewers: { color: viewerColors.text, textAlign: 'center' },
+  });
+};

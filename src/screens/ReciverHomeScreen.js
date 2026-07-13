@@ -1,14 +1,8 @@
-import React, { useEffect, useCallback, useState } from 'react';
-import {
-  View,
-  FlatList,
-  TextInput,
-  StyleSheet,
-  Dimensions,
-  RefreshControl,
-} from 'react-native';
+import React, { useEffect, useCallback, useState, useMemo } from 'react';
+import { View, FlatList, TextInput, StyleSheet, RefreshControl } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
+import { moderateScale } from 'react-native-size-matters';
 
 import ReceiverHeader from '../components/ReceiverHeader';
 import StoriesScreen from './StoriesScreen';
@@ -20,18 +14,18 @@ import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeSc
 
 import { userDatarequest } from '../features/user/userAction';
 import { fetchUnreadCount } from '../features/notification/notificationAction';
-
-const { width } = Dimensions.get('window');
-
-const scale = size => (width / 375) * size;
+import { useAppTheme } from '../theme';
 
 const ReciverHomeScreen = ({ navigation }) => {
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [refreshing, setRefreshing] = useState(false);
 
-  const { userdata } = useSelector(state => state.user);
-  const unread = useSelector(state => state.notification.unread);
+  const { userdata } = useSelector((state) => state.user);
+  const unread = useSelector((state) => state.notification.unread);
 
   useEffect(() => {
     dispatch(userDatarequest());
@@ -40,17 +34,13 @@ const ReciverHomeScreen = ({ navigation }) => {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-
     dispatch(userDatarequest());
     dispatch(fetchUnreadCount());
-
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    setTimeout(() => setRefreshing(false), 1000);
   }, [dispatch]);
 
   const coins = userdata?.user?.rings_balance ?? 0;
-const avatar = userdata?.images?.display_profile_image;
+  const avatar = userdata?.images?.display_profile_image;
 
   const sections = [
     { id: 'stories' },
@@ -73,7 +63,7 @@ const avatar = userdata?.images?.display_profile_image;
           return <ActiveDostSectionScreen />;
         case 'go':
           return (
-            <View style={{ marginHorizontal: scale(16) }}>
+            <View style={styles.goOnlineWrap}>
               <GoOnlineCard navigation={navigation} />
             </View>
           );
@@ -81,12 +71,12 @@ const avatar = userdata?.images?.display_profile_image;
           return null;
       }
     },
-    [navigation],
+    [navigation, styles]
   );
 
   return (
     <WelcomeScreenbackgroungpage>
-      <View style={{ flex: 1 }}>
+      <View style={styles.flex}>
         <View style={styles.headerContainer}>
           <ReceiverHeader
             navigation={navigation}
@@ -98,24 +88,26 @@ const avatar = userdata?.images?.display_profile_image;
         </View>
 
         <View style={styles.searchWrapper}>
-          <Icon name="search-outline" size={scale(18)} color="#999" />
-          <TextInput placeholder="Search" style={styles.input} />
+          <Icon name="search-outline" size={moderateScale(18)} color={colors.iconMuted} />
+          <TextInput
+            placeholder="Search"
+            style={styles.input}
+            placeholderTextColor={colors.placeholder}
+          />
         </View>
 
         <FlatList
           data={sections}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingBottom: scale(90),
-          }}
+          contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={['#D51BF9']}
-              tintColor="#D51BF9"
+              colors={[colors.gradientPurpleStart]}
+              tintColor={colors.gradientPurpleStart}
             />
           }
         />
@@ -126,27 +118,41 @@ const avatar = userdata?.images?.display_profile_image;
 
 export default ReciverHomeScreen;
 
-const styles = StyleSheet.create({
-  searchWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: scale(16),
-    marginBottom: scale(10),
-    paddingHorizontal: scale(12),
-    height: scale(48),
-    backgroundColor: '#fff',
-    borderWidth: 1.5,
-    borderColor: '#D51BF9',
-    borderRadius: scale(12),
-  },
+const createStyles = (theme) => {
+  const { colors, spacing, radius } = theme;
 
-  headerContainer: {
-    paddingHorizontal: scale(16),
-  },
+  return StyleSheet.create({
+    flex: { flex: 1 },
 
-  input: {
-    flex: 1,
-    marginLeft: scale(10),
-    fontSize: scale(14),
-  },
-});
+    headerContainer: {
+      paddingHorizontal: spacing.lg,
+    },
+
+    searchWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: spacing.lg,
+      marginBottom: spacing.sm,
+      paddingHorizontal: spacing.md,
+      height: moderateScale(48),
+      backgroundColor: colors.card,
+      borderWidth: 1.5,
+      borderColor: colors.gradientPurpleStart,
+      borderRadius: radius.md,
+    },
+
+    input: {
+      flex: 1,
+      marginLeft: spacing.sm,
+      color: colors.text,
+    },
+
+    listContent: {
+      paddingBottom: moderateScale(90),
+    },
+
+    goOnlineWrap: {
+      marginHorizontal: spacing.lg,
+    },
+  });
+};

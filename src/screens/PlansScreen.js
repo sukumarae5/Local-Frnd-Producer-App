@@ -1,18 +1,18 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   Image,
   FlatList,
   StatusBar,
-  Dimensions,
+  useWindowDimensions,
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSelector, useDispatch } from 'react-redux';
+import { moderateScale } from 'react-native-size-matters';
 import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
 import { useNavigation } from '@react-navigation/native';
 import HomeHeader from '../components/HomeHeader';
@@ -22,13 +22,9 @@ import {
   createOrderRequest,
   resetPurchase,
 } from '../features/purchase/purchaseActions';
-
-const { width, height } = Dimensions.get('window');
-
-const wp = val => (width * val) / 100;
-const hp = val => (height * val) / 100;
-
-const isSmallDevice = width < 360;
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
+import MaskedView from '@react-native-masked-view/masked-view';
 
 export default function PlanScreen() {
   const [isCreatingOrder, setIsCreatingOrder] = React.useState(false);
@@ -37,6 +33,13 @@ export default function PlanScreen() {
 
   const dispatch = useDispatch();
   const navigation = useNavigation();
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const { width, height } = useWindowDimensions();
+  const styles = useMemo(
+    () => createStyles(theme, width, height),
+    [theme, width, height],
+  );
 
   const { userdata } = useSelector(state => state.user);
   const coins = useSelector(state => state.coins?.coins || []);
@@ -66,12 +69,8 @@ export default function PlanScreen() {
 
   const onRefresh = () => {
     setRefreshing(true);
-
     dispatch(getCoinsRequest());
-
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    setTimeout(() => setRefreshing(false), 1000);
   };
 
   const handleClaim = item => {
@@ -92,19 +91,19 @@ export default function PlanScreen() {
         end={{ x: 1, y: 1 }}
         style={styles.newCard}
       >
-        <Text style={styles.newTitle} numberOfLines={2}>
+        <AppText style={styles.newTitle} numberOfLines={2}>
           Unlock {item?.discount_percent ?? 0}% Savings
-        </Text>
+        </AppText>
 
         <Image
           source={require('../assets/multicoin.png')}
           style={styles.newCoin}
         />
 
-        <Text style={styles.newPrice} numberOfLines={1}>
-          Only <Text style={styles.rupee}>₹</Text>
+        <AppText style={styles.newPrice} numberOfLines={1}>
+          Only <AppText style={styles.rupee}>₹</AppText>
           {item?.price_after_discount ?? 0}
-        </Text>
+        </AppText>
 
         <TouchableOpacity
           style={[styles.claimBtn, loading && styles.disabledBtn]}
@@ -116,9 +115,9 @@ export default function PlanScreen() {
             <ActivityIndicator size="small" color="#fff" />
           ) : (
             <>
-              <Text style={styles.claimText} numberOfLines={1}>
+              <AppText style={styles.claimText} numberOfLines={1}>
                 Claim {item?.coins ?? 0}
-              </Text>
+              </AppText>
               <Image
                 source={require('../assets/normalmulticoin.png')}
                 style={styles.btnCoin}
@@ -135,19 +134,13 @@ export default function PlanScreen() {
       <View style={styles.offerWrapper}>
         <OffersSectionScreen />
       </View>
-
-      {/* <Image
-        source={require('../assets/blackfriday.png')}
-        style={styles.blackBanner}
-        resizeMode="contain"
-      /> */}
     </View>
   );
 
   return (
     <WelcomeScreenbackgroungpage>
       <View style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+        <StatusBar barStyle={colors.statusBar} backgroundColor="transparent" />
 
         <View style={styles.headerContainer}>
           <HomeHeader
@@ -156,14 +149,37 @@ export default function PlanScreen() {
             userdata={userdata}
             unread={unread}
             imageUrl={imageUrl}
-            wp={wp}
-            hp={hp}
           />
         </View>
 
         <View style={styles.titleWrapper}>
-          <Text style={styles.lokalText}>Lokal frnd</Text>
-          <Text style={styles.buyCoinsText}>Buy Coins</Text>
+          <MaskedView
+            maskElement={<AppText style={styles.lokalMask}>Lokal frnd</AppText>}
+          >
+            <LinearGradient
+              colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]}
+              useAngle
+              angle={75.05}
+            >
+              <AppText style={[styles.lokalMask, { opacity: 0 }]}>
+                Lokal frnd
+              </AppText>
+            </LinearGradient>
+          </MaskedView>
+
+          <MaskedView
+            maskElement={<AppText style={styles.buyMask}>Buy Coins</AppText>}
+          >
+            <LinearGradient
+              colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]}
+              useAngle
+              angle={75.05}
+            >
+              <AppText style={[styles.buyMask, { opacity: 0 }]}>
+                Buy Coins
+              </AppText>
+            </LinearGradient>
+          </MaskedView>
         </View>
 
         <FlatList
@@ -181,8 +197,8 @@ export default function PlanScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={['#D946EF']}
-              tintColor="#D946EF"
+              colors={[colors.secondary]}
+              tintColor={colors.secondary}
             />
           }
         />
@@ -191,134 +207,139 @@ export default function PlanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+const createStyles = (theme, width, height) => {
+  const { colors, spacing, radius } = theme;
 
-  headerContainer: {
-    paddingHorizontal: wp(4),
-    paddingTop: hp(0.5),
-  },
+  return StyleSheet.create({
+    container: { flex: 1 },
 
-  titleWrapper: {
-    alignItems: 'center',
-    marginTop: hp(0.3),
-    marginBottom: hp(0.5),
-  },
+    headerContainer: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.xxs,
+    },
 
-  lokalText: {
-    textAlign: 'center',
-    color: '#9333EA',
-    fontSize: isSmallDevice ? wp(6.4) : wp(6.8),
-    fontWeight: '500',
-  },
+    titleWrapper: {
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
 
-  buyCoinsText: {
-    textAlign: 'center',
-    color: '#A21CAF',
-    fontSize: isSmallDevice ? wp(8.8) : wp(9.6),
-    fontWeight: '800',
-    marginTop: hp(0.2),
-  },
+    lokalMask: {
+      fontSize: moderateScale(24),
+      fontWeight: '600',
+      textAlign: 'center',
+      lineHeight: moderateScale(30),
+    },
 
-  listContainer: {
-    paddingBottom: hp(12),
-  },
+    buyMask: {
+      fontSize: moderateScale(32),
+      fontWeight: '900',
+      textAlign: 'center',
+      lineHeight: moderateScale(40),
+    },
 
-  bannerSection: {
-    width: width,
-    alignSelf: 'center',
-    marginBottom: hp(1),
-  },
+    listContainer: {
+      paddingBottom: height * 0.13,
+    },
 
-  offerWrapper: {
-    width: width,
-    overflow: 'visible',
-  },
+    // Screen-level width — legitimate window-dimension use.
+    bannerSection: {
+      width,
+      alignSelf: 'center',
+      marginTop: moderateScale(6),
+      marginBottom: moderateScale(22),
+    },
 
-  blackBanner: {
-    width: width,
-    height: hp(17),
-    marginTop: hp(1),
-    marginBottom: hp(1.5),
-    alignSelf: 'center',
-  },
+    offerWrapper: {
+      width,
+      overflow: 'visible',
+    },
 
-  columnWrapper: {
-    justifyContent: 'space-between',
-    paddingHorizontal: wp(2.5),
-  },
+    columnWrapper: {
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.sm,
+    },
 
-  cardWrapper: {
-    width: wp(29.5),
-    marginBottom: hp(1.6),
-  },
+    // Grid card: percentage of screen width for a fixed 3-column layout —
+    // this is screen-level responsive sizing, correctly done via percentage
+    // rather than a fixed moderateScale value (a fixed value would overflow
+    // or leave gaps as device width changes).
+    cardWrapper: {
+      width: '31.8%',
+      marginBottom: spacing.sm,
+    },
 
-  newCard: {
-    borderRadius: wp(5),
-    paddingVertical: hp(1.5),
-    paddingHorizontal: wp(1.8),
-    height: isSmallDevice ? hp(24.5) : hp(25.5),
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#7C3AED',
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    elevation: 8,
-  },
+    newCard: {
+      borderRadius: radius.xl,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.xs,
+      height: verticalHeightFor(height),
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      shadowColor: '#7C3AED',
+      shadowOpacity: 0.45,
+      shadowRadius: 10,
+      elevation: 8,
+    },
 
-  newTitle: {
-    color: '#fff',
-    fontSize: isSmallDevice ? wp(3.3) : wp(3.6),
-    fontWeight: '800',
-    textAlign: 'center',
-    lineHeight: isSmallDevice ? wp(4.1) : wp(4.4),
-  },
+    newTitle: {
+      color: '#fff',
+      fontSize: moderateScale(12),
+      fontWeight: '800',
+      textAlign: 'center',
+      lineHeight: moderateScale(15),
+    },
 
-  newCoin: {
-    width: isSmallDevice ? wp(17) : wp(18.5),
-    height: isSmallDevice ? wp(17) : wp(18.5),
-    resizeMode: 'contain',
-  },
+    newCoin: {
+      width: moderateScale(72),
+      height: moderateScale(72),
+      resizeMode: 'contain',
+    },
 
-  newPrice: {
-    color: '#fff',
-    fontSize: isSmallDevice ? wp(3.2) : wp(3.5),
-    fontWeight: '800',
-  },
+    newPrice: {
+      color: '#fff',
+      fontSize: moderateScale(12),
+      fontWeight: '800',
+    },
 
-  rupee: {
-    color: '#FACC15',
-    fontWeight: '900',
-  },
+    rupee: {
+      color: '#FACC15',
+      fontWeight: '900',
+    },
 
-  claimBtn: {
-    minHeight: hp(4.2),
-    backgroundColor: '#481162',
-    borderRadius: wp(10),
-    paddingVertical: hp(0.8),
-    paddingHorizontal: wp(3.2),
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    maxWidth: '100%',
-  },
+    claimBtn: {
+      minHeight: moderateScale(34),
+      backgroundColor: '#481162',
+      borderRadius: radius.pill,
+      paddingVertical: spacing.xxs,
+      paddingHorizontal: spacing.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      maxWidth: '100%',
+    },
 
-  disabledBtn: {
-    opacity: 0.65,
-  },
+    disabledBtn: {
+      opacity: 0.65,
+    },
 
-  claimText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: isSmallDevice ? wp(2.4) : wp(2.6),
-  },
+    claimText: {
+      color: '#fff',
+      fontWeight: '700',
+      fontSize: moderateScale(9),
+    },
 
-  btnCoin: {
-    width: wp(4),
-    height: wp(4),
-    marginLeft: wp(0.8),
-    resizeMode: 'contain',
-  },
-});
+    btnCoin: {
+      width: moderateScale(14),
+      height: moderateScale(14),
+      marginLeft: spacing.xxs,
+      resizeMode: 'contain',
+    },
+  });
+};
+
+// Card height scales with screen height, dampened to avoid tablets
+// getting absurdly tall cards — clamp keeps it within a sane range.
+const verticalHeightFor = screenHeight => {
+  const raw = screenHeight * 0.245;
+  return Math.min(Math.max(raw, moderateScale(190)), moderateScale(260));
+};

@@ -1,71 +1,57 @@
-import React, {
-  useEffect,
-  useCallback,
-  useState,
-  useMemo,
-} from "react";
+import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
   Image,
   RefreshControl,
   TextInput,
-  Dimensions,
   StatusBar,
-  Platform,
-} from "react-native";
+} from 'react-native';
+import { moderateScale } from 'react-native-size-matters';
+import LinearGradient from 'react-native-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useDispatch, useSelector } from 'react-redux';
 
-import Ionicons from "react-native-vector-icons/Ionicons";
-import { useDispatch, useSelector } from "react-redux";
-
-import WelcomeScreenbackgroungpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
+import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
 import {
   recentCallRequest,
   friendCallRequest,
-} from "../features/calls/callAction";
-
-const { width } = Dimensions.get("window");
+} from '../features/calls/callAction';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 const RecentsCallHistoryScreen = ({ navigation }) => {
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
-  /* SAFE SELECTORS */
-  const recentCalls =
-    useSelector((state) => state.calls?.recentCalls) || [];
-
-  const loading =
-    useSelector((state) => state.calls?.loading) || false;
-
-  const userdata =
-    useSelector((state) => state.user?.userdata) || null;
+  const recentCalls = useSelector(state => state.calls?.recentCalls) || [];
+  const loading = useSelector(state => state.calls?.loading) || false;
+  const userdata = useSelector(state => state.user?.userdata) || null;
 
   const currentUserId = userdata?.user?.user_id;
 
-  /* LOCAL STATE */
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [callingId, setCallingId] = useState(null);
 
-  /* FETCH DATA */
   useEffect(() => {
     dispatch(recentCallRequest());
   }, [dispatch]);
 
-  /* REFRESH */
   const onRefresh = async () => {
     setRefreshing(true);
     await dispatch(recentCallRequest());
     setRefreshing(false);
   };
 
-  /* START FRIEND CALL */
   const startFriendCall = useCallback(
-    async (item, type = "AUDIO") => {
+    async (item, type = 'AUDIO') => {
       if (!item?.other_user_id) return;
-
       if (callingId === item.other_user_id) return;
 
       setCallingId(item.other_user_id);
@@ -74,109 +60,95 @@ const RecentsCallHistoryScreen = ({ navigation }) => {
         friendCallRequest({
           friend_id: item.other_user_id,
           call_type: type,
-        })
+        }),
       );
 
       setCallingId(null);
 
-      navigation.navigate("CallStatusScreen", {
+      navigation.navigate('CallStatusScreen', {
         call_type: type,
         friend: item,
       });
     },
-    [dispatch, navigation, callingId]
+    [dispatch, navigation, callingId],
   );
 
-  /* SEARCH FILTER */
   const filteredData = useMemo(() => {
     if (!search.trim()) return recentCalls;
 
-    return recentCalls.filter((item) =>
-      item?.name
-        ?.toLowerCase()
-        .includes(search.toLowerCase())
+    return recentCalls.filter(item =>
+      item?.name?.toLowerCase().includes(search.toLowerCase()),
     );
   }, [search, recentCalls]);
 
-  /* FORMAT DURATION */
-  const formatDuration = (seconds) => {
-    if (!seconds || seconds === 0) return "Missed call";
+  const formatDuration = seconds => {
+    if (!seconds || seconds === 0) return 'Missed call';
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m}m ${s}s`;
   };
 
-  /* RENDER ITEM */
   const renderItem = ({ item }) => {
     const isOutgoing = item.caller_id === currentUserId;
-    const isMissed =
-      item.status === "MISSED" ||
-      item.duration_seconds === 0;
+    const isMissed = item.status === 'MISSED' || item.duration_seconds === 0;
 
     const avatar =
-  item.display_profile_image ||
-  item.avatar ||
-  "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+      item.display_profile_image ||
+      item.avatar ||
+      'https://cdn-icons-png.flaticon.com/512/149/149071.png';
 
-  
     return (
       <View style={styles.row}>
-        {/* Avatar */}
         <View style={styles.avatarWrap}>
           <Image source={{ uri: avatar }} style={styles.avatar} />
-          {Number(item.is_online) === 1 && (
-            <View style={styles.onlineDot} />
-          )}
+          {Number(item.is_online) === 1 && <View style={styles.onlineDot} />}
         </View>
 
-        {/* Name + Info */}
         <View style={styles.centerPart}>
-          <Text style={styles.name} numberOfLines={1}>
+          <AppText variant="subtitle" numberOfLines={1}>
             {item.name || `User ${item.other_user_id}`}
-          </Text>
+          </AppText>
 
           <View style={styles.subtitleRow}>
             <Ionicons
-              name={isOutgoing ? "arrow-up" : "arrow-down"}
-              size={14}
-              color={isMissed ? "#ff3b30" : "#C51DAF"}
+              name={isOutgoing ? 'arrow-up' : 'arrow-down'}
+              size={moderateScale(14)}
+              color={isMissed ? colors.error : colors.gradientPurpleStart}
             />
-            <Text
-              style={[
-                styles.subtitle,
-                isMissed && { color: "#ff3b30" },
-              ]}
+            <AppText
+              variant="bodySmall"
+              color={isMissed ? 'error' : 'textMuted'}
+              style={styles.subtitleText}
             >
-              {" "}
-              {isOutgoing ? "Outgoing" : "Incoming"} •{" "}
+              {' '}
+              {isOutgoing ? 'Outgoing' : 'Incoming'} •{' '}
               {formatDuration(item.duration_seconds)}
-            </Text>
+            </AppText>
           </View>
         </View>
 
-        {/* CALL BUTTONS */}
         <View style={styles.callSection}>
           <TouchableOpacity
             style={styles.callBtn}
-            onPress={() => startFriendCall(item, "AUDIO")}
+            onPress={() => startFriendCall(item, 'AUDIO')}
             disabled={callingId === item.other_user_id}
           >
             <Ionicons
               name="call-outline"
-              size={20}
-              color="#C51DAF"
+              size={moderateScale(20)}
+              color={colors.gradientPurpleStart}
             />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.callBtn}
-            onPress={() => startFriendCall(item, "VIDEO")}
+            onPress={() => startFriendCall(item, 'VIDEO')}
             disabled={callingId === item.other_user_id}
           >
             <Ionicons
               name="videocam-outline"
-              size={20}
-              color="#C51DAF"
+              size={moderateScale(20)}
+              color={colors.gradientPurpleStart}
             />
           </TouchableOpacity>
         </View>
@@ -186,51 +158,58 @@ const RecentsCallHistoryScreen = ({ navigation }) => {
 
   return (
     <WelcomeScreenbackgroungpage>
+      <StatusBar barStyle={colors.statusBar} />
       <View style={styles.container}>
-        <StatusBar barStyle="dark-content" />
-
-        {/* HEADER */}
         <View style={styles.headerContainer}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
+            hitSlop={theme.hitSlop}
           >
             <Ionicons
               name="chevron-back"
-              size={22}
-              color="#4A4A4A"
+              size={moderateScale(22)}
+              color={colors.icon}
             />
           </TouchableOpacity>
 
-          <Text style={styles.headerTitle}>Recent</Text>
+          <AppText variant="h3" style={styles.headerTitle}>
+            Recent
+          </AppText>
         </View>
+        <LinearGradient
+          colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]}
+          style={styles.searchGradientBorder}
+        >
+          <View style={styles.searchBox}>
+            <Ionicons
+              name="search"
+              size={moderateScale(18)}
+              color={colors.gradientPurpleStart}
+            />
+            <TextInput
+              placeholder="Search"
+              value={search}
+              onChangeText={setSearch}
+              style={styles.searchInput}
+              placeholderTextColor={colors.placeholder}
+            />
+          </View>
+        </LinearGradient>
 
-        {/* SEARCH */}
-        <View style={styles.searchBox}>
-          <Ionicons name="search" size={18} color="#999" />
-          <TextInput
-            placeholder="Search"
-            value={search}
-            onChangeText={setSearch}
-            style={styles.searchInput}
-            placeholderTextColor="#999"
-          />
-        </View>
-
-        {/* LIST */}
         <FlatList
           data={filteredData}
-          keyExtractor={(item) =>
-            String(item.other_user_id)
-          }
+          keyExtractor={item => String(item.other_user_id)}
           renderItem={renderItem}
           refreshControl={
             <RefreshControl
               refreshing={refreshing || loading}
               onRefresh={onRefresh}
+              colors={[colors.secondary]}
+              tintColor={colors.secondary}
             />
           }
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={styles.listContent}
         />
       </View>
     </WelcomeScreenbackgroungpage>
@@ -239,99 +218,98 @@ const RecentsCallHistoryScreen = ({ navigation }) => {
 
 export default RecentsCallHistoryScreen;
 
-/* ================= STYLES ================= */
+const createStyles = theme => {
+  const { colors, spacing, radius } = theme;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    // paddingTop: Platform.OS === "ios" ? 50 : 25,
-    paddingHorizontal: width * 0.05,
-  },
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      paddingHorizontal: spacing.lg,
+    },
 
-  headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
+    headerContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
 
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    marginLeft: 12,
-    color: '#000', // ✅ ADD
-  },
-  searchBox: {
-    height: 40,
-    backgroundColor: '#fff',
-    borderRadius: 25,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    marginBottom: 15,
-  },
+    headerTitle: {
+      marginLeft: spacing.md,
+    },
 
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#000', 
-  },
+    searchBox: {
+      height: moderateScale(40),
+      backgroundColor: colors.card,
+      borderRadius: radius.pill,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+    },
+    searchGradientBorder: {
+      borderRadius: radius.pill,
+      padding: 1.5,
+      marginBottom: spacing.md,
+    },
+    searchInput: {
+      flex: 1,
+      marginLeft: spacing.sm,
+      fontSize: theme.fontSizes.sm,
+      color: colors.text,
+    },
 
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+    },
 
-  avatarWrap: {
-    marginRight: 12,
-  },
+    avatarWrap: {
+      marginRight: spacing.md,
+    },
 
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-  },
+    avatar: {
+      width: moderateScale(50),
+      height: moderateScale(50),
+      borderRadius: moderateScale(25),
+    },
 
-  onlineDot: {
-    position: 'absolute',
-    right: 2,
-    bottom: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#31D158',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
+    onlineDot: {
+      position: 'absolute',
+      right: moderateScale(2),
+      bottom: moderateScale(2),
+      width: moderateScale(12),
+      height: moderateScale(12),
+      borderRadius: moderateScale(6),
+      backgroundColor: colors.online,
+      borderWidth: 2,
+      borderColor: colors.card,
+    },
 
-  centerPart: {
-    flex: 1,
-  },
+    centerPart: {
+      flex: 1,
+    },
 
-  name: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000', // ✅ ADD
-  },
+    subtitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: spacing.xxs,
+    },
 
-  subtitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
+    subtitleText: {
+      marginLeft: spacing.xxs,
+    },
 
-  subtitle: {
-    fontSize: 13,
-    color: '#8E8E8E',
-  },
+    callSection: {
+      flexDirection: 'row',
+    },
 
-  callSection: {
-    flexDirection: 'row',
-  },
+    callBtn: {
+      padding: spacing.xs,
+      marginLeft: spacing.xs,
+    },
 
-  callBtn: {
-    padding: 6,
-    marginLeft: 6,
-  },
-});
+    listContent: {
+      paddingBottom: spacing.xl,
+    },
+  });
+};

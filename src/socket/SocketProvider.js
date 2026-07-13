@@ -5,8 +5,6 @@
 import React, { createContext, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 // ❌ remove
-// import Sound from 'react-native-sound';
-
 import { createSound } from 'react-native-nitro-sound';
 import { createSocket, destroySocket } from './globalSocket';
 import { useDispatch, useStore } from 'react-redux';

@@ -1,7 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from 'react';
 import {
-  StyleSheet,
-  Text,
   View,
   TouchableOpacity,
   Image,
@@ -9,282 +7,387 @@ import {
   PermissionsAndroid,
   ScrollView,
   InteractionManager,
-  Dimensions
-} from "react-native";
-import LinearGradient from "react-native-linear-gradient";
-import Ionicons from "react-native-vector-icons/Ionicons";
-import { launchCamera, launchImageLibrary } from "react-native-image-picker";
-import ContinueButton from "../components/Common/ContinueButton";
-import { useDispatch } from "react-redux";
-import { userpostphotorequest } from "../features/photo/photoAction";
-const { width, height } = Dimensions.get("window");
-import WelcomeScreenbackgroundgpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
+  StyleSheet,
+  useWindowDimensions,
+  ActivityIndicator,
+} from 'react-native';
 
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
+import { useDispatch } from 'react-redux';
+
+import { userpostphotorequest } from '../features/photo/photoAction';
+
+import WelcomeScreenbackgroundgpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
+import ContinueButton from '../components/Common/ContinueButton';
+
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 const AddYourPhotosScreen = ({ navigation, route }) => {
   const dispatch = useDispatch();
 
-  /* ================= EXISTING PHOTOS (FROM API) ================= */
-  const existingPhotos = route?.params?.existingPhotos || []; // [{photo_id, photo_url}]
+  const { theme } = useAppTheme();
+
+  const { colors, spacing, radius } = theme;
+
+  const { height } = useWindowDimensions();
+
+  const styles = useMemo(() => createStyles(theme, height), [theme, height]);
+
+  const existingPhotos = route?.params?.existingPhotos || [];
+
   const from = route?.params?.from;
 
-  /* ================= NEW PHOTOS (LOCAL) ================= */
   const [newPhotos, setNewPhotos] = useState([]);
+
+  const [uploading, setUploading] = useState(false);
 
   const totalPhotos = [...existingPhotos, ...newPhotos];
 
-  /* ================= CAMERA PERMISSION ================= */
+  /* ---------------- CAMERA PERMISSION ---------------- */
 
   const requestCameraPermission = async () => {
     try {
       const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.CAMERA
+        PermissionsAndroid.PERMISSIONS.CAMERA,
       );
+
       return granted === PermissionsAndroid.RESULTS.GRANTED;
     } catch {
       return false;
     }
   };
 
-  /* ================= OPEN CAMERA ================= */
+  /* ---------------- IMAGE VALIDATION ---------------- */
+
+  const validateImage = asset => {
+    if (!asset) return false;
+
+    if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+      Alert.alert('Large Image', 'Please select an image smaller than 5 MB.');
+
+      return false;
+    }
+
+    return true;
+  };
+
+  /* ---------------- CAMERA ---------------- */
 
   const openCamera = async () => {
-    const permitted = await requestCameraPermission();
-    if (!permitted) {
-      Alert.alert("Camera permission denied");
+    const granted = await requestCameraPermission();
+
+    if (!granted) {
+      Alert.alert('Permission', 'Camera permission denied.');
+
       return;
     }
 
-    launchCamera({ mediaType: "photo", quality: 1 }, (response) => {
-      if (response.didCancel || response.errorCode) return;
-      if (response.assets?.length > 0) {
-        setNewPhotos((prev) => [...prev, response.assets[0]]);
-      }
-    });
+    launchCamera(
+      {
+        mediaType: 'photo',
+        quality: 0.6,
+        maxWidth: 1080,
+        maxHeight: 1080,
+      },
+      response => {
+        if (response.didCancel || response.errorCode) return;
+
+        const asset = response.assets?.[0];
+
+        if (!validateImage(asset)) return;
+
+        setNewPhotos(prev => [...prev, asset]);
+      },
+    );
   };
 
-  /* ================= OPEN GALLERY ================= */
+  /* ---------------- GALLERY ---------------- */
 
   const openGallery = () => {
-    launchImageLibrary({ mediaType: "photo", quality: 0.8 }, (response) => {
-      if (response.didCancel || response.errorMessage) return;
-      if (response.assets?.length > 0) {
-        setNewPhotos((prev) => [...prev, response.assets[0]]);
-      }
-    });
+    launchImageLibrary(
+      {
+        mediaType: 'photo',
+        quality: 0.6,
+        maxWidth: 1080,
+        maxHeight: 1080,
+      },
+      response => {
+        if (response.didCancel || response.errorCode) return;
+
+        const asset = response.assets?.[0];
+
+        if (!validateImage(asset)) return;
+
+        setNewPhotos(prev => [...prev, asset]);
+      },
+    );
   };
 
-  /* ================= SELECT OPTION ================= */
+  /* ---------------- PHOTO OPTION ---------------- */
 
   const openSelectOption = () => {
     if (totalPhotos.length >= 4) {
-      Alert.alert("Limit Reached", "You can upload only 4 photos.");
+      Alert.alert('Limit Reached', 'Maximum 4 photos allowed.');
+
       return;
     }
 
     InteractionManager.runAfterInteractions(() => {
-      Alert.alert(
-        "Select Option",
-        "Choose an option to upload photo",
-        [
-          { text: "Camera", onPress: openCamera },
-          { text: "Gallery", onPress: openGallery },
-          { text: "Cancel", style: "cancel" },
-        ],
-        { cancelable: true }
-      );
+      Alert.alert('Upload Photo', 'Choose an option', [
+        {
+          text: 'Camera',
+          onPress: openCamera,
+        },
+        {
+          text: 'Gallery',
+          onPress: openGallery,
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]);
     });
   };
 
-  /* ================= UPLOAD NEW PHOTOS ONLY ================= */
+  /* ---------------- UPLOAD ---------------- */
 
   const handleUploadPhotos = () => {
     if (newPhotos.length === 0) {
-      Alert.alert("No new photos to upload");
+      Alert.alert('No Photos', 'Please select at least one photo.');
       return;
     }
 
     const formData = new FormData();
 
     newPhotos.forEach((photo, index) => {
-      formData.append("photos", {
+      formData.append('photos', {
         uri: photo.uri,
-        type: photo.type || "image/jpeg",
-        name: photo.fileName || `photo_${index}_${Date.now()}.jpg`,
+        type: photo.type || 'image/jpeg',
+        name: photo.fileName || `photo_${Date.now()}_${index}.jpg`,
       });
     });
 
-    dispatch(
-      userpostphotorequest(formData, () => {
+    setUploading(true);
 
-        if (from === "EditProfile") {
-          navigation.goBack();
+    dispatch(
+      userpostphotorequest(formData, response => {
+        setUploading(false);
+
+        if (response.success) {
+          Alert.alert('Success', response.message, [
+            {
+              text: 'OK',
+              onPress: () => {
+                navigation.navigate('SelectYourIdealMatchScreen');
+              },
+            },
+          ]);
         } else {
-          navigation.navigate("SelectYourIdealMatchScreen");
+          Alert.alert('Upload Failed', response.message);
         }
-      })
+      }),
     );
   };
 
-  /* ================= UI ================= */
-return (
-  <WelcomeScreenbackgroundgpage>
-
-    <View style={{ flex: 1 }}>
-
-      <ScrollView contentContainerStyle={{ paddingBottom: height * 0.18 }}>
-
-        {/* HEADER */}
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={width * 0.06} />
-          </TouchableOpacity>
-          <Text style={styles.header}>Add Your Photos</Text>
-        </View>
-
-        {/* GRID */}
-        <View style={styles.grid}>
-          {Array.from({ length: 4 }).map((_, index) => {
-            const photo = totalPhotos[index];
-
-            if (photo?.photo_url) {
-              return (
-                <View key={`existing-${photo.photo_id}`} style={styles.gridItem}>
-                  <Image source={{ uri: photo.photo_url }} style={styles.image} />
-                </View>
-              );
-            }
-
-            if (photo?.uri) {
-              return (
-                <View key={`new-${index}`} style={styles.gridItem}>
-                  <Image source={{ uri: photo.uri }} style={styles.image} />
-                </View>
-              );
-            }
-
-            if (index === totalPhotos.length) {
-              return (
-                <TouchableOpacity
-                  key={`add-${index}`}
-                  style={styles.addBox}
-                  onPress={openSelectOption}
-                >
-                  <Ionicons name="add" size={width * 0.1} color="#C56CF0" />
-                </TouchableOpacity>
-              );
-            }
-
-            return (
-              <View key={`empty-${index}`} style={styles.placeholderBox}>
-                <Text style={styles.placeholderText}>160 x 210</Text>
-              </View>
-            );
-          })}
-        </View>
-
-      </ScrollView>
-
-      {/* BUTTON */}
-      <View style={styles.bottomFixed}>
-        <ContinueButton
-          title="CONTINUE"
-          onPress={handleUploadPhotos}
-          disabled={newPhotos.length === 0}
-        />
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate("SelectYourIdealMatchScreen")}
-          style={{ marginTop: height * 0.015 }}
+  return (
+    <WelcomeScreenbackgroundgpage>
+      <SafeAreaView style={styles.flex} edges={[]}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.skipText}>NOT NOW</Text>
-        </TouchableOpacity>
-      </View>
+          {/* Header */}
 
-    </View>
+          <View style={styles.headerRow}>
+            <TouchableOpacity
+              hitSlop={theme.hitSlop}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="chevron-back" size={22} color={colors.icon} />
+            </TouchableOpacity>
 
-  </WelcomeScreenbackgroundgpage>
-);
+            <AppText variant="h4" style={styles.header}>
+              Add Your Photos
+            </AppText>
+          </View>
+
+          {/* Photo Grid */}
+
+          <View style={styles.grid}>
+            {Array.from({ length: 4 }).map((_, index) => {
+              const photo = totalPhotos[index];
+
+              if (photo?.photo_url) {
+                return (
+                  <View
+                    key={`existing-${photo.photo_id}`}
+                    style={styles.gridItem}
+                  >
+                    <Image
+                      source={{
+                        uri: photo.photo_url,
+                      }}
+                      style={styles.image}
+                    />
+                  </View>
+                );
+              }
+
+              if (photo?.uri) {
+                return (
+                  <View key={`new-${index}`} style={styles.gridItem}>
+                    <Image
+                      source={{
+                        uri: photo.uri,
+                      }}
+                      style={styles.image}
+                    />
+                  </View>
+                );
+              }
+
+              if (index === totalPhotos.length) {
+                return (
+                  <TouchableOpacity
+                    key={`add-${index}`}
+                    activeOpacity={0.8}
+                    style={styles.addBox}
+                    onPress={openSelectOption}
+                  >
+                    <Ionicons name="add" size={40} color="#C56CF0" />
+                  </TouchableOpacity>
+                );
+              }
+
+              return (
+                <View key={`empty-${index}`} style={styles.placeholderBox}>
+                  <AppText variant="bodySmall" color="textMuted">
+                    160 × 210
+                  </AppText>
+                </View>
+              );
+            })}
+          </View>
+        </ScrollView>
+
+        {/* Bottom */}
+
+        <View style={styles.bottomFixed}>
+          {uploading ? (
+            <ActivityIndicator size="large" color="#d62edc" />
+          ) : (
+            <ContinueButton
+              title="CONTINUE"
+              disabled={newPhotos.length === 0}
+              onPress={handleUploadPhotos}
+            />
+          )}
+
+          <TouchableOpacity
+            style={styles.skipWrap}
+            onPress={() => navigation.navigate('SelectYourIdealMatchScreen')}
+          >
+            <AppText variant="subtitle" style={styles.skipText}>
+              NOT NOW
+            </AppText>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </WelcomeScreenbackgroundgpage>
+  );
 };
 
 export default AddYourPhotosScreen;
 
-/* ==================== STYLES ==================== */
+const createStyles = (theme, height) => {
+  const { colors, spacing, radius } = theme;
 
-const ITEM_HEIGHT = height * 0.26; // 🔥 replaces 210
+  const ITEM_HEIGHT = height * 0.26;
 
-const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: width * 0.05,
-    marginTop: height * 0.02,
-  },
+  return StyleSheet.create({
+    flex: {
+      flex: 1,
+    },
 
-  header: {
-    fontSize: width * 0.045,
-    fontWeight: "600",
-  },
+    scrollContent: {
+      paddingBottom: height * 0.18,
+    },
 
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    paddingHorizontal: width * 0.05,
-    marginTop: height * 0.02,
-  },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      marginTop: spacing.sm,
+    },
 
-  gridItem: {
-    width: "48%",
-    height: ITEM_HEIGHT,
-    marginBottom: height * 0.02,
-    borderRadius: width * 0.04,
-    overflow: "hidden",
-    backgroundColor: "#D9D9D9",
-  },
+    header: {
+      marginLeft: spacing.sm,
+    },
 
-  image: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.lg,
+      marginTop: spacing.md,
+    },
 
-  addBox: {
-    width: "48%",
-    height: ITEM_HEIGHT,
-    borderRadius: width * 0.04,
-    borderWidth: 2,
-    borderColor: "#C56CF0",
-    borderStyle: "dashed",
-    backgroundColor: "#FEEBFF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    gridItem: {
+      width: '48%',
+      height: ITEM_HEIGHT,
+      marginBottom: spacing.sm,
+      borderRadius: radius.lg,
+      overflow: 'hidden',
+      backgroundColor: colors.surface,
+    },
 
-  placeholderBox: {
-    width: "48%",
-    height: ITEM_HEIGHT,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    image: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'cover',
+    },
 
-  placeholderText: {
-    fontSize: width * 0.035,
-    color: "#777",
-  },
+    addBox: {
+      width: '48%',
+      height: ITEM_HEIGHT,
+      borderWidth: 2,
+      borderStyle: 'dashed',
+      borderColor: '#C56CF0',
+      backgroundColor: '#FEEBFF',
+      borderRadius: radius.lg,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  bottomFixed: {
-    position: "absolute",
-    bottom: height * 0.025,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-  },
+    placeholderBox: {
+      width: '48%',
+      height: ITEM_HEIGHT,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  skipText: {
-    color: "#666",
-    fontSize: width * 0.04,
-    fontWeight: "600",
-  },
-});
+    bottomFixed: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: spacing.md,
+      alignItems: 'center',
+    },
+
+    skipWrap: {
+      marginTop: spacing.sm,
+    },
+
+    skipText: {
+      color: '#666',
+    },
+  });
+};

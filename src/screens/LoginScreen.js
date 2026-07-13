@@ -1,154 +1,137 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
-  Dimensions,
-  Platform,
-  SafeAreaView,
-} from 'react-native';
+import React, { useMemo } from 'react';
+import { View, TouchableOpacity, StatusBar, Platform, StyleSheet, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { moderateScale } from 'react-native-size-matters';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import BackgroundPagesOne from "../components/BackgroundPages/BackgroundPagesOne";
-import AnimatedLogo from "../components/SampleLogo/AnimatedLogo";
+import BackgroundPagesOne from '../components/BackgroundPages/BackgroundPagesOne';
+import AnimatedLogo from '../components/SampleLogo/AnimatedLogo';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
-const { height } = Dimensions.get('window');
+const LoginScreen = ({ navigation }) => {
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const { height } = useWindowDimensions();
+  const styles = useMemo(() => createStyles(theme, height), [theme, height]);
 
-const LoginScreen = ({ navigation }) => (
-  <BackgroundPagesOne>
-    <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+  return (
+    <BackgroundPagesOne>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Animated Logo */}
-        <AnimatedLogo style={styles.animatedLogo} />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <AnimatedLogo style={styles.animatedLogo} />
 
-        {/* Content */}
-        <View style={styles.centerContent}>
-          <View style={styles.midcontent}>
+          <View style={styles.centerContent}>
+            <View style={styles.midcontent}>
+              <AppText variant="h1" style={styles.title}>Get Started</AppText>
 
-          <Text style={styles.title}>Get Started</Text>
+              <AppText variant="body" style={styles.subtitle}>
+                By tapping <AppText variant="body" style={{ fontWeight: 'bold', color: '#fff' }}>Log In</AppText>, you agree to our
+              </AppText>
 
-          <Text style={styles.subtitle}>
-            By tapping <Text style={{ fontWeight: 'bold' }}>Log In</Text>, you agree to our
-          </Text>
+              <TouchableOpacity>
+                <AppText variant="body" style={styles.link}>Terms & Privacy Policy</AppText>
+              </TouchableOpacity>
+            </View>
 
-          <TouchableOpacity>
-            <Text style={styles.link}>Terms & Privacy Policy</Text>
-          </TouchableOpacity>
+            <View style={styles.buttonGroup}>
+              <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Phone')}>
+                <Icon name="phone" size={moderateScale(22)} color="#fff" style={styles.icon} />
+                <AppText variant="subtitle" style={styles.buttonText}>Log in with Phone number</AppText>
+              </TouchableOpacity>
+            </View>
 
-          </View>
-          <View style={styles.buttonGroup}>
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => navigation.navigate('Phone')}
-            >
-              <Icon name="phone" size={22} color="#fff" style={styles.icon} />
-              <Text style={styles.buttonText}>Log in with Phone number</Text>
+            <TouchableOpacity>
+              <AppText variant="bodySmall" style={styles.troubleLink}>Trouble Logging In?</AppText>
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity>
-            <Text style={styles.troubleLink}>Trouble Logging In?</Text>
-          </TouchableOpacity>
         </View>
-      </View>
-    </SafeAreaView>
-  </BackgroundPagesOne>
-);
+      </SafeAreaView>
+    </BackgroundPagesOne>
+  );
+};
 
 export default LoginScreen;
 
-/* ================= STYLES ================= */
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
+const createStyles = (theme, height) => {
+  const { colors, spacing, radius } = theme;
 
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: Platform.OS === 'android' ? height * 0.06 : height * 0.02,
-  },
+  return StyleSheet.create({
+    safeArea: { flex: 1 },
 
-  animatedLogo: {
-    marginTop: -height * 0.07,   
-    marginBottom: height * 0.02,
-  },
+    container: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      paddingTop: Platform.OS === 'android' ? height * 0.06 : height * 0.02,
+    },
 
-  midcontent: {
-  marginTop: -height * 0.03,   
-  marginBottom: height * 0.05,  
-  alignItems: 'center',
-},
+    animatedLogo: {
+      marginTop: -height * 0.07,
+      marginBottom: spacing.sm,
+    },
 
-centerContent: {
-     
-    width: '88%',
-    alignItems: 'center',
-  },
+    midcontent: {
+      marginTop: -height * 0.03,
+      marginBottom: height * 0.05,
+      alignItems: 'center',
+    },
 
-  title: {
-    marginTop:-height*0.04,
-    fontSize: 28,
-    color: '#fff',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
+    centerContent: {
+      width: '88%',
+      alignItems: 'center',
+    },
 
-  subtitle: {
-    color: '#fff',
-    fontSize: 15,
-    textAlign: 'center',
-    marginBottom: 4,
-  },
+    title: {
+      marginTop: -height * 0.04,
+      color: '#fff',
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+    },
 
-  link: {
-    color: '#fff',
-    textDecorationLine: 'underline',
-    fontSize: 15,
-    fontWeight: '500',
-    textAlign: 'center',
-    marginBottom: 26, // ⬅️ more space before buttons
-    marginTop: 6,
-  },
+    subtitle: {
+      color: '#fff',
+      textAlign: 'center',
+      marginBottom: spacing.xxs,
+    },
 
-  buttonGroup: {
-    width: '100%',
-    marginBottom: 26,
-  },
+    link: {
+      color: '#fff',
+      textDecorationLine: 'underline',
+      fontWeight: '500',
+      textAlign: 'center',
+      marginBottom: spacing.xxl,
+      marginTop: spacing.xxs,
+    },
 
-  button: {
-    marginTop:height*0.030,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#C724C7',
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    backgroundColor: 'rgba(0,0,0,0.30)',
-  },
+    buttonGroup: {
+      width: '100%',
+      marginBottom: spacing.xxl,
+    },
 
-  icon: {
-    marginRight: 16,
-  },
+    button: {
+      marginTop: height * 0.03,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: radius.md,
+      borderWidth: 1.5,
+      borderColor: colors.vividPurple,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      backgroundColor: 'rgba(0,0,0,0.30)', // sits directly on the fixed dark gradient hero — one-off, not theme-driven
+    },
 
-  buttonText: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '500',
-  },
+    icon: { marginRight: spacing.md },
 
-  troubleLink: {
-    color: '#fff',
-    textDecorationLine: 'underline',
-    fontSize: 13.5,
-    textAlign: 'center',
-    fontWeight: '500',
-    marginTop: 4,
-  },
-});
+    buttonText: { color: '#fff' },
+
+    troubleLink: {
+      color: '#fff',
+      textDecorationLine: 'underline',
+      textAlign: 'center',
+      fontWeight: '500',
+      marginTop: spacing.xxs,
+    },
+  });
+};
