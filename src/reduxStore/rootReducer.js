@@ -49,7 +49,7 @@ const rootReducer = combineReducers({
   withdraw: withdrawReducer,
   chatOptions: chatOptionsReducer,
   likeMinded: likeMindedReducer,
-  randomusers:randomuserReducer,
+  randomusers: randomuserReducer,
   calls: callReducer,
   profileImage: profileImageReducer,
 });

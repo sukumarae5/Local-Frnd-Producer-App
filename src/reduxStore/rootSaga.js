@@ -10,7 +10,6 @@ import callSaga from '../features/calls/callSaga';
 import friendSaga from '../features/friend/friendSaga';
 import interestSaga from '../features/interest/interestSaga';
 import lifestyleSaga from '../features/lifeStyle/lifestyleSaga';
-import likeMindedSaga from '../features/LikeMinded/likeMindedSaga';
 import otherusersSaga from '../features/Otherusers/otherUserSaga';
 import chatSaga from '../features/chat/chatSaga';
 import ratingSaga from '../features/rating/ratingSaga';
@@ -21,6 +20,7 @@ import offersSaga from '../features/Offers/offersSaga';
 import watchPurchase from '../features/purchase/purchaseSaga';
 import { watchWithdraw } from '../features/withdraw/withdrawSaga';
 import chatOptionsSaga from '../features/chat/chatOptionsSaga';
+import likeMindedSaga from '../features/LikeMinded/likeMindedSaga';
 import profileImageSaga from '../features/profileImage/profileImageSaga';
 
 export default function* rootSaga() {
