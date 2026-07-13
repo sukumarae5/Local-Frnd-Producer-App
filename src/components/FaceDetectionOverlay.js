@@ -1,6 +1,9 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import React, { useEffect, useRef, useMemo } from 'react';
+import { View, StyleSheet, Animated } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { moderateScale } from 'react-native-size-matters';
+import { useAppTheme } from '../theme';
+import { AppText } from './index';
 
 const PulsingDot = ({ delay, color }) => {
   const opacity = useRef(new Animated.Value(0.3)).current;
@@ -17,18 +20,19 @@ const PulsingDot = ({ delay, color }) => {
     return () => anim.stop();
   }, []);
 
-  return (
-    <Animated.View style={[styles.dot, { backgroundColor: color, opacity }]} />
-  );
+  return <Animated.View style={[styles.dot, { backgroundColor: color, opacity }]} />;
 };
 
 const FaceDetectionOverlay = ({ faceStatus, faceCount, visible = true }) => {
-  const slideAnim   = useRef(new Animated.Value(160)).current;
+  const { theme } = useAppTheme();
+  const { spacing, radius } = theme;
+
+  const slideAnim = useRef(new Animated.Value(160)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   const shouldShow = visible && (faceStatus === 'no_face' || faceStatus === 'multiple_faces');
-  const isNoFace   = faceStatus === 'no_face';
-  const color      = isNoFace ? '#FF4D4F' : '#FF9800';
+  const isNoFace = faceStatus === 'no_face';
+  const color = isNoFace ? '#FF4D4F' : '#FF9800';
 
   useEffect(() => {
     Animated.parallel([
@@ -52,32 +56,22 @@ const FaceDetectionOverlay = ({ faceStatus, faceCount, visible = true }) => {
       style={[styles.wrapper, { opacity: opacityAnim, transform: [{ translateY: slideAnim }] }]}
     >
       <View style={[styles.card, { borderColor: color }]}>
-        {/* Left accent strip */}
         <View style={[styles.strip, { backgroundColor: color }]} />
 
         <View style={styles.inner}>
-          {/* Icon */}
           <View style={[styles.iconBox, { backgroundColor: color + '22' }]}>
-            <Ionicons
-              name={isNoFace ? 'scan-outline' : 'people-outline'}
-              size={20}
-              color={color}
-            />
+            <Ionicons name={isNoFace ? 'scan-outline' : 'people-outline'} size={moderateScale(20)} color={color} />
           </View>
 
-          {/* Text */}
           <View style={styles.textBox}>
-            <Text style={[styles.title, { color }]}>
+            <AppText variant="bodySmall" style={{ color, fontWeight: '700' }}>
               {isNoFace ? 'Face Not Visible' : 'Multiple Faces'}
-            </Text>
-            <Text style={styles.msg}>
-              {isNoFace
-                ? 'Look at the camera to continue'
-                : `${faceCount} faces detected — only one allowed`}
-            </Text>
+            </AppText>
+            <AppText variant="caption" style={styles.msg}>
+              {isNoFace ? 'Look at the camera to continue' : `${faceCount} faces detected — only one allowed`}
+            </AppText>
           </View>
 
-          {/* Live dots */}
           <View style={styles.dots}>
             {[0, 200, 400].map((d, i) => (
               <PulsingDot key={i} delay={d} color={color} />
@@ -92,61 +86,39 @@ const FaceDetectionOverlay = ({ faceStatus, faceCount, visible = true }) => {
 const styles = StyleSheet.create({
   wrapper: {
     position: 'absolute',
-    bottom: 100,
-    left: 16,
-    right: 16,
+    bottom: moderateScale(100),
+    left: moderateScale(16),
+    right: moderateScale(16),
     zIndex: 100,
     elevation: 20,
   },
   card: {
     flexDirection: 'row',
-    borderRadius: 14,
+    borderRadius: moderateScale(14),
     borderWidth: 1,
     backgroundColor: 'rgba(8,8,8,0.94)',
     overflow: 'hidden',
   },
-  strip: {
-    width: 4,
-  },
+  strip: { width: moderateScale(4) },
   inner: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 10,
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(12),
+    gap: moderateScale(10),
   },
   iconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: moderateScale(38),
+    height: moderateScale(38),
+    borderRadius: moderateScale(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  textBox: {
-    flex: 1,
-    gap: 2,
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0.1,
-  },
-  msg: {
-    color: '#777',
-    fontSize: 11,
-    lineHeight: 15,
-  },
-  dots: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  dot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-  },
+  textBox: { flex: 1, gap: moderateScale(2) },
+  msg: { color: '#777', lineHeight: moderateScale(15) },
+  dots: { flexDirection: 'row', alignItems: 'center', gap: moderateScale(4) },
+  dot: { width: moderateScale(5), height: moderateScale(5), borderRadius: moderateScale(3) },
 });
 
 export default FaceDetectionOverlay;

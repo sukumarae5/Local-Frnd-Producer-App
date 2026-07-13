@@ -1,46 +1,42 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   TouchableOpacity,
   TextInput,
   Image,
   ActivityIndicator,
   ScrollView,
   Alert,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Icon from "react-native-vector-icons/Ionicons";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import { useDispatch, useSelector } from "react-redux";
+  StyleSheet,
+  useWindowDimensions,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { moderateScale } from 'react-native-size-matters';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { useDispatch, useSelector } from 'react-redux';
 
-import { FETCH_COUNTRIES_REQUEST } from "../features/Countries/locationTypes";
-import {
-  fetchStatesRequest,
-  fetchCitiesRequest,
-} from "../features/Countries/locationActions";
-import { languageApiFetchRequest } from "../features/language/languageAction";
-import { newUserDataRequest } from "../features/user/userAction";
-import { Dimensions } from "react-native";
-import { RESET_USER_STATE } from "../features/user/userType";
-
-const { width, height } = Dimensions.get("window");
-
-const wp = (percent) => (width * percent) / 100;
-const hp = (percent) => (height * percent) / 100;
-const PURPLE = "#B832F9";
+import { FETCH_COUNTRIES_REQUEST } from '../features/Countries/locationTypes';
+import { fetchStatesRequest, fetchCitiesRequest } from '../features/Countries/locationActions';
+import { languageApiFetchRequest } from '../features/language/languageAction';
+import { newUserDataRequest } from '../features/user/userAction';
+import { RESET_USER_STATE } from '../features/user/userType';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 const EditUserGeneralInfoScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const dispatch = useDispatch();
-const { userDataResponse } = useSelector(state => state.user);
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const { width } = useWindowDimensions();
+  const styles = useMemo(() => createStyles(theme, width), [theme, width]);
 
-  /* ===== PARAMS ===== */
-  const { locationIds = {}, language = "" } = route.params || {};
+  const { userDataResponse } = useSelector((state) => state.user);
 
-  /* ===== LOCAL STATE ===== */
+  const { locationIds = {}, language = '' } = route.params || {};
+
   const [selectedLanguage, setSelectedLanguage] = useState(null);
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [selectedState, setSelectedState] = useState(null);
@@ -51,36 +47,28 @@ const { userDataResponse } = useSelector(state => state.user);
   const [openState, setOpenState] = useState(false);
   const [openCity, setOpenCity] = useState(false);
 
-  const [query, setQuery] = useState("");
-const isResponseHandled = useRef(false);
-const [isSubmitting, setIsSubmitting] = useState(false);
+  const [query, setQuery] = useState('');
+  const isResponseHandled = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  /* ===== REDUX ===== */
-  const { countries = [], states = [], cities = [], loading } = useSelector(
-    state => state.location
-  );
-  const { languages = [], loading: langLoading } = useSelector(
-    state => state.language
-  );
+  const { countries = [], states = [], cities = [], loading } = useSelector((state) => state.location);
+  const { languages = [], loading: langLoading } = useSelector((state) => state.language);
 
-  /* ===== LOAD ===== */
   useEffect(() => {
     dispatch({ type: FETCH_COUNTRIES_REQUEST });
     dispatch(languageApiFetchRequest());
   }, []);
 
-  /* ===== PREFILL LANGUAGE ===== */
   useEffect(() => {
     if (languages.length && language) {
-      const l = languages.find(i => i.native_name === language);
+      const l = languages.find((i) => i.native_name === language);
       if (l) setSelectedLanguage(l);
     }
   }, [languages]);
 
-  /* ===== PREFILL COUNTRY ===== */
   useEffect(() => {
     if (countries.length && locationIds.country_id) {
-      const c = countries.find(i => i.id === locationIds.country_id);
+      const c = countries.find((i) => i.id === locationIds.country_id);
       if (c) {
         setSelectedCountry(c);
         dispatch(fetchStatesRequest(c.id));
@@ -88,10 +76,9 @@ const [isSubmitting, setIsSubmitting] = useState(false);
     }
   }, [countries]);
 
-  /* ===== PREFILL STATE ===== */
   useEffect(() => {
     if (states.length && locationIds.state_id) {
-      const s = states.find(i => i.id === locationIds.state_id);
+      const s = states.find((i) => i.id === locationIds.state_id);
       if (s) {
         setSelectedState(s);
         dispatch(fetchCitiesRequest(s.id));
@@ -99,88 +86,80 @@ const [isSubmitting, setIsSubmitting] = useState(false);
     }
   }, [states]);
 
-  /* ===== PREFILL CITY ===== */
   useEffect(() => {
     if (cities.length && locationIds.city_id) {
-      const c = cities.find(i => i.id === locationIds.city_id);
+      const c = cities.find((i) => i.id === locationIds.city_id);
       if (c) setSelectedCity(c);
     }
   }, [cities]);
 
-  const filteredCountries = countries.filter(item =>
-    item.name.toLowerCase().includes(query.toLowerCase())
-  );
+  const filteredCountries = countries.filter((item) => item.name.toLowerCase().includes(query.toLowerCase()));
 
-  /* ===== DONE → DISPATCH ===== */
   const handleDone = () => {
-  const payload = {
-    language_id: selectedLanguage?.id,
-    country_id: selectedCountry?.id,
-    state_id: selectedState?.id,
-    city_id: selectedCity?.id,
+    const payload = {
+      language_id: selectedLanguage?.id,
+      country_id: selectedCountry?.id,
+      state_id: selectedState?.id,
+      city_id: selectedCity?.id,
+    };
+
+    setIsSubmitting(true);
+    dispatch(newUserDataRequest(payload));
   };
 
-  console.log("✅ GENERAL INFO PAYLOAD", payload);
+  useEffect(() => {
+    if (!userDataResponse || isResponseHandled.current) return;
 
-  setIsSubmitting(true);
+    const isSuccess = userDataResponse?.success === true;
+    const safeMessage =
+      typeof userDataResponse?.message === 'string'
+        ? userDataResponse.message
+        : isSuccess
+        ? 'Updated successfully!'
+        : 'Something went wrong';
 
-  dispatch(newUserDataRequest(payload));
-};
-// ✅ Alert effect
-useEffect(() => {
-  if (!userDataResponse || isResponseHandled.current) return; // ✅ .current
+    setIsSubmitting(false);
+    isResponseHandled.current = true;
 
-  const isSuccess = userDataResponse?.success === true;
-  const safeMessage =
-    typeof userDataResponse?.message === 'string'
-      ? userDataResponse.message
-      : isSuccess
-      ? 'Updated successfully!'
-      : 'Something went wrong';
-
-  setIsSubmitting(false);
-  isResponseHandled.current = true;
-
-  Alert.alert(
-    isSuccess ? 'Success ✅' : 'Error ❌',
-    safeMessage,
-    [{
-      text: 'OK',
-      onPress: () => {
-        dispatch({ type: RESET_USER_STATE }); // ✅ clear first
-        if (isSuccess) {
-          navigation.navigate('EditProfileScreen'); // ✅ then navigate
-        }
+    Alert.alert(isSuccess ? 'Success ✅' : 'Error ❌', safeMessage, [
+      {
+        text: 'OK',
+        onPress: () => {
+          dispatch({ type: RESET_USER_STATE });
+          if (isSuccess) {
+            navigation.navigate('EditProfileScreen');
+          }
+        },
       },
-    }]
-  );
-}, [userDataResponse]); // ✅ no isResponseHandled in deps
+    ]);
+  }, [userDataResponse]);
 
-// ✅ Focus listener — only reset ref, NO dispatch
-useEffect(() => {
-  const unsubscribe = navigation.addListener('focus', () => {
-    isResponseHandled.current = false; // ✅ only this
-  });
-  return unsubscribe;
-}, [navigation]);
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      isResponseHandled.current = false;
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      {/* HEADER */}
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="chevron-back" size={26} />
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={theme.hitSlop}>
+          <Icon name="chevron-back" size={moderateScale(26)} color={colors.icon} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>General Information</Text>
-        <TouchableOpacity onPress={handleDone}>
-          <Text style={styles.done}>DONE</Text>
+        <AppText variant="h4" style={styles.headerTitle}>General Information</AppText>
+        <TouchableOpacity onPress={handleDone} disabled={isSubmitting}>
+          {isSubmitting ? (
+            <ActivityIndicator color={colors.editPurple} size="small" />
+          ) : (
+            <AppText variant="subtitle" style={styles.done}>DONE</AppText>
+          )}
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* LANGUAGE */}
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.section}>
-          <Text style={styles.label}>Language</Text>
+          <AppText variant="bodySmall" style={styles.label}>Language</AppText>
 
           <TouchableOpacity
             style={styles.dropdown}
@@ -191,14 +170,14 @@ useEffect(() => {
               setOpenCity(false);
             }}
           >
-            <Text>{selectedLanguage?.native_name || "Select Language"}</Text>
-            <Icon name="chevron-down" />
+            <AppText variant="body">{selectedLanguage?.native_name || 'Select Language'}</AppText>
+            <Icon name="chevron-down" color={colors.iconMuted} />
           </TouchableOpacity>
 
           {openLanguage && (
             <>
-              {langLoading && <ActivityIndicator color={PURPLE} />}
-              {languages.map(item => (
+              {langLoading && <ActivityIndicator color={colors.editPurple} />}
+              {languages.map((item) => (
                 <TouchableOpacity
                   key={item.id}
                   style={styles.option}
@@ -207,16 +186,15 @@ useEffect(() => {
                     setOpenLanguage(false);
                   }}
                 >
-                  <Text>{item.native_name}</Text>
+                  <AppText variant="body">{item.native_name}</AppText>
                 </TouchableOpacity>
               ))}
             </>
           )}
         </View>
 
-        {/* COUNTRY */}
         <View style={styles.section}>
-          <Text style={styles.label}>Country</Text>
+          <AppText variant="bodySmall" style={styles.label}>Country</AppText>
 
           <TouchableOpacity
             style={styles.dropdown}
@@ -227,25 +205,26 @@ useEffect(() => {
               setOpenCity(false);
             }}
           >
-            <Text>{selectedCountry?.name || "Select Country"}</Text>
-            <Icon name="chevron-down" />
+            <AppText variant="body">{selectedCountry?.name || 'Select Country'}</AppText>
+            <Icon name="chevron-down" color={colors.iconMuted} />
           </TouchableOpacity>
 
           {openCountry && (
             <>
               <View style={styles.searchBox}>
-                <Icon name="search-outline" size={18} />
+                <Icon name="search-outline" size={moderateScale(18)} color={colors.iconMuted} />
                 <TextInput
                   placeholder="Search country"
+                  placeholderTextColor={colors.placeholder}
                   value={query}
                   onChangeText={setQuery}
-                  style={{ flex: 1, marginLeft: 6 }}
+                  style={styles.searchInput}
                 />
               </View>
 
-              {loading && <ActivityIndicator color={PURPLE} />}
+              {loading && <ActivityIndicator color={colors.editPurple} />}
 
-              {filteredCountries.map(item => (
+              {filteredCountries.map((item) => (
                 <TouchableOpacity
                   key={item.id}
                   style={styles.option}
@@ -258,17 +237,16 @@ useEffect(() => {
                   }}
                 >
                   <Image source={{ uri: item.flag_url }} style={styles.flag} />
-                  <Text>{item.name}</Text>
+                  <AppText variant="body">{item.name}</AppText>
                 </TouchableOpacity>
               ))}
             </>
           )}
         </View>
 
-        {/* STATE */}
         {states.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.label}>State</Text>
+            <AppText variant="bodySmall" style={styles.label}>State</AppText>
 
             <TouchableOpacity
               style={styles.dropdown}
@@ -277,12 +255,12 @@ useEffect(() => {
                 setOpenCity(false);
               }}
             >
-              <Text>{selectedState?.name || "Select State"}</Text>
-              <Icon name="chevron-down" />
+              <AppText variant="body">{selectedState?.name || 'Select State'}</AppText>
+              <Icon name="chevron-down" color={colors.iconMuted} />
             </TouchableOpacity>
 
             {openState &&
-              states.map(item => (
+              states.map((item) => (
                 <TouchableOpacity
                   key={item.id}
                   style={styles.option}
@@ -293,27 +271,23 @@ useEffect(() => {
                     dispatch(fetchCitiesRequest(item.id));
                   }}
                 >
-                  <Text>{item.name}</Text>
+                  <AppText variant="body">{item.name}</AppText>
                 </TouchableOpacity>
               ))}
           </View>
         )}
 
-        {/* CITY */}
         {cities.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.label}>City</Text>
+            <AppText variant="bodySmall" style={styles.label}>City</AppText>
 
-            <TouchableOpacity
-              style={styles.dropdown}
-              onPress={() => setOpenCity(!openCity)}
-            >
-              <Text>{selectedCity?.name || "Select City"}</Text>
-              <Icon name="chevron-down" />
+            <TouchableOpacity style={styles.dropdown} onPress={() => setOpenCity(!openCity)}>
+              <AppText variant="body">{selectedCity?.name || 'Select City'}</AppText>
+              <Icon name="chevron-down" color={colors.iconMuted} />
             </TouchableOpacity>
 
             {openCity &&
-              cities.map(item => (
+              cities.map((item) => (
                 <TouchableOpacity
                   key={item.id}
                   style={styles.option}
@@ -322,7 +296,7 @@ useEffect(() => {
                     setOpenCity(false);
                   }}
                 >
-                  <Text>{item.name}</Text>
+                  <AppText variant="body">{item.name}</AppText>
                 </TouchableOpacity>
               ))}
           </View>
@@ -334,83 +308,64 @@ useEffect(() => {
 
 export default EditUserGeneralInfoScreen;
 
+const createStyles = (theme, width) => {
+  const { colors, spacing, radius } = theme;
 
-/* ================= STYLES ================= */
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.background },
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.xl,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
 
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: wp(4),
-    paddingVertical: hp(2),
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
+    headerTitle: {},
+    done: { color: colors.editPurple, fontWeight: '700' },
 
-  headerTitle: {
-  fontSize: wp(4.5),
-  fontWeight: "600",
-  color: "#000", // ✅ ADD
-},
+    scrollContent: { paddingBottom: spacing.xl },
 
-  done: {
-    color: PURPLE,
-    fontWeight: "700",
-    fontSize: wp(4),
-  },
+    section: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
 
-  section: {
-    paddingHorizontal: wp(5),
-    paddingVertical: hp(2),
-  },
+    label: { marginBottom: spacing.xxs, color: colors.textSecondary },
 
-  label: {
-    marginBottom: hp(0.8),
-    color: "#444",
-    fontSize: wp(3.8),
-  },
+    dropdown: {
+      minHeight: moderateScale(48),
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: '#E3D8FF',
+      paddingHorizontal: spacing.md,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
 
-  dropdown: {
-    minHeight: hp(6),
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: "#E3D8FF",
-    paddingHorizontal: wp(4),
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
+    searchBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#E3D8FF',
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.sm,
+      marginTop: spacing.xs,
+      minHeight: moderateScale(44),
+    },
 
-  searchBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E3D8FF",
-    borderRadius: 12,
-    paddingHorizontal: wp(3),
-    marginTop: hp(1.2),
-    minHeight: hp(5.5),
-  },
+    searchInput: { flex: 1, marginLeft: spacing.xxs, color: colors.text },
 
-  option: {
-    paddingVertical: hp(1.5),
-    paddingHorizontal: wp(3),
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    flexDirection: "row",
-    alignItems: "center",
-  },
+    option: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
 
-  flag: {
-    width: wp(6),
-    height: wp(4),
-    marginRight: wp(3),
-    resizeMode: "cover",
-  },
-});
+    flag: { width: moderateScale(24), height: moderateScale(16), marginRight: spacing.sm, resizeMode: 'cover' },
+  });
+};

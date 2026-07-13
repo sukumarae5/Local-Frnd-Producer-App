@@ -1,39 +1,34 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   TouchableOpacity,
   TextInput,
   Platform,
   Alert,
   KeyboardAvoidingView,
   ScrollView,
-  Dimensions,
-  Image,
+  StyleSheet,
 } from 'react-native';
+import { moderateScale } from 'react-native-size-matters';
 import Icon from 'react-native-vector-icons/Ionicons';
-import Svg, { Path } from 'react-native-svg';
-import {
-  userLoginRequest,
-  userOtpRequest,
-  userResendOtpRequest,
-} from '../features/Auth/authAction';
+import { userOtpRequest, userResendOtpRequest } from '../features/Auth/authAction';
 import { useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AuthLayout from '../components/Common/AuthLayout';
 import ContinueButton from '../components/Common/ContinueButton';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
-const { width, height } = Dimensions.get('window');
 const OTP_LENGTH = 6;
 
 const OtpScreen = ({ route, navigation }) => {
   const dispatch = useDispatch();
-  const { Otp } = useSelector(state => state.auth);
-
-  console.log('📩 OTP STATE:', Otp);
+  const { Otp } = useSelector((state) => state.auth);
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const mobile_number = route?.params?.mobile_number;
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
@@ -41,6 +36,7 @@ const OtpScreen = ({ route, navigation }) => {
   const [canResend, setCanResend] = useState(false);
   const mode = route?.params?.mode;
   const inputRefs = useRef([]);
+
   useEffect(() => {
     if (timer === 0) {
       setCanResend(true);
@@ -48,7 +44,7 @@ const OtpScreen = ({ route, navigation }) => {
     }
 
     const interval = setInterval(() => {
-      setTimer(prev => prev - 1);
+      setTimer((prev) => prev - 1);
     }, 1000);
 
     return () => clearInterval(interval);
@@ -93,81 +89,69 @@ const OtpScreen = ({ route, navigation }) => {
     dispatch(userOtpRequest({ mobile_number, otp: otpString }));
   };
 
-  // ✅ ONLY SHOWING UPDATED PARTS — rest remains same
+  useEffect(() => {
+    if (!Otp) return;
 
-useEffect(() => {
-  if (!Otp) return;
+    if (Otp.success === false) {
+      Alert.alert('Invalid OTP', Otp.message || 'Try again');
+      return;
+    }
 
-  if (Otp.success === false) {
-    Alert.alert('Invalid OTP', Otp.message || 'Try again');
-    return;
-  }
+    if (!Otp.success) return;
 
-  if (!Otp.success) return;
+    const handleSuccess = async () => {
+      try {
+        await AsyncStorage.setItem('twittoke', Otp.token ?? '');
+        await AsyncStorage.setItem('user_id', String(Otp.user?.user_id ?? ''));
 
-  const handleSuccess = async () => {
-    try {
-      console.log('✅ OTP VERIFIED SUCCESSFULLY');
+        const gender = Otp.user?.gender ?? '';
+        await AsyncStorage.setItem('gender', gender);
 
-      // 1️⃣ Save auth data
-      await AsyncStorage.setItem('twittoke', Otp.token ?? '');
-      await AsyncStorage.setItem('user_id', String(Otp.user?.user_id ?? ''));
-
-      const gender = Otp.user?.gender ?? '';
-      await AsyncStorage.setItem('gender', gender);
-
-      // 🟡 Save onboarding state if gender missing
-      if (!gender) {
-        await AsyncStorage.setItem('onboarding_step', 'start');
-      } else {
-        await AsyncStorage.removeItem('onboarding_step');
-      }
-
-      // 2️⃣ Confirm token
-      const savedToken = await AsyncStorage.getItem('twittoke');
-      console.log('🔑 TOKEN IN STORAGE:', savedToken);
-
-      if (!savedToken) {
-        Alert.alert('Error', 'Login failed. Please try again.');
-        return;
-      }
-
-      // 3️⃣ Navigation Logic (🔥 FIXED)
-      const normalizedGender = gender?.toLowerCase();
-
-      let routeName = '';
-
-      if (mode === 'login') {
-        if (normalizedGender === 'male') {
-          routeName = 'MaleHomeTabs';
-        } else if (normalizedGender === 'female') {
-          routeName = 'ReceiverBottomTabs';
+        if (!gender) {
+          await AsyncStorage.setItem('onboarding_step', 'start');
         } else {
-          // ❗ NULL / EMPTY → START REGISTRATION
+          await AsyncStorage.removeItem('onboarding_step');
+        }
+
+        const savedToken = await AsyncStorage.getItem('twittoke');
+
+        if (!savedToken) {
+          Alert.alert('Error', 'Login failed. Please try again.');
+          return;
+        }
+
+        const normalizedGender = gender?.toLowerCase();
+        let routeName = '';
+
+        if (mode === 'login') {
+          if (normalizedGender === 'male') {
+            routeName = 'MaleHomeTabs';
+          } else if (normalizedGender === 'female') {
+            routeName = 'ReceiverBottomTabs';
+          } else {
+            routeName = 'SelectYourCountryScreen';
+          }
+        } else {
           routeName = 'SelectYourCountryScreen';
         }
-      } else {
-        // register flow always goes to onboarding
-        routeName = 'SelectYourCountryScreen';
+
+        navigation.reset({
+          index: 0,
+          routes: [{ name: routeName }],
+        });
+      } catch (err) {
+        console.error('❌ OTP FLOW ERROR:', err);
+        Alert.alert('Error', 'Something went wrong');
       }
+    };
 
-      navigation.reset({
-        index: 0,
-        routes: [{ name: routeName }],
-      });
+    handleSuccess();
+  }, [Otp]);
 
-    } catch (err) {
-      console.error('❌ OTP FLOW ERROR:', err);
-      Alert.alert('Error', 'Something went wrong');
-    }
-  };
-
-  handleSuccess();
-}, [Otp]);
   const handleResend = () => {
     if (!canResend) return;
 
-    dispatch(userResendOtpRequest({ mobile_number })); // or resend action
+    dispatch(userResendOtpRequest({ mobile_number }));
 
     setTimer(120);
     setCanResend(false);
@@ -175,40 +159,28 @@ useEffect(() => {
 
   return (
     <AuthLayout>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 120 }}
-          keyboardShouldPersistTaps="handled"
-        >
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.bottomSection}>
-            <Text style={styles.title}>Verification OTP</Text>
-            <Text style={styles.subtitle}>OTP sent on your mobile Number</Text>
+            <AppText variant="h3" style={styles.title}>Verification OTP</AppText>
+            <AppText variant="bodySmall" style={styles.subtitle}>OTP sent on your mobile Number</AppText>
 
-            {/* OTP */}
             <View style={styles.otpWrapper}>
               <View style={styles.otpContainer}>
                 {otp.map((v, idx) => (
                   <View key={idx} style={styles.otpBox}>
                     <TextInput
-                      ref={el => (inputRefs.current[idx] = el)}
+                      ref={(el) => (inputRefs.current[idx] = el)}
                       style={styles.otpInput}
                       maxLength={1}
                       keyboardType="numeric"
                       value={v}
-                      onChangeText={t => handleChange(t, idx)}
-                      onKeyPress={e => handleKeyPress(e, idx)}
+                      onChangeText={(t) => handleChange(t, idx)}
+                      onKeyPress={(e) => handleKeyPress(e, idx)}
                     />
 
-                    {/* 🔥 Gradient Underline */}
                     <LinearGradient
-                      colors={
-                        v
-                          ? ['#D51BF9', '#8C37F8'] // ✅ active strong gradient
-                          : ['#E3D8FF', '#8C37F8'] // ✅ default light
-                      }
+                      colors={v ? [colors.gradientPurpleStart, colors.gradientPurpleEnd] : ['#E3D8FF', colors.gradientPurpleEnd]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={styles.underline}
@@ -218,40 +190,25 @@ useEffect(() => {
               </View>
             </View>
 
-            {/* RESEND */}
             {!canResend ? (
-              <Text style={styles.resendText}>
-                Resend in {Math.floor(timer / 60)}:
-                {String(timer % 60).padStart(2, '0')}
-              </Text>
+              <AppText variant="caption" style={styles.resendText}>
+                Resend in {Math.floor(timer / 60)}:{String(timer % 60).padStart(2, '0')}
+              </AppText>
             ) : (
               <TouchableOpacity onPress={handleResend}>
-                <TouchableOpacity onPress={handleResend}>
-                  <MaskedView
-                    maskElement={
-                      <Text style={styles.resendText}>Resend OTP</Text>
-                    }
-                  >
-                    <LinearGradient
-                      colors={['#D51BF9', '#8C37F8']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                    >
-                      <Text style={[styles.resendText, { opacity: 0 }]}>
-                        Resend OTP
-                      </Text>
-                    </LinearGradient>
-                  </MaskedView>
-                </TouchableOpacity>
+                <MaskedView maskElement={<AppText variant="caption" style={styles.resendText}>Resend OTP</AppText>}>
+                  <LinearGradient colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                    <AppText variant="caption" style={[styles.resendText, { opacity: 0 }]}>Resend OTP</AppText>
+                  </LinearGradient>
+                </MaskedView>
               </TouchableOpacity>
             )}
-
-           
           </View>
         </ScrollView>
-         <View style={styles.bottomFixed}>
-              <ContinueButton onPress={handleOtpSubmit} />
-            </View>
+
+        <View style={styles.bottomFixed}>
+          <ContinueButton onPress={handleOtpSubmit} />
+        </View>
       </KeyboardAvoidingView>
     </AuthLayout>
   );
@@ -259,72 +216,55 @@ useEffect(() => {
 
 export default OtpScreen;
 
-const styles = StyleSheet.create({
-  bottomSection: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
-  },
+const createStyles = (theme) => {
+  const { colors, spacing, radius } = theme;
 
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#161616',
-    textAlign: 'center',
-    marginTop: 10,
-  },
+  return StyleSheet.create({
+    flex: { flex: 1 },
+    scrollContent: { flexGrow: 1, paddingBottom: moderateScale(120) },
 
-  subtitle: {
-    fontSize: 14,
-    color: '#777',
-    textAlign: 'center',
-    marginTop: 6,
-    marginBottom: 15, // ✅ controls spacing
-  },
+    bottomSection: {
+      flex: 1,
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.sm,
+    },
 
-  otpWrapper: {
-    marginTop: 10, // ✅ NO flex
-  },
-  otpContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    marginBottom: 20,
-  },
+    title: { color: '#161616', textAlign: 'center', marginTop: spacing.xs },
 
-  otpBox: {
-    alignItems: 'center',
-  },
+    subtitle: { color: '#777', textAlign: 'center', marginTop: spacing.xxs, marginBottom: spacing.md },
 
-  otpInput: {
-    width: 40,
-    height: 45,
-    textAlign: 'center',
-    fontSize: 20,
-    color: '#000',
-  },
+    otpWrapper: { marginTop: spacing.sm },
+    otpContainer: { flexDirection: 'row', justifyContent: 'space-evenly', marginBottom: spacing.lg },
 
-  underline: {
-    height: 2,
-    width: 30,
-    marginTop: 5,
-    borderRadius: 2,
-  },
+    otpBox: { alignItems: 'center' },
 
-  otpInputActive: {
-    borderColor: '#B023E8',
-  },
+    otpInput: {
+      width: moderateScale(40),
+      height: moderateScale(45),
+      textAlign: 'center',
+      fontSize: theme.fontSizes.xl,
+      color: '#000',
+    },
 
-  resendText: {
-    textAlign: 'center',
-    marginTop: 10,
-    color: '#B023E8',
-    fontSize: 13,
-  },
-  bottomFixed: {
-    position: 'absolute',
-    bottom: 30,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-});
+    underline: {
+      height: 2,
+      width: moderateScale(30),
+      marginTop: spacing.xxs,
+      borderRadius: radius.xs,
+    },
+
+    resendText: {
+      textAlign: 'center',
+      marginTop: spacing.sm,
+      color: colors.actionPurple,
+    },
+
+    bottomFixed: {
+      position: 'absolute',
+      bottom: moderateScale(30),
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+    },
+  });
+};

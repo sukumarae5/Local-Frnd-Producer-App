@@ -1,5 +1,14 @@
 // screens/ChatScreen.js
 // Full ChatScreen with Chat Options: Mute, Block, Clear Chat, Report
+// + WhatsApp-style voice notes: hold-to-record, slide-left-to-cancel,
+//   slide-up-to-lock, auto-upload on release (no preview screen),
+//   optimistic sending, single shared audio player across all bubbles.
+//
+// Recording AND playback both go through react-native-nitro-sound's
+// singleton (`Sound`) — the same package already working in this app for
+// the message-tone sound effect. No react-native-live-audio-stream, no
+// react-native-audio-recorder-player (deprecated in favor of nitro-sound,
+// which has the identical API).
 
 import React, {
   useEffect,
@@ -13,36 +22,44 @@ import React, {
 import {
   View,
   Text,
-  FlatList,
   TextInput,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   Image,
-  SafeAreaView,
-  Dimensions,
   PermissionsAndroid,
   Alert,
   Modal,
   ActivityIndicator,
   Pressable,
+  Linking,
+  useWindowDimensions,
+  FlatList,
+  PanResponder,
 } from 'react-native';
-import { NitroSound } from 'react-native-nitro-sound';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+import { moderateScale } from 'react-native-size-matters';
 import Voice from '@react-native-voice/voice';
 import { launchCamera } from 'react-native-image-picker';
 import { pick } from '@react-native-documents/picker';
-import { Linking } from 'react-native';
 import Video from 'react-native-video';
 import { useDispatch, useSelector } from 'react-redux';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaskedView from '@react-native-masked-view/masked-view';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import Sound from 'react-native-nitro-sound';
 
 import { SocketContext } from '../socket/SocketProvider';
 import { friendCallRequest } from '../features/calls/callAction';
-import { chatFileUploadRequest } from '../features/chat/chatAction';
+import {
+  chatFileUploadRequest,
+  chatMessageAdd,
+  chatMessageRemove,
+} from '../features/chat/chatAction';
 
 import {
   chatHistoryRequest,
@@ -51,7 +68,6 @@ import {
   chatClearActive,
 } from '../features/chat/chatAction';
 
-// ── Chat Options actions ────────────────────────────────────────────────────
 import {
   chatMuteRequest,
   chatBlockRequest,
@@ -60,18 +76,11 @@ import {
   chatOptionsStatusRequest,
 } from '../features/chat/chatOptionsAction';
 
-const { width } = Dimensions.get('window');
-const isSmall = width < 360;
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
+import AudioMessageBubble from '../components/AudioMessageBubble';
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
-
-const createAudioRecorder = () => {
-  try {
-    return new NitroSound();
-  } catch {
-    return null;
-  }
-};
 
 const requestPermission = async permission => {
   if (Platform.OS !== 'android') return true;
@@ -108,15 +117,96 @@ const getLastSeenText = dateStr => {
   return `Last seen on ${d.toLocaleDateString()}`;
 };
 
-/* ── Decorative hearts ───────────────────────────────────────────────────── */
+const formatDuration = totalSeconds => {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+};
 
-const GradientHeart = ({ size, style, opacity = 1 }) => (
+/* ── Voice-note recording constants ─────────────────────────────────────── */
+const MAX_RECORD_SECONDS = 300; // item 14 — 5 minute cap
+const MIN_RECORD_SECONDS = 1;   // item 15 — discard if shorter than this
+const CANCEL_THRESHOLD = -90;   // px dragged left -> cancel (item 16)
+const LOCK_THRESHOLD = -90;     // px dragged up   -> lock   (item 18)
+
+/* ── Chat palette — now theme-aware instead of fixed ────────────────────────
+   Light mode keeps the original pink/purple romantic identity.
+   Dark mode swaps to a deep purple/charcoal palette that keeps the same
+   brand hue family but respects the user's theme choice. ─────────────────── */
+
+const getChatPalette = theme => {
+  if (theme.isDark) {
+    return {
+      screenGradient: ['#1A0F22', '#1A0F22', '#2E1A3D'],
+      headerGradient: ['#241530', '#2B1838'],
+      heartTint: ['rgba(255,255,255,0.08)', 'rgba(152,50,248,0.12)'],
+      headerAccent: '#C026F8',
+      headerBorder: '#C026F8',
+      headerNameColor: theme.colors.text,
+      headerStatusColor: theme.colors.textMuted,
+      backIconColor: theme.colors.text,
+      menuDotsColor: theme.colors.textMuted,
+      dateBg: 'rgba(255,255,255,0.08)',
+      dateText: theme.colors.textMuted,
+      myBubble: '#8C37F8',
+      otherBubble: theme.colors.card,
+      otherBubbleText: theme.colors.text,
+      timeText: theme.colors.textMuted,
+      myTimeText: 'rgba(255,255,255,0.75)',
+      bottomWrapBg: '#1A0F22',
+      inputPillBg: theme.colors.card,
+      inputBorder: theme.colors.border,
+      inputText: theme.colors.text,
+      inputPlaceholder: theme.colors.placeholder,
+      leftIconColor: theme.colors.iconMuted,
+      accentIconColor: '#C026F8',
+      micBg: '#8C37F8',
+      blockedBannerBg: `${theme.colors.error}1F`,
+      blockedBannerText: theme.colors.error,
+      errorText: theme.colors.text,
+    };
+  }
+
+  return {
+    screenGradient: ['#fdf2fa', '#fdf2fa', '#b470f3'],
+    headerGradient: ['#F3E7FF', '#FCE6F6'],
+    heartTint: ['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)'],
+    headerAccent: '#C026F8',
+    headerBorder: '#C026F8',
+    headerNameColor: '#111',
+    headerStatusColor: '#6A6A6A',
+    backIconColor: '#222',
+    menuDotsColor: '#555',
+    dateBg: 'rgba(255,255,255,0.85)',
+    dateText: '#666',
+    myBubble: '#B829F4',
+    otherBubble: '#fff',
+    otherBubbleText: '#222',
+    timeText: '#777',
+    myTimeText: '#eee',
+    bottomWrapBg: '#FCE6F6',
+    inputPillBg: '#fff',
+    inputBorder: '#E6E6E6',
+    inputText: '#222',
+    inputPlaceholder: '#8F8F8F',
+    leftIconColor: '#8F8F8F',
+    accentIconColor: '#C026F8',
+    micBg: '#B829F4',
+    blockedBannerBg: '#FFF0F0',
+    blockedBannerText: '#E53935',
+    errorText: '#222',
+  };
+};
+
+/* ── Decorative hearts — tinted per palette ─────────────────────────────── */
+
+const GradientHeart = ({ size, style, opacity = 1, tint }) => (
   <View pointerEvents="none" style={[{ position: 'absolute', opacity }, style]}>
     <MaskedView
       maskElement={<Ionicons name="heart" size={size} color="black" />}
     >
       <LinearGradient
-        colors={['rgba(255,255,255,0.5)', 'rgba(152,50,248,0.15)']}
+        colors={tint}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={{ width: size, height: size }}
@@ -125,23 +215,57 @@ const GradientHeart = ({ size, style, opacity = 1 }) => (
   </View>
 );
 
-const HeartsBackground = () => (
-  <View pointerEvents="none" style={styles.heartsLayer}>
-    <GradientHeart size={100} opacity={0.9} style={{ top: 90, right: -15 }} />
-    <GradientHeart size={85} opacity={0.85} style={{ top: 260, left: -25 }} />
-    <GradientHeart size={90} opacity={0.9} style={{ top: 380, right: 50 }} />
-    <GradientHeart size={100} opacity={0.75} style={{ top: 500, left: -30 }} />
+const HeartsBackground = ({ tint }) => (
+  <View pointerEvents="none" style={heartsBackgroundStyles.heartsLayer}>
     <GradientHeart
-      size={30}
+      size={moderateScale(100)}
       opacity={0.9}
-      style={{ position: 'absolute', bottom: 100, alignSelf: 'center' }}
+      tint={tint}
+      style={{ top: moderateScale(90), right: -moderateScale(15) }}
     />
-    <GradientHeart size={80} opacity={1} style={{ bottom: 120, right: 100 }} />
+    <GradientHeart
+      size={moderateScale(85)}
+      opacity={0.85}
+      tint={tint}
+      style={{ top: moderateScale(260), left: -moderateScale(25) }}
+    />
+    <GradientHeart
+      size={moderateScale(90)}
+      opacity={0.9}
+      tint={tint}
+      style={{ top: moderateScale(380), right: moderateScale(50) }}
+    />
+    <GradientHeart
+      size={moderateScale(100)}
+      opacity={0.75}
+      tint={tint}
+      style={{ top: moderateScale(500), left: -moderateScale(30) }}
+    />
+    <GradientHeart
+      size={moderateScale(30)}
+      opacity={0.9}
+      tint={tint}
+      style={{
+        position: 'absolute',
+        bottom: moderateScale(100),
+        alignSelf: 'center',
+      }}
+    />
+    <GradientHeart
+      size={moderateScale(80)}
+      opacity={1}
+      tint={tint}
+      style={{ bottom: moderateScale(120), right: moderateScale(100) }}
+    />
   </View>
 );
 
+const heartsBackgroundStyles = StyleSheet.create({
+  heartsLayer: { ...StyleSheet.absoluteFillObject },
+});
+
 /* ══════════════════════════════════════════════════════════════════════════
-   CHAT OPTIONS MENU — 3-dot dropdown
+   CHAT OPTIONS MENU — 3-dot dropdown (themed, standard system sheet)
    ══════════════════════════════════════════════════════════════════════════ */
 
 const REPORT_REASONS = [
@@ -165,10 +289,13 @@ const ChatOptionsMenu = ({
   onClearChat,
   onReport,
 }) => {
-  const [view, setView] = useState('menu'); // 'menu' | 'reportPicker' | 'reportDone'
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const menuStyles = useMemo(() => createMenuStyles(theme), [theme]);
+
+  const [view, setView] = useState('menu');
   const [selectedReason, setSelectedReason] = useState(null);
 
-  // Reset to menu when modal opens
   useEffect(() => {
     if (visible) {
       setView('menu');
@@ -176,7 +303,6 @@ const ChatOptionsMenu = ({
     }
   }, [visible]);
 
-  // Auto-advance to done after report succeeds
   useEffect(() => {
     if (reportSubmitted && view === 'reportPicker') {
       setView('reportDone');
@@ -187,8 +313,6 @@ const ChatOptionsMenu = ({
     if (!selectedReason) return;
     onReport(selectedReason);
   }, [selectedReason, onReport]);
-
-  /* ── Confirm helpers ──────────────────────────────────────────── */
 
   const confirmBlock = useCallback(() => {
     const action = isBlocked ? 'Unblock' : 'Block';
@@ -216,8 +340,6 @@ const ChatOptionsMenu = ({
     );
   }, [onClearChat]);
 
-  /* ── Render ───────────────────────────────────────────────────── */
-
   if (!visible) return null;
 
   return (
@@ -227,195 +349,265 @@ const ChatOptionsMenu = ({
       animationType="fade"
       onRequestClose={onClose}
     >
-      {/* Dimmed backdrop */}
-      <Pressable style={styles.menuBackdrop} onPress={onClose}>
-        {/* Stop propagation so tapping inside the card doesn't close */}
-        <Pressable style={styles.menuCard} onPress={() => {}}>
-          {/* ─── MAIN MENU ────────────────────────────────────────── */}
+      <Pressable style={menuStyles.menuBackdrop} onPress={onClose}>
+        <Pressable style={menuStyles.menuCard} onPress={() => {}}>
           {view === 'menu' && (
             <>
-              <Text style={styles.menuTitle}>Chat Options</Text>
+              <AppText variant="h4" style={menuStyles.menuTitle}>
+                Chat Options
+              </AppText>
 
-              {/* MUTE */}
               <TouchableOpacity
-                style={styles.menuRow}
+                style={menuStyles.menuRow}
                 onPress={onMute}
                 disabled={muteLoading}
               >
-                <View style={[styles.menuIcon, { backgroundColor: '#F3E7FF' }]}>
+                <View
+                  style={[
+                    menuStyles.menuIcon,
+                    { backgroundColor: `${colors.secondary}1F` },
+                  ]}
+                >
                   <Ionicons
                     name={
                       isMuted
                         ? 'notifications-outline'
                         : 'notifications-off-outline'
                     }
-                    size={20}
-                    color="#8B2FC9"
+                    size={moderateScale(20)}
+                    color={colors.secondary}
                   />
                 </View>
-                <View style={styles.menuTextBox}>
-                  <Text style={styles.menuLabel}>
+                <View style={menuStyles.menuTextBox}>
+                  <AppText variant="subtitle">
                     {isMuted ? 'Unmute Chat' : 'Mute Chat'}
-                  </Text>
-                  <Text style={styles.menuSub}>
+                  </AppText>
+                  <AppText
+                    variant="caption"
+                    color="textMuted"
+                    style={menuStyles.menuSub}
+                  >
                     {isMuted
                       ? 'Turn on notifications'
                       : 'Stop notifications from this chat'}
-                  </Text>
+                  </AppText>
                 </View>
                 {muteLoading && (
-                  <ActivityIndicator size="small" color="#8B2FC9" />
+                  <ActivityIndicator size="small" color={colors.secondary} />
                 )}
               </TouchableOpacity>
 
-              <View style={styles.menuDivider} />
+              <View style={menuStyles.menuDivider} />
 
-              {/* BLOCK */}
               <TouchableOpacity
-                style={styles.menuRow}
+                style={menuStyles.menuRow}
                 onPress={confirmBlock}
                 disabled={blockLoading}
               >
-                <View style={[styles.menuIcon, { backgroundColor: '#FFF0F0' }]}>
-                  <Ionicons name="ban-outline" size={20} color="#E53935" />
+                <View
+                  style={[
+                    menuStyles.menuIcon,
+                    { backgroundColor: `${colors.error}1A` },
+                  ]}
+                >
+                  <Ionicons
+                    name="ban-outline"
+                    size={moderateScale(20)}
+                    color={colors.error}
+                  />
                 </View>
-                <View style={styles.menuTextBox}>
-                  <Text style={[styles.menuLabel, { color: '#E53935' }]}>
+                <View style={menuStyles.menuTextBox}>
+                  <AppText variant="subtitle" color="error">
                     {isBlocked ? 'Unblock User' : 'Block User'}
-                  </Text>
-                  <Text style={styles.menuSub}>
+                  </AppText>
+                  <AppText
+                    variant="caption"
+                    color="textMuted"
+                    style={menuStyles.menuSub}
+                  >
                     {isBlocked
                       ? 'Allow messages and calls again'
                       : 'Prevent messages and calls'}
-                  </Text>
+                  </AppText>
                 </View>
                 {blockLoading && (
-                  <ActivityIndicator size="small" color="#E53935" />
+                  <ActivityIndicator size="small" color={colors.error} />
                 )}
               </TouchableOpacity>
 
-              <View style={styles.menuDivider} />
+              <View style={menuStyles.menuDivider} />
 
-              {/* CLEAR CHAT */}
               <TouchableOpacity
-                style={styles.menuRow}
+                style={menuStyles.menuRow}
                 onPress={confirmClear}
                 disabled={clearLoading}
               >
-                <View style={[styles.menuIcon, { backgroundColor: '#FFF8E1' }]}>
-                  <Ionicons name="trash-outline" size={20} color="#F9A825" />
+                <View
+                  style={[
+                    menuStyles.menuIcon,
+                    { backgroundColor: `${colors.warning}1F` },
+                  ]}
+                >
+                  <Ionicons
+                    name="trash-outline"
+                    size={moderateScale(20)}
+                    color={colors.warning}
+                  />
                 </View>
-                <View style={styles.menuTextBox}>
-                  <Text style={[styles.menuLabel, { color: '#F9A825' }]}>
+                <View style={menuStyles.menuTextBox}>
+                  <AppText variant="subtitle" color="warning">
                     Clear Chat
-                  </Text>
-                  <Text style={styles.menuSub}>
+                  </AppText>
+                  <AppText
+                    variant="caption"
+                    color="textMuted"
+                    style={menuStyles.menuSub}
+                  >
                     Delete messages only for you
-                  </Text>
+                  </AppText>
                 </View>
                 {clearLoading && (
-                  <ActivityIndicator size="small" color="#F9A825" />
+                  <ActivityIndicator size="small" color={colors.warning} />
                 )}
               </TouchableOpacity>
 
-              <View style={styles.menuDivider} />
+              <View style={menuStyles.menuDivider} />
 
-              {/* REPORT */}
               <TouchableOpacity
-                style={styles.menuRow}
+                style={menuStyles.menuRow}
                 onPress={() => setView('reportPicker')}
               >
-                <View style={[styles.menuIcon, { backgroundColor: '#FFF0F0' }]}>
-                  <Ionicons name="flag-outline" size={20} color="#E53935" />
+                <View
+                  style={[
+                    menuStyles.menuIcon,
+                    { backgroundColor: `${colors.error}1A` },
+                  ]}
+                >
+                  <Ionicons
+                    name="flag-outline"
+                    size={moderateScale(20)}
+                    color={colors.error}
+                  />
                 </View>
-                <View style={styles.menuTextBox}>
-                  <Text style={[styles.menuLabel, { color: '#E53935' }]}>
+                <View style={menuStyles.menuTextBox}>
+                  <AppText variant="subtitle" color="error">
                     Report User
-                  </Text>
-                  <Text style={styles.menuSub}>Flag for admin review</Text>
+                  </AppText>
+                  <AppText
+                    variant="caption"
+                    color="textMuted"
+                    style={menuStyles.menuSub}
+                  >
+                    Flag for admin review
+                  </AppText>
                 </View>
               </TouchableOpacity>
 
-              {/* CANCEL */}
-              <TouchableOpacity style={styles.menuCancel} onPress={onClose}>
-                <Text style={styles.menuCancelText}>Cancel</Text>
+              <TouchableOpacity style={menuStyles.menuCancel} onPress={onClose}>
+                <AppText variant="subtitle" color="textSecondary">
+                  Cancel
+                </AppText>
               </TouchableOpacity>
             </>
           )}
 
-          {/* ─── REPORT REASON PICKER ─────────────────────────────── */}
           {view === 'reportPicker' && (
             <>
               <TouchableOpacity
-                style={styles.menuBack}
+                style={menuStyles.menuBack}
                 onPress={() => setView('menu')}
               >
-                <Ionicons name="chevron-back" size={18} color="#444" />
-                <Text style={styles.menuBackText}>Back</Text>
+                <Ionicons
+                  name="chevron-back"
+                  size={moderateScale(18)}
+                  color={colors.icon}
+                />
+                <AppText variant="bodySmall" color="textSecondary">
+                  Back
+                </AppText>
               </TouchableOpacity>
 
-              <Text style={styles.menuTitle}>Report Reason</Text>
-              <Text
-                style={[
-                  styles.menuSub,
-                  { marginBottom: 12, textAlign: 'center', color: '#666' },
-                ]}
+              <AppText variant="h4" style={menuStyles.menuTitle}>
+                Report Reason
+              </AppText>
+              <AppText
+                variant="caption"
+                color="textMuted"
+                style={menuStyles.reportSubTitle}
               >
                 Select the reason for your report
-              </Text>
+              </AppText>
 
               {REPORT_REASONS.map(r => (
                 <TouchableOpacity
                   key={r.key}
                   style={[
-                    styles.reasonRow,
-                    selectedReason === r.key && styles.reasonRowActive,
+                    menuStyles.reasonRow,
+                    selectedReason === r.key && menuStyles.reasonRowActive,
                   ]}
                   onPress={() => setSelectedReason(r.key)}
                 >
                   <View
                     style={[
-                      styles.radioOuter,
-                      selectedReason === r.key && styles.radioOuterActive,
+                      menuStyles.radioOuter,
+                      selectedReason === r.key && menuStyles.radioOuterActive,
                     ]}
                   >
                     {selectedReason === r.key && (
-                      <View style={styles.radioInner} />
+                      <View style={menuStyles.radioInner} />
                     )}
                   </View>
-                  <Text style={styles.reasonLabel}>{r.label}</Text>
+                  <AppText variant="bodySmall" style={menuStyles.reasonLabel}>
+                    {r.label}
+                  </AppText>
                 </TouchableOpacity>
               ))}
 
               <TouchableOpacity
                 style={[
-                  styles.reportSubmitBtn,
+                  menuStyles.reportSubmitBtn,
                   (!selectedReason || reportLoading) &&
-                    styles.reportSubmitDisabled,
+                    menuStyles.reportSubmitDisabled,
                 ]}
                 onPress={submitReport}
                 disabled={!selectedReason || reportLoading}
               >
                 {reportLoading ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={colors.textInverse} />
                 ) : (
-                  <Text style={styles.reportSubmitText}>Submit Report</Text>
+                  <AppText
+                    variant="button"
+                    style={{ color: colors.textInverse }}
+                  >
+                    Submit Report
+                  </AppText>
                 )}
               </TouchableOpacity>
             </>
           )}
 
-          {/* ─── REPORT DONE ──────────────────────────────────────── */}
           {view === 'reportDone' && (
-            <View style={styles.reportDoneBox}>
-              <Ionicons name="checkmark-circle" size={52} color="#4CAF50" />
-              <Text style={styles.reportDoneTitle}>Report Submitted</Text>
-              <Text style={styles.reportDoneSub}>
+            <View style={menuStyles.reportDoneBox}>
+              <Ionicons
+                name="checkmark-circle"
+                size={moderateScale(52)}
+                color={colors.success}
+              />
+              <AppText variant="h4" style={menuStyles.reportDoneTitle}>
+                Report Submitted
+              </AppText>
+              <AppText
+                variant="bodySmall"
+                color="textMuted"
+                style={menuStyles.reportDoneSub}
+              >
                 Our team will review this report. Thank you for keeping the
                 community safe.
-              </Text>
-              <TouchableOpacity style={styles.menuCancel} onPress={onClose}>
-                <Text style={styles.menuCancelText}>Close</Text>
+              </AppText>
+              <TouchableOpacity style={menuStyles.menuCancel} onPress={onClose}>
+                <AppText variant="subtitle" color="textSecondary">
+                  Close
+                </AppText>
               </TouchableOpacity>
             </View>
           )}
@@ -436,16 +628,61 @@ const ChatScreen = ({ route, navigation }) => {
   const { socketRef } = useContext(SocketContext);
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const { width } = useWindowDimensions();
+  const chat = useMemo(() => getChatPalette(theme), [theme]);
+  const styles = useMemo(
+    () => createStyles(theme, width, chat),
+    [theme, width, chat],
+  );
 
   const flatRef = useRef(null);
-  const audioRecorderRef = useRef(null);
+  const timerRef = useRef(null);
+
+  // Refs mirror the "recording state machine" synchronously, since the
+  // PanResponder handlers are created once (via useRef) and would otherwise
+  // close over stale state values from the first render.
+  const isRecordingRef = useRef(false);
+  const isLockedRef = useRef(false);
+  const cancelledRef = useRef(false);
+  const gestureHandledRef = useRef(false);
+  const recordDurationRef = useRef(0);
 
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingLocked, setRecordingLocked] = useState(false);
+  const [slideX, setSlideX] = useState(0);
+  const [slideY, setSlideY] = useState(0);
   const [isListening, setIsListening] = useState(false);
   const [text, setText] = useState('');
   const [menuVisible, setMenuVisible] = useState(false);
+  const [recordDuration, setRecordDuration] = useState(0);
 
-  /* ── Selectors ─────────────────────────────────────────────────── */
+  const [onlineStatus, setOnlineStatus] = useState({
+  is_online: user?.is_online || 0,
+  last_seen: user?.last_seen || null,
+});
+
+useEffect(() => {
+  const socket = socketRef.current;
+  if (!socket) return;
+
+  const onPresenceUpdate = data => {
+    if (Number(data.user_id) !== Number(userId)) return;
+
+    setOnlineStatus({
+      is_online: data.is_online,
+      last_seen: data.last_seen,
+    });
+  };
+
+  socket.on('presence_update', onPresenceUpdate);
+
+  return () => {
+    socket.off('presence_update', onPresenceUpdate);
+  };
+}, [userId]);
+
+  const fileUploading = useSelector(s => s.chat.fileUploading);
 
   const conversationId = useSelector(s =>
     userId ? s.chat.conversationIds?.[userId] : null,
@@ -455,7 +692,6 @@ const ChatScreen = ({ route, navigation }) => {
   const messages =
     useSelector(s => (userId ? s.chat.conversations?.[userId] : [])) || [];
 
-  // Chat options state
   const chatOptions = useSelector(s => s.chatOptions) ?? {};
   const isMuted = !!chatOptions.muted?.[conversationId];
   const isBlocked = !!chatOptions.blocked?.[userId];
@@ -465,24 +701,17 @@ const ChatScreen = ({ route, navigation }) => {
   const reportLoading = chatOptions.reportLoading;
   const reportSubmitted = chatOptions.reportSubmitted;
 
-  /* ── Init ──────────────────────────────────────────────────────── */
+  useEffect(() => {
+    recordDurationRef.current = recordDuration;
+  }, [recordDuration]);
 
   useEffect(() => {
-    audioRecorderRef.current = createAudioRecorder();
-
-    Voice.onSpeechStart = () => setIsListening(true);
-    Voice.onSpeechEnd = () => setIsListening(false);
-    Voice.onSpeechResults = ev => {
-      const spoken = ev?.value?.[0];
-      if (spoken) setText(spoken);
-      setIsListening(false);
-    };
-    Voice.onSpeechError = () => setIsListening(false);
-
+    // Stop any in-flight recording if the screen unmounts mid-way.
     return () => {
-      audioRecorderRef.current?.stopRecorder?.();
-      audioRecorderRef.current?.removeRecordBackListener?.();
-      Voice.destroy().then(Voice.removeAllListeners);
+      clearInterval(timerRef.current);
+      if (isRecordingRef.current) {
+        Sound.stopRecorder().catch(() => {});
+      }
     };
   }, []);
 
@@ -516,7 +745,6 @@ const ChatScreen = ({ route, navigation }) => {
     return () => socketRef.current?.emit('chat_close', { userId: myId });
   }, [myId, userId, socketRef]);
 
-  // Load mute + block status once conversationId is known
   useEffect(() => {
     if (!conversationId || !userId) return;
     dispatch(chatOptionsStatusRequest(conversationId, userId));
@@ -526,18 +754,18 @@ const ChatScreen = ({ route, navigation }) => {
     setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
   }, [messages]);
 
-  /* ── Blocked banner ────────────────────────────────────────────── */
-  // Show a banner at the bottom when the chat is blocked
   const renderBlockedBanner = () => (
     <View style={styles.blockedBanner}>
-      <Ionicons name="ban-outline" size={16} color="#E53935" />
-      <Text style={styles.blockedBannerText}>
+      <Ionicons
+        name="ban-outline"
+        size={moderateScale(16)}
+        color={chat.blockedBannerText}
+      />
+      <AppText variant="bodySmall" style={styles.blockedBannerText}>
         You have blocked this user. Unblock to send messages.
-      </Text>
+      </AppText>
     </View>
   );
-
-  /* ── Chat Options handlers ─────────────────────────────────────── */
 
   const handleMute = useCallback(() => {
     if (!conversationId) return;
@@ -560,12 +788,9 @@ const ChatScreen = ({ route, navigation }) => {
     reason => {
       if (!userId) return;
       dispatch(chatReportRequest(userId, reason));
-      // menu stays open to show loading → done state
     },
     [dispatch, userId],
   );
-
-  /* ── Messages list ─────────────────────────────────────────────── */
 
   const messagesWithDate = useMemo(() => {
     const map = new Map();
@@ -593,8 +818,6 @@ const ChatScreen = ({ route, navigation }) => {
     return out;
   }, [messages]);
 
-  /* ── Send / Media ──────────────────────────────────────────────── */
-
   const sendMessage = useCallback(() => {
     if (!text.trim() || !userId) return;
     if (isBlocked) {
@@ -608,29 +831,6 @@ const ChatScreen = ({ route, navigation }) => {
     });
     setText('');
   }, [text, userId, isBlocked, socketRef]);
-
-  const startVoiceRecognition = async () => {
-    try {
-      const ok = await requestPermission(
-        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-      );
-      if (!ok) {
-        Alert.alert('Permission required', 'Allow microphone permission.');
-        return;
-      }
-      if (isListening) {
-        await Voice.stop();
-        setIsListening(false);
-        return;
-      }
-      setText('');
-      setIsListening(true);
-      await Voice.start('en-US');
-    } catch (e) {
-      console.log('voice error:', e);
-      setIsListening(false);
-    }
-  };
 
   const openCamera = async () => {
     try {
@@ -682,38 +882,244 @@ const ChatScreen = ({ route, navigation }) => {
     }
   };
 
+  /* ── VOICE NOTE RECORDING (react-native-nitro-sound) ─────────────────── */
+
+  const resetRecordingUI = () => {
+    clearInterval(timerRef.current);
+    isRecordingRef.current = false;
+    isLockedRef.current = false;
+    setIsRecording(false);
+    setRecordingLocked(false);
+    setSlideX(0);
+    setSlideY(0);
+    setRecordDuration(0);
+  };
+
   const startRecording = async () => {
+    if (isRecordingRef.current) return;
+
+    if (fileUploading) {
+      // nitro-sound reuses the same default file path for every recording.
+      // Starting a new one while the previous upload is still reading that
+      // file would corrupt/overwrite it mid-upload.
+      Alert.alert('Please wait', 'Your last voice note is still sending.');
+      return;
+    }
+
+    const granted = await requestPermission(
+      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+    );
+    if (!granted) {
+      Alert.alert('Microphone permission required');
+      return;
+    }
+
     try {
-      if (!audioRecorderRef.current?.startRecorder) return;
+      cancelledRef.current = false;
+      gestureHandledRef.current = false;
+
+      // No filename passed here on purpose. A bare relative filename like
+      // `voice_123.m4a` gets opened relative to the OS root ("/"), which is
+      // read-only on Android -> EROFS. Calling startRecorder() with no
+      // argument makes nitro-sound use its own safe, writable default path
+      // ({cacheDir}/sound.mp4), and it returns that resolved absolute path.
+      console.log('[voice] starting recorder');
+      const uri = await Sound.startRecorder();
+      console.log('[voice] recorder started at', uri);
+
+      isRecordingRef.current = true;
+      isLockedRef.current = false;
       setIsRecording(true);
-      await audioRecorderRef.current.startRecorder();
+      setRecordingLocked(false);
+      setRecordDuration(0);
+      setSlideX(0);
+      setSlideY(0);
+
+      timerRef.current = setInterval(() => {
+        setRecordDuration(prev => {
+          const next = prev + 1;
+          if (next >= MAX_RECORD_SECONDS) {
+            // Hit the cap — auto-stop and send, same as releasing normally.
+            finishRecording();
+          }
+          return next;
+        });
+      }, 1000);
     } catch (e) {
-      setIsRecording(false);
+      console.log('[voice] record start error', e);
+      Alert.alert('Could not start recording', String(e?.message || e));
+      resetRecordingUI();
     }
   };
 
-  const stopRecording = async () => {
+  const cancelRecording = async () => {
+    console.log('[voice] cancel recording (slide-to-cancel)');
+    cancelledRef.current = true;
     try {
-      if (!audioRecorderRef.current?.stopRecorder) {
-        setIsRecording(false);
+      await Sound.stopRecorder();
+    } catch (e) {
+      // fine — recorder may already be stopped
+    }
+    resetRecordingUI();
+  };
+
+  const lockRecording = () => {
+    console.log('[voice] recording locked (slide-up)');
+    isLockedRef.current = true;
+    setRecordingLocked(true);
+    setSlideX(0);
+    setSlideY(0);
+  };
+
+  const uploadVoiceMessage = (uri, durationSeconds) => {
+    if (!userId) return;
+    if (isBlocked) {
+      Alert.alert('Blocked', 'You cannot send messages to a blocked user.');
+      return;
+    }
+
+    const tempId = `temp-audio-${Date.now()}`;
+
+    // Optimistic bubble — appears instantly for the sender, before the
+    // upload even starts (item 20).
+    dispatch(
+      chatMessageAdd({
+        otherUserId: userId,
+        message: {
+          message_id: tempId,
+          conversation_id: conversationId,
+          sender_id: myId,
+          message_type: 'audio',
+          content: uri, // local file — playable by the sender immediately
+          duration_seconds: durationSeconds,
+          sent_at: new Date().toISOString(),
+          is_read: 0,
+          delivered: 0,
+          uploading: true,
+        },
+      }),
+    );
+
+    dispatch(
+      chatFileUploadRequest({
+        file: {
+          uri,
+          fileName: `voice_${Date.now()}.mp4`,
+type: 'audio/mp4',
+        },
+        receiverId: userId,
+        message_type: 'audio',
+        socket: socketRef.current,
+        tempId,
+        duration: durationSeconds,
+      }),
+    );
+  };
+
+  // Stops the recorder and either uploads (normal release / lock-send /
+  // max-duration reached) or discards (cancelled / too short).
+  const finishRecording = async () => {
+    if (!isRecordingRef.current) return;
+    clearInterval(timerRef.current);
+
+    const finalDuration = recordDurationRef.current;
+
+    try {
+      const resultPath = await Sound.stopRecorder();
+      console.log('[voice] stopRecorder ->', resultPath);
+
+      if (cancelledRef.current) {
+        resetRecordingUI();
         return;
       }
-      const path = await audioRecorderRef.current.stopRecorder();
-      audioRecorderRef.current?.removeRecordBackListener?.();
-      setIsRecording(false);
-      if (!path || !userId) return;
-      dispatch(
-        chatFileUploadRequest({
-          file: { uri: path, fileName: 'voice.mp3', type: 'audio/mpeg' },
-          receiverId: userId,
-          message_type: 'audio',
-          socket: socketRef.current,
-        }),
-      );
+
+      if (finalDuration < MIN_RECORD_SECONDS) {
+        // item 15 — too short, silently discard like WhatsApp's tap-guard.
+        console.log('[voice] recording under 1s, discarding');
+        resetRecordingUI();
+        return;
+      }
+
+      const uri = resultPath.startsWith('file://')
+        ? resultPath
+        : `file://${resultPath}`;
+
+      resetRecordingUI();
+      uploadVoiceMessage(uri, finalDuration);
     } catch (e) {
-      setIsRecording(false);
+      console.log('[voice] stopRecorder error', e);
+      Alert.alert('Recording failed', String(e?.message || e));
+      resetRecordingUI();
     }
   };
+
+  const retryVoiceMessage = item => {
+    dispatch(chatMessageRemove(userId, item.message_id));
+    uploadVoiceMessage(item.content, item.duration_seconds);
+  };
+
+  // The PanResponder below is created exactly once (useRef). Its handlers
+  // would otherwise permanently close over this render's versions of
+  // startRecording/cancelRecording/lockRecording/finishRecording — meaning
+  // if userId, isBlocked, or conversationId ever changed while this screen
+  // stayed mounted, the gesture would keep using stale values. Routing
+  // every call through this ref, updated on every render, keeps it correct
+  // regardless of when the PanResponder itself was constructed.
+  const latestFns = useRef({});
+  latestFns.current = {
+    startRecording,
+    cancelRecording,
+    lockRecording,
+    finishRecording,
+  };
+
+  // Gesture handling for hold-to-record / slide-to-cancel / slide-up-to-lock.
+  // Created once via useRef; all decision logic reads from refs (not state)
+  // so it always sees the latest values regardless of render timing.
+  const micPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        latestFns.current.startRecording();
+      },
+      onPanResponderMove: (evt, gesture) => {
+        if (!isRecordingRef.current || isLockedRef.current || gestureHandledRef.current) {
+          return;
+        }
+        setSlideX(gesture.dx);
+        setSlideY(gesture.dy);
+
+        if (gesture.dx < CANCEL_THRESHOLD) {
+          gestureHandledRef.current = true;
+          latestFns.current.cancelRecording();
+          return;
+        }
+        if (gesture.dy < LOCK_THRESHOLD) {
+          gestureHandledRef.current = true;
+          latestFns.current.lockRecording();
+        }
+      },
+      onPanResponderRelease: () => {
+        if (!isRecordingRef.current) {
+          gestureHandledRef.current = false;
+          return;
+        }
+        if (isLockedRef.current || gestureHandledRef.current) {
+          // Locked: stays recording until the user taps send/cancel.
+          // Already-cancelled: nothing more to do.
+          gestureHandledRef.current = false;
+          return;
+        }
+        latestFns.current.finishRecording();
+      },
+      onPanResponderTerminate: () => {
+        if (isRecordingRef.current && !isLockedRef.current && !gestureHandledRef.current) {
+          latestFns.current.cancelRecording();
+        }
+        gestureHandledRef.current = false;
+      },
+    }),
+  ).current;
 
   const startFriendCall = type => {
     if (!userId) return;
@@ -734,39 +1140,43 @@ const ChatScreen = ({ route, navigation }) => {
     });
   };
 
-  /* ── Render helpers ────────────────────────────────────────────── */
-
-  const renderContent = item => {
+  const renderContent = (item, isMe) => {
     switch (item.message_type) {
       case 'image':
         return (
-          <Image
-            source={{ uri: item.content }}
-            style={{ width: 200, height: 200, borderRadius: 10 }}
-          />
+          <Image source={{ uri: item.content }} style={styles.imageMessage} />
         );
       case 'video':
         return (
           <Video
             source={{ uri: item.content }}
-            style={{ width: 220, height: 200 }}
+            style={styles.videoMessage}
             controls
           />
         );
       case 'audio':
         return (
-          <TouchableOpacity onPress={() => Linking.openURL(item.content)}>
-            <Text style={{ color: '#222' }}>▶️ Play Audio</Text>
-          </TouchableOpacity>
+          <AudioMessageBubble
+            item={item}
+            isMe={isMe}
+            chat={chat}
+            onRetry={() => retryVoiceMessage(item)}
+          />
         );
       case 'file':
         return (
           <TouchableOpacity onPress={() => Linking.openURL(item.content)}>
-            <Text style={{ color: '#222' }}>📎 Open File</Text>
+            <AppText variant="bodySmall" style={styles.mediaLinkText}>
+              📎 Open File
+            </AppText>
           </TouchableOpacity>
         );
       default:
-        return <Text style={{ color: '#222' }}>{item.content}</Text>;
+        return (
+          <AppText variant="bodySmall" style={styles.mediaLinkText}>
+            {item.content}
+          </AppText>
+        );
     }
   };
 
@@ -774,7 +1184,9 @@ const ChatScreen = ({ route, navigation }) => {
     if (item.type === 'date') {
       return (
         <View style={styles.dateWrap}>
-          <Text style={styles.dateText}>{item.label}</Text>
+          <AppText variant="caption" style={styles.dateText}>
+            {item.label}
+          </AppText>
         </View>
       );
     }
@@ -791,27 +1203,44 @@ const ChatScreen = ({ route, navigation }) => {
       <View
         style={[styles.bubble, isMe ? styles.myBubble : styles.otherBubble]}
       >
-        <View>{renderContent(item)}</View>
+        <View>{renderContent(item, isMe)}</View>
         <View style={styles.metaRow}>
           {!!time && (
-            <Text style={[styles.timeText, isMe && styles.myTimeText]}>
+            <AppText
+              variant="caption"
+              style={[styles.timeText, isMe && styles.myTimeText]}
+            >
               {time}
-            </Text>
+            </AppText>
           )}
           {isMe && (
-            <Ionicons
-              name={
-                item.is_read
-                  ? 'checkmark-done'
-                  : item.delivered
-                  ? 'checkmark-done'
-                  : 'checkmark'
-              }
-              size={14}
-              color={
-                item.is_read ? '#34B7F1' : item.delivered ? '#999' : '#ddd'
-              }
-            />
+            item.uploading ? (
+              <ActivityIndicator
+                size="small"
+                color={chat.myTimeText}
+                style={styles.tickSpinner}
+              />
+            ) : item.failed ? (
+              <Ionicons
+                name="alert-circle"
+                size={moderateScale(14)}
+                color={chat.blockedBannerText}
+              />
+            ) : (
+              <Ionicons
+                name={
+                  item.is_read
+                    ? 'checkmark-done'
+                    : item.delivered
+                    ? 'checkmark-done'
+                    : 'checkmark'
+                }
+                size={moderateScale(14)}
+                color={
+                  item.is_read ? '#34B7F1' : item.delivered ? '#999' : '#ddd'
+                }
+              />
+            )
           )}
         </View>
       </View>
@@ -826,59 +1255,65 @@ const ChatScreen = ({ route, navigation }) => {
     user?.image ||
     null;
 
-  const lastSeenValue =
-    user?.last_seen || user?.lastSeen || user?.last_active || null;
+  const isOnline = Number(onlineStatus.is_online) === 1;
+
+const lastSeenValue =
+  onlineStatus.last_seen ||
+  user?.last_seen ||
+  user?.lastSeen ||
+  user?.last_active;
 
   if (!userId) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>
         <View style={styles.errorBox}>
-          <Text style={styles.errorText}>User data not found</Text>
+          <AppText variant="h4" style={styles.errorText}>
+            User data not found
+          </AppText>
           <TouchableOpacity
             style={styles.errorBtn}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.errorBtnText}>Go Back</Text>
+            <AppText variant="button" style={styles.errorBtnText}>
+              Go Back
+            </AppText>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  /* ── JSX ───────────────────────────────────────────────────────── */
+  const micTranslateX = Math.min(0, Math.max(slideX, CANCEL_THRESHOLD * 1.3));
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
         <LinearGradient
-          colors={['#fdf2fa', '#fdf2fa', '#b470f3']}
+          colors={chat.screenGradient}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
-          style={{ flex: 1 }}
+          style={styles.flex}
         >
-          <HeartsBackground />
+          <HeartsBackground tint={chat.heartTint} />
 
-          {/* ── HEADER ─────────────────────────────────────────────── */}
           <LinearGradient
-            colors={['#F3E7FF', '#FCE6F6']}
-            style={[
-              styles.chatHeader,
-              {
-                paddingTop:
-                  Platform.OS === 'android' ? insets.top + 8 : insets.top + 4,
-              },
-            ]}
+            colors={chat.headerGradient}
+            style={[styles.chatHeader]}
           >
             <TouchableOpacity
               style={styles.backBtn}
               onPress={() => navigation.goBack()}
               activeOpacity={0.7}
             >
-              <Ionicons name="chevron-back" size={26} color="#222" />
+              <Ionicons
+                name="chevron-back"
+                size={moderateScale(26)}
+                color={chat.backIconColor}
+              />
             </TouchableOpacity>
 
             <View style={styles.profileBox}>
@@ -889,27 +1324,37 @@ const ChatScreen = ({ route, navigation }) => {
                 />
               ) : (
                 <View style={styles.headerPlaceholder}>
-                  <Text style={styles.headerPlaceholderText}>
+                  <AppText
+                    variant="subtitle"
+                    style={styles.headerPlaceholderText}
+                  >
                     {user?.name?.[0]?.toUpperCase() || '?'}
-                  </Text>
+                  </AppText>
                 </View>
               )}
               <View style={styles.nameBox}>
-                <Text style={styles.headerName} numberOfLines={1}>
+                <AppText
+                  variant="subtitle"
+                  style={styles.headerName}
+                  numberOfLines={1}
+                >
                   {user?.name || 'User'}
-                </Text>
-                <Text style={styles.headerStatus} numberOfLines={1}>
+                </AppText>
+                <AppText
+                  variant="caption"
+                  style={styles.headerStatus}
+                  numberOfLines={1}
+                >
                   {isMuted
                     ? '🔕 Muted'
-                    : Number(user?.is_online) === 1
+                    : isOnline
                     ? 'Active now'
                     : getLastSeenText(lastSeenValue)}
-                </Text>
+                </AppText>
               </View>
             </View>
 
             <View style={styles.callIconsRow}>
-              {/* Call buttons (disabled when blocked) */}
               <TouchableOpacity
                 style={styles.headerIconBtn}
                 onPress={() => startFriendCall('AUDIO')}
@@ -918,8 +1363,8 @@ const ChatScreen = ({ route, navigation }) => {
               >
                 <Ionicons
                   name="call-outline"
-                  size={28}
-                  color={isBlocked ? '#ccc' : '#C026F8'}
+                  size={moderateScale(28)}
+                  color={isBlocked ? '#ccc' : chat.headerAccent}
                 />
               </TouchableOpacity>
 
@@ -931,40 +1376,34 @@ const ChatScreen = ({ route, navigation }) => {
               >
                 <Ionicons
                   name="videocam-outline"
-                  size={31}
-                  color={isBlocked ? '#ccc' : '#C026F8'}
+                  size={moderateScale(31)}
+                  color={isBlocked ? '#ccc' : chat.headerAccent}
                 />
               </TouchableOpacity>
 
-              {/* ── 3-DOT MENU BUTTON ─────────────────────────────── */}
               <TouchableOpacity
                 style={styles.headerIconBtn}
                 onPress={() => setMenuVisible(true)}
                 activeOpacity={0.75}
               >
-                <Ionicons name="ellipsis-vertical" size={22} color="#555" />
+                <Ionicons
+                  name="ellipsis-vertical"
+                  size={moderateScale(22)}
+                  color={chat.menuDotsColor}
+                />
               </TouchableOpacity>
             </View>
           </LinearGradient>
 
-          {/* ── MESSAGE LIST ───────────────────────────────────────── */}
-          <FlatList
-            ref={flatRef}
+          <FlatListMemo
+            flatRef={flatRef}
             data={messagesWithDate}
-            keyExtractor={i =>
-              i.type === 'date' ? i.id : String(i.message_id)
-            }
             renderItem={renderItem}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
+            styles={styles}
           />
 
-          {/* ── BLOCKED BANNER ─────────────────────────────────────── */}
           {isBlocked && renderBlockedBanner()}
 
-          {/* ── INPUT BAR ──────────────────────────────────────────── */}
           {!isBlocked && (
             <View
               style={[
@@ -972,74 +1411,140 @@ const ChatScreen = ({ route, navigation }) => {
                 { paddingBottom: Platform.OS === 'ios' ? insets.bottom : 0 },
               ]}
             >
-              <View style={styles.inputPill}>
-                <TouchableOpacity style={styles.leftIcon} activeOpacity={0.7}>
-                  <Ionicons name="happy-outline" size={26} color="#8F8F8F" />
-                </TouchableOpacity>
+              {!isRecording && (
+                <View style={styles.inputPill}>
+                  <TouchableOpacity style={styles.leftIcon} activeOpacity={0.7}>
+                    <Ionicons
+                      name="happy-outline"
+                      size={moderateScale(26)}
+                      color={chat.leftIconColor}
+                    />
+                  </TouchableOpacity>
 
-                <TextInput
-                  placeholder={isListening ? 'Listening...' : 'Type.....'}
-                  value={text}
-                  onChangeText={setText}
-                  style={styles.input}
-                  placeholderTextColor="#8F8F8F"
-                  multiline={false}
-                  returnKeyType="send"
-                  onSubmitEditing={sendMessage}
-                />
+                  <TextInput
+                    placeholder={isListening ? 'Listening...' : 'Type.....'}
+                    value={text}
+                    onChangeText={setText}
+                    style={styles.input}
+                    placeholderTextColor={chat.inputPlaceholder}
+                    multiline={false}
+                    returnKeyType="send"
+                    onSubmitEditing={sendMessage}
+                  />
 
-                <TouchableOpacity
-                  style={styles.smallIconBtn}
-                  onPress={openFileManager}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="attach-outline" size={28} color="#C026F8" />
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.smallIconBtn}
+                    onPress={openFileManager}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name="attach-outline"
+                      size={moderateScale(28)}
+                      color={chat.accentIconColor}
+                    />
+                  </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.smallIconBtn}
-                  onPress={openCamera}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="camera-outline" size={30} color="#C026F8" />
-                </TouchableOpacity>
-              </View>
+                  <TouchableOpacity
+                    style={styles.smallIconBtn}
+                    onPress={openCamera}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name="camera-outline"
+                      size={moderateScale(30)}
+                      color={chat.accentIconColor}
+                    />
+                  </TouchableOpacity>
+                </View>
+              )}
 
-              {text.trim().length > 0 ? (
+              {isRecording && !recordingLocked && (
+                <View style={styles.recordingBar}>
+                  <View style={styles.recDotWrap}>
+                    <View style={styles.recDot} />
+                    <Text style={styles.recordingText}>
+                      {formatDuration(recordDuration)}
+                    </Text>
+                  </View>
+                  <View style={styles.slideHintWrap} pointerEvents="none">
+                    <Ionicons name="chevron-back" size={16} color={chat.leftIconColor} />
+                    <AppText variant="caption" style={styles.slideHintText}>
+                      Slide to cancel
+                    </AppText>
+                  </View>
+                </View>
+              )}
+
+              {isRecording && recordingLocked && (
+                <View style={styles.lockedBar}>
+                  <View style={styles.recDotWrap}>
+                    <View style={styles.recDot} />
+                    <Text style={styles.recordingText}>
+                      {formatDuration(recordDuration)}
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={cancelRecording} style={styles.lockedCancelBtn}>
+                    <Ionicons name="trash-outline" size={22} color={chat.blockedBannerText} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={finishRecording} style={styles.lockedSendBtn}>
+                    <Ionicons name="send" size={20} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {!isRecording && text.trim().length > 0 && (
                 <TouchableOpacity
                   style={styles.micBtn}
                   onPress={sendMessage}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="send" size={27} color="#fff" />
+                  <Ionicons name="send" size={moderateScale(27)} color="#fff" />
                 </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={[
-                    styles.micBtn,
-                    isRecording && styles.micRecording,
-                    isListening && styles.micListening,
-                  ]}
-                  onPress={startVoiceRecognition}
-                  onLongPress={startRecording}
-                  onPressOut={() => {
-                    if (isRecording) stopRecording();
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons
-                    name={isListening ? 'mic' : 'mic-outline'}
-                    size={34}
-                    color="#fff"
-                  />
-                </TouchableOpacity>
+              )}
+
+              {!recordingLocked && (isRecording || text.trim().length === 0) && (
+                // IMPORTANT: this is a single persistent View covering both
+                // idle and actively-recording states. It must NEVER unmount
+                // between onPanResponderGrant and onPanResponderRelease —
+                // doing so breaks the touch responder chain, which is why
+                // release (and therefore upload) previously silently failed
+                // on a normal hold-and-release.
+                <View style={styles.micGestureWrap}>
+                  {isRecording && slideY < -20 && (
+                    <View style={styles.lockHint}>
+                      <Ionicons
+                        name="lock-closed-outline"
+                        size={16}
+                        color={chat.accentIconColor}
+                      />
+                      <Ionicons
+                        name="chevron-up"
+                        size={12}
+                        color={chat.accentIconColor}
+                      />
+                    </View>
+                  )}
+                  <View
+                    style={[
+                      styles.micBtn,
+                      isRecording && styles.micRecording,
+                      isRecording && { transform: [{ translateX: micTranslateX }] },
+                    ]}
+                    {...micPanResponder.panHandlers}
+                  >
+                    <Ionicons
+                      name={isRecording ? 'mic' : 'mic-outline'}
+                      size={moderateScale(34)}
+                      color="#fff"
+                    />
+                  </View>
+                </View>
               )}
             </View>
           )}
         </LinearGradient>
       </KeyboardAvoidingView>
 
-      {/* ── CHAT OPTIONS MODAL ─────────────────────────────────────── */}
       <ChatOptionsMenu
         visible={menuVisible}
         onClose={() => setMenuVisible(false)}
@@ -1059,317 +1564,398 @@ const ChatScreen = ({ route, navigation }) => {
   );
 };
 
+const FlatListMemo = React.memo(({ flatRef, data, renderItem, styles }) => (
+  <FlatList
+    ref={flatRef}
+    data={data}
+    keyExtractor={i => (i.type === 'date' ? i.id : String(i.message_id))}
+    renderItem={renderItem}
+    contentContainerStyle={styles.list}
+    showsVerticalScrollIndicator={false}
+    keyboardShouldPersistTaps="handled"
+    keyboardDismissMode="on-drag"
+  />
+));
+
 export default ChatScreen;
 
 /* ══════════════════════════════════════════════════════════════════════════
-   STYLES
+   STYLES — pull colors from the chat palette (theme-aware) instead of
+   fixed hex, so the whole screen now flips with light/dark mode.
    ══════════════════════════════════════════════════════════════════════════ */
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FCE6F6' },
-  flex: { flex: 1 },
-  heartsLayer: { ...StyleSheet.absoluteFillObject },
+const createStyles = (theme, width, chat) => {
+  const { spacing, radius } = theme;
+  const isSmall = width < 360;
 
-  /* HEADER */
-  chatHeader: {
-    minHeight: 88,
-    paddingBottom: 12,
-    paddingHorizontal: isSmall ? 8 : 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomLeftRadius: 22,
-    borderBottomRightRadius: 22,
-    elevation: 4,
-  },
-  backBtn: {
-    width: isSmall ? 28 : 34,
-    height: 42,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-  },
-  profileBox: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    minWidth: 0,
-    marginRight: 4,
-  },
-  headerAvatar: {
-    width: isSmall ? 34 : 40,
-    height: isSmall ? 34 : 40,
-    borderRadius: isSmall ? 17 : 20,
-    marginRight: isSmall ? 6 : 9,
-    borderWidth: 2,
-    borderColor: '#C026F8',
-  },
-  headerPlaceholder: {
-    width: isSmall ? 34 : 40,
-    height: isSmall ? 34 : 40,
-    borderRadius: isSmall ? 17 : 20,
-    backgroundColor: '#C026F8',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: isSmall ? 6 : 9,
-  },
-  headerPlaceholderText: { color: '#fff', fontWeight: '800', fontSize: 16 },
-  nameBox: { flex: 1, minWidth: 0 },
-  headerName: { fontSize: isSmall ? 14 : 16, fontWeight: '800', color: '#111' },
-  headerStatus: { fontSize: isSmall ? 10 : 11, color: '#6A6A6A', marginTop: 2 },
-  callIconsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: isSmall ? 4 : 8,
-  },
-  headerIconBtn: {
-    width: isSmall ? 34 : 40,
-    height: isSmall ? 34 : 40,
-    borderRadius: isSmall ? 17 : 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: chat.bottomWrapBg },
+    flex: { flex: 1 },
 
-  /* MESSAGE LIST */
-  list: { paddingHorizontal: 14, paddingTop: 14, paddingBottom: 8 },
-  dateWrap: { alignItems: 'center', marginVertical: 10 },
-  dateText: {
-    backgroundColor: 'rgba(255,255,255,0.85)',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 14,
-    fontSize: 12,
-    color: '#666',
-  },
-  bubble: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 18,
-    marginVertical: 6,
-    maxWidth: '78%',
-  },
-  myBubble: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#B829F4',
-    borderBottomRightRadius: 6,
-  },
-  otherBubble: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#fff',
-    borderBottomLeftRadius: 6,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  timeText: { fontSize: 10, color: '#777', marginRight: 3 },
-  myTimeText: { color: '#eee' },
+    chatHeader: {
+      minHeight: moderateScale(68),
+      paddingBottom: spacing.md,
+      paddingHorizontal: isSmall ? spacing.sm : spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderBottomLeftRadius: radius.xl,
+      borderBottomRightRadius: radius.xl,
+      elevation: 4,
+    },
+    backBtn: {
+      width: isSmall ? moderateScale(28) : moderateScale(34),
+      height: moderateScale(42),
+      justifyContent: 'center',
+      alignItems: 'flex-start',
+    },
+    profileBox: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      minWidth: 0,
+      marginRight: spacing.xxs,
+    },
+    headerAvatar: {
+      width: isSmall ? moderateScale(34) : moderateScale(40),
+      height: isSmall ? moderateScale(34) : moderateScale(40),
+      borderRadius: isSmall ? moderateScale(17) : moderateScale(20),
+      marginRight: isSmall ? spacing.xs : spacing.sm,
+      borderWidth: 2,
+      borderColor: chat.headerBorder,
+    },
+    headerPlaceholder: {
+      width: isSmall ? moderateScale(34) : moderateScale(40),
+      height: isSmall ? moderateScale(34) : moderateScale(40),
+      borderRadius: isSmall ? moderateScale(17) : moderateScale(20),
+      backgroundColor: chat.headerBorder,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: isSmall ? spacing.xs : spacing.sm,
+    },
+    headerPlaceholderText: { color: '#fff', fontWeight: '800' },
+    nameBox: { flex: 1, minWidth: 0 },
+    headerName: { color: chat.headerNameColor, fontWeight: '800' },
+    headerStatus: { color: chat.headerStatusColor, marginTop: spacing.xxs },
+    callIconsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      gap: isSmall ? spacing.xxs : spacing.xs,
+    },
+    headerIconBtn: {
+      width: isSmall ? moderateScale(34) : moderateScale(40),
+      height: isSmall ? moderateScale(34) : moderateScale(40),
+      borderRadius: isSmall ? moderateScale(17) : moderateScale(20),
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  /* INPUT */
-  bottomWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: isSmall ? 7 : 10,
-    paddingTop: 6,
-    backgroundColor: '#FCE6F6',
-  },
-  inputPill: {
-    flex: 1,
-    height: isSmall ? 50 : 56,
-    backgroundColor: '#fff',
-    borderRadius: 30,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: isSmall ? 10 : 12,
-    paddingRight: isSmall ? 5 : 8,
-    borderWidth: 1,
-    borderColor: '#E6E6E6',
-    elevation: 2,
-  },
-  leftIcon: {
-    width: 30,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 2,
-  },
-  input: {
-    flex: 1,
-    fontSize: isSmall ? 14 : 16,
-    color: '#222',
-    paddingVertical: 6,
-    paddingHorizontal: 5,
-  },
-  smallIconBtn: {
-    width: isSmall ? 28 : 34,
-    height: isSmall ? 28 : 34,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: isSmall ? 1 : 3,
-  },
-  micBtn: {
-    width: isSmall ? 50 : 56,
-    height: isSmall ? 50 : 56,
-    borderRadius: isSmall ? 25 : 28,
-    backgroundColor: '#B829F4',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: isSmall ? 7 : 10,
-    elevation: 5,
-  },
-  micRecording: { backgroundColor: '#ff2d55' },
-  micListening: { backgroundColor: '#22C55E' },
+    list: {
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.sm,
+    },
+    dateWrap: { alignItems: 'center', marginVertical: spacing.sm },
+    dateText: {
+      backgroundColor: chat.dateBg,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xxs,
+      borderRadius: radius.md,
+      color: chat.dateText,
+    },
+    bubble: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.lg,
+      marginVertical: spacing.xs,
+      maxWidth: '78%',
+    },
+    myBubble: {
+      alignSelf: 'flex-end',
+      backgroundColor: chat.myBubble,
+      borderBottomRightRadius: spacing.xs,
+    },
+    otherBubble: {
+      alignSelf: 'flex-start',
+      backgroundColor: chat.otherBubble,
+      borderBottomLeftRadius: spacing.xs,
+    },
+    imageMessage: {
+      width: moderateScale(200),
+      height: moderateScale(200),
+      borderRadius: radius.sm,
+    },
+    videoMessage: { width: moderateScale(220), height: moderateScale(200) },
+    mediaLinkText: { color: chat.otherBubbleText },
+    metaRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      marginTop: spacing.xxs,
+    },
+    timeText: { color: chat.timeText, marginRight: spacing.xxs },
+    myTimeText: { color: chat.myTimeText },
+    tickSpinner: { marginLeft: spacing.xxs },
 
-  /* BLOCKED BANNER */
-  blockedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFF0F0',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    gap: 6,
-  },
-  blockedBannerText: {
-    color: '#E53935',
-    fontSize: 13,
-    fontWeight: '500',
-    flex: 1,
-  },
+    bottomWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: isSmall ? spacing.xs : spacing.sm,
+      paddingTop: spacing.xs,
+      backgroundColor: chat.bottomWrapBg,
+      minHeight: isSmall ? moderateScale(66) : moderateScale(72),
+    },
+    inputPill: {
+      flex: 1,
+      height: isSmall ? moderateScale(50) : moderateScale(56),
+      backgroundColor: chat.inputPillBg,
+      borderRadius: radius.pill,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingLeft: isSmall ? spacing.sm : spacing.md,
+      paddingRight: isSmall ? spacing.xxs : spacing.sm,
+      borderWidth: 1,
+      borderColor: chat.inputBorder,
+      elevation: 2,
+    },
+    leftIcon: {
+      width: moderateScale(30),
+      height: moderateScale(40),
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.xxs,
+    },
+    input: {
+      flex: 1,
+      fontSize: isSmall ? theme.fontSizes.sm : theme.fontSizes.base,
+      color: chat.inputText,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.xxs,
+    },
+    smallIconBtn: {
+      width: isSmall ? moderateScale(28) : moderateScale(34),
+      height: isSmall ? moderateScale(28) : moderateScale(34),
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: isSmall ? spacing.xxs : spacing.xxs,
+    },
+    micGestureWrap: {
+      marginLeft: isSmall ? spacing.sm : spacing.md,
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+    },
+    micBtn: {
+      width: isSmall ? moderateScale(50) : moderateScale(56),
+      height: isSmall ? moderateScale(50) : moderateScale(56),
+      borderRadius: isSmall ? moderateScale(25) : moderateScale(28),
+      backgroundColor: chat.micBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 5,
+    },
+    micRecording: { backgroundColor: '#ff2d55' },
+    lockHint: {
+      backgroundColor: '#fff',
+      borderRadius: 16,
+      paddingVertical: 6,
+      paddingHorizontal: 6,
+      alignItems: 'center',
+      marginBottom: 8,
+      elevation: 4,
+    },
 
-  /* ERROR */
-  errorBox: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#222',
-    marginBottom: 20,
-  },
-  errorBtn: {
-    backgroundColor: '#B829F4',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  errorBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+    // Full-width recording bar (replaces the text input while recording).
+    recordingBar: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      height: isSmall ? moderateScale(50) : moderateScale(56),
+      paddingHorizontal: spacing.md,
+    },
+    recDotWrap: { flexDirection: 'row', alignItems: 'center' },
+    recDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: '#ff2d55',
+      marginRight: spacing.xs,
+    },
+    recordingText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: chat.inputText,
+    },
+    slideHintWrap: { flexDirection: 'row', alignItems: 'center' },
+    slideHintText: { color: chat.leftIconColor, marginLeft: 2 },
 
-  /* ── MENU MODAL ───────────────────────────────────────────────── */
-  menuBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
-  },
-  menuCard: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingTop: 20,
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-  },
-  menuTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#111',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    gap: 14,
-  },
-  menuIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  menuTextBox: { flex: 1 },
-  menuLabel: { fontSize: 15, fontWeight: '600', color: '#111' },
-  menuSub: { fontSize: 12, color: '#888', marginTop: 2 },
-  menuDivider: { height: 1, backgroundColor: '#F2F2F2', marginVertical: 2 },
-  menuCancel: {
-    marginTop: 18,
-    alignSelf: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 10,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 20,
-  },
-  menuCancelText: { fontSize: 15, fontWeight: '600', color: '#555' },
+    // Locked-recording bar with explicit cancel/send controls.
+    lockedBar: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: chat.inputPillBg,
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: chat.inputBorder,
+      height: isSmall ? moderateScale(50) : moderateScale(56),
+      paddingHorizontal: spacing.md,
+      justifyContent: 'space-between',
+    },
+    lockedCancelBtn: {
+      width: 36,
+      height: 36,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    lockedSendBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: chat.micBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  menuBack: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 4,
-  },
-  menuBackText: { fontSize: 14, color: '#444' },
+    blockedBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: chat.blockedBannerBg,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      gap: spacing.xxs,
+    },
+    blockedBannerText: {
+      color: chat.blockedBannerText,
+      fontWeight: '500',
+      flex: 1,
+    },
 
-  /* REPORT PICKER */
-  reasonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 13,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: '#FAFAFA',
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    gap: 12,
-  },
-  reasonRowActive: { borderColor: '#B829F4', backgroundColor: '#F9F0FF' },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#ccc',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioOuterActive: { borderColor: '#B829F4' },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#B829F4',
-  },
-  reasonLabel: { fontSize: 14, color: '#222', flex: 1 },
+    errorBox: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xl,
+    },
+    errorText: { color: chat.errorText, marginBottom: spacing.xl },
+    errorBtn: {
+      backgroundColor: chat.micBg,
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.md,
+      borderRadius: radius.xl,
+    },
+    errorBtnText: { color: '#fff' },
+  });
+};
 
-  reportSubmitBtn: {
-    marginTop: 20,
-    backgroundColor: '#B829F4',
-    paddingVertical: 13,
-    borderRadius: 24,
-    alignItems: 'center',
-  },
-  reportSubmitDisabled: { backgroundColor: '#DDD' },
-  reportSubmitText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+/* ── MENU MODAL STYLES — themed, standard system sheet ─────────────────────── */
 
-  /* REPORT DONE */
-  reportDoneBox: { alignItems: 'center', paddingVertical: 16 },
-  reportDoneTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  reportDoneSub: {
-    fontSize: 13,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-});
+const createMenuStyles = theme => {
+  const { colors, spacing, radius } = theme;
+
+  return StyleSheet.create({
+    menuBackdrop: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: 'flex-end',
+    },
+    menuCard: {
+      backgroundColor: colors.card,
+      borderTopLeftRadius: radius.xl,
+      borderTopRightRadius: radius.xl,
+      paddingTop: spacing.xl,
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.xxxl,
+    },
+    menuTitle: {
+      textAlign: 'center',
+      marginBottom: spacing.xl,
+    },
+    reportSubTitle: {
+      marginBottom: spacing.md,
+      textAlign: 'center',
+    },
+    menuRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      gap: spacing.md,
+    },
+    menuIcon: {
+      width: moderateScale(44),
+      height: moderateScale(44),
+      borderRadius: moderateScale(22),
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    menuTextBox: { flex: 1 },
+    menuSub: { marginTop: spacing.xxs },
+    menuDivider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.divider,
+      marginVertical: spacing.xxs,
+    },
+    menuCancel: {
+      marginTop: spacing.lg,
+      alignSelf: 'center',
+      paddingHorizontal: spacing.xxl,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.surface,
+      borderRadius: radius.xl,
+    },
+    menuBack: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+      gap: spacing.xxs,
+    },
+
+    reasonRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radius.md,
+      marginBottom: spacing.xs,
+      backgroundColor: colors.surface,
+      borderWidth: 1.5,
+      borderColor: 'transparent',
+      gap: spacing.md,
+    },
+    reasonRowActive: {
+      borderColor: colors.secondary,
+      backgroundColor: `${colors.secondary}14`,
+    },
+    radioOuter: {
+      width: moderateScale(20),
+      height: moderateScale(20),
+      borderRadius: moderateScale(10),
+      borderWidth: 2,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    radioOuterActive: { borderColor: colors.secondary },
+    radioInner: {
+      width: moderateScale(10),
+      height: moderateScale(10),
+      borderRadius: moderateScale(5),
+      backgroundColor: colors.secondary,
+    },
+    reasonLabel: { flex: 1 },
+
+    reportSubmitBtn: {
+      marginTop: spacing.xl,
+      backgroundColor: colors.secondary,
+      paddingVertical: spacing.md,
+      borderRadius: radius.xl,
+      alignItems: 'center',
+    },
+    reportSubmitDisabled: { backgroundColor: colors.disabled },
+
+    reportDoneBox: { alignItems: 'center', paddingVertical: spacing.md },
+    reportDoneTitle: { marginTop: spacing.md, marginBottom: spacing.sm },
+    reportDoneSub: { textAlign: 'center', lineHeight: moderateScale(20) },
+  });
+};

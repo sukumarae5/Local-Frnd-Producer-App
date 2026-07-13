@@ -3,17 +3,19 @@ import {
   CHAT_HISTORY_SUCCESS,
   CHAT_HISTORY_FAILED,
   CHAT_MESSAGE_ADD,
+  CHAT_MESSAGE_REMOVE,
+  CHAT_MESSAGE_UPDATE,
   CHAT_LIST_REQUEST,
   CHAT_LIST_SUCCESS,
   CHAT_LIST_FAILED,
-    CHAT_UNREAD_CLEAR,
-CHAT_MARK_READ_REQUEST,
+  CHAT_UNREAD_CLEAR,
+  CHAT_MARK_READ_REQUEST,
   CHAT_MARK_READ_SUCCESS,
   CHAT_MARK_READ_FAILED,
   CHAT_CLEAR,
   CHAT_SET_ACTIVE,
   CHAT_CLEAR_ACTIVE,
-  CHAT_UNREAD_INCREASE, 
+  CHAT_UNREAD_INCREASE,
   CHAT_FILE_UPLOAD_REQUEST,
   CHAT_FILE_UPLOAD_SUCCESS,
   CHAT_FILE_UPLOAD_FAILED,
@@ -40,6 +42,20 @@ export const chatHistoryFailed = (error) => ({
 export const chatMessageAdd = (payload) => ({
   type: CHAT_MESSAGE_ADD,
   payload,
+});
+
+// NEW: remove a message (used to drop an optimistic temp bubble once the
+// real message has arrived via socket, or after a discarded retry).
+export const chatMessageRemove = (otherUserId, messageId) => ({
+  type: CHAT_MESSAGE_REMOVE,
+  payload: { otherUserId, messageId },
+});
+
+// NEW: patch fields on an existing message in place (used to flip a temp
+// voice-note bubble from uploading -> failed without losing its position).
+export const chatMessageUpdate = (otherUserId, messageId, changes) => ({
+  type: CHAT_MESSAGE_UPDATE,
+  payload: { otherUserId, messageId, changes },
 });
 
 export const chatListRequest = () => ({
@@ -76,13 +92,16 @@ export const chatFileUploadRequest = (fileData) => ({
   payload: fileData,
 });
 
-export const chatFileUploadSuccess = () => ({
+// tempId/otherUserId let the reducer resolve exactly which optimistic
+// bubble this result belongs to (see chatReducer.js).
+export const chatFileUploadSuccess = (tempId, otherUserId) => ({
   type: CHAT_FILE_UPLOAD_SUCCESS,
+  payload: { tempId, otherUserId },
 });
 
-export const chatFileUploadFailed = (error) => ({
+export const chatFileUploadFailed = (error, tempId, otherUserId) => ({
   type: CHAT_FILE_UPLOAD_FAILED,
-  payload: error,
+  payload: { error, tempId, otherUserId },
 });
 
 export const chatClear = () => ({

@@ -1,86 +1,85 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import { resetPurchase } from '../features/purchase/purchaseActions';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 const PaymentSuccessScreen = ({ navigation }) => {
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.icon}>🎉</Text>
+    <SafeAreaView style={styles.container}>
+      <AppText style={styles.icon}>🎉</AppText>
 
-      <Text style={styles.title}>Payment Successful</Text>
+      <AppText variant="h2" style={styles.title}>Payment Successful</AppText>
 
-      <Text style={styles.subtitle}>
+      <AppText variant="body" color="textSecondary" style={styles.subtitle}>
         Coins added to your wallet successfully
-      </Text>
+      </AppText>
 
       <TouchableOpacity
         style={styles.btn}
         activeOpacity={0.8}
         onPress={() => {
-          dispatch(resetPurchase()); // ✅ clear everything
+          dispatch(resetPurchase());
 
           navigation.reset({
             index: 0,
             routes: [
               {
-                name: 'MaleHomeTabs', // ✅ your tab navigator name
-                state: {
-                  routes: [{ name: 'Home' }], // open Home tab inside it
-                },
+                name: 'MaleHomeTabs',
+                state: { routes: [{ name: 'Home' }] },
               },
             ],
           });
         }}
       >
-        <Text style={styles.btnText}>Go to Home</Text>
+        <AppText variant="subtitle" style={styles.btnText}>Go to Home</AppText>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 };
 
 export default PaymentSuccessScreen;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
+const createStyles = (theme) => {
+  const { colors, spacing, radius } = theme;
 
-  icon: {
-    fontSize: 60,
-    color: '#9333EA', // ✅ optional branding
-  },
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
 
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginTop: 10,
-    color: '#000', // ✅ ADD
-  },
+    icon: { fontSize: 60, color: colors.royalPurple },
 
-  subtitle: {
-    marginTop: 10,
-    color: '#555',
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
+    title: { marginTop: spacing.sm, color: colors.text },
 
-  btn: {
-    marginTop: 25,
-    backgroundColor: '#9333EA',
-    padding: 14,
-    borderRadius: 10,
-    width: 180,
-    alignItems: 'center',
-  },
+    subtitle: { marginTop: spacing.sm, textAlign: 'center', paddingHorizontal: spacing.lg },
 
-  btnText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-});
+    btn: {
+      marginTop: spacing.xl,
+      backgroundColor: colors.royalPurple,
+      padding: spacing.md,
+      borderRadius: radius.sm,
+      width: moderateScaleFallback(180),
+      alignItems: 'center',
+    },
+
+    btnText: { color: colors.textInverse, fontWeight: 'bold' },
+  });
+};
+
+// Fallback in case moderateScale isn't imported in a stripped-down copy —
+// use react-native-size-matters directly instead in your actual file:
+// import { moderateScale } from 'react-native-size-matters';
+function moderateScaleFallback(v) {
+  return v;
+}

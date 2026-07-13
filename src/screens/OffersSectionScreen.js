@@ -1,52 +1,58 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
-  Dimensions,
   ImageBackground,
   TouchableOpacity,
-} from "react-native";
-import { useDispatch, useSelector } from "react-redux";
-import { getOffersRequest } from "../features/Offers/offersActions";
-import Ionicons from "react-native-vector-icons/Ionicons";
-
-const { width, height } = Dimensions.get("window");
-const wp = v => (width * v) / 100;
-const hp = v => (height * v) / 100;
+  useWindowDimensions,
+} from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
+import LinearGradient from 'react-native-linear-gradient';
+import { moderateScale } from 'react-native-size-matters';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { getOffersRequest } from '../features/Offers/offersActions';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 // Extract a content value by key from the contents array
 const getContent = (contents = [], key) =>
-  (contents.find(c => c.content_key === key) || {}).content_value || "";
+  (contents.find(c => c.content_key === key) || {}).content_value || '';
 
 const OffersSectionScreen = () => {
   const dispatch = useDispatch();
   const [activeIndex, setActiveIndex] = useState(0);
 
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const { width, height } = useWindowDimensions();
+  const styles = useMemo(
+    () => createStyles(theme, width, height),
+    [theme, width, height],
+  );
   const { offers, loading } = useSelector(state => state.offers);
 
-  const activeOffers = (offers || []).filter(
-    item => Number(item.status) === 1,
-  );
+  const activeOffers = (offers || []).filter(item => Number(item.status) === 1);
 
   useEffect(() => {
     dispatch(getOffersRequest());
   }, [dispatch]);
 
   const handleScroll = event => {
-    const index = Math.round(
-      event.nativeEvent.contentOffset.x / width,
-    );
+    const index = Math.round(event.nativeEvent.contentOffset.x / width);
     setActiveIndex(index);
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionLabel}>Offers</Text>
+      <AppText variant="h4" style={styles.sectionLabel}>
+        Offers
+      </AppText>
 
       {loading ? (
-        <Text style={styles.loading}>Loading...</Text>
+        <AppText variant="body" color="textSecondary" style={styles.loading}>
+          Loading...
+        </AppText>
       ) : (
         <>
           <ScrollView
@@ -56,15 +62,14 @@ const OffersSectionScreen = () => {
             onMomentumScrollEnd={handleScroll}
           >
             {activeOffers.map((item, index) => {
-              const brand    = getContent(item.contents, "brand");
-              const title1   = getContent(item.contents, "title1");
-              const title2   = getContent(item.contents, "title2");
-              const subtitle = getContent(item.contents, "subtitle");
+              const brand = getContent(item.contents, 'brand');
+              const title1 = getContent(item.contents, 'title1');
+              const title2 = getContent(item.contents, 'title2');
+              const subtitle = getContent(item.contents, 'subtitle');
 
-              const btn         = item.button || {};
-              const buttonText  = btn.button_text  || "Explore";
-              const buttonBg    = btn.button_color  || "#6D21B8";
-              const buttonTxt   = btn.text_color    || "#FFFFFF";
+              const btn = item.button || {};
+              const buttonText = btn.button_text || 'Explore';
+              const buttonBg = btn.button_color || colors.secondary;
 
               const features = item.features || [];
 
@@ -76,62 +81,61 @@ const OffersSectionScreen = () => {
                     imageStyle={styles.cardImage}
                     resizeMode="cover"
                   >
-                    {/* ── LEFT CONTENT ── */}
+                    {/* LEFT CONTENT */}
                     <View style={styles.leftContent}>
-                      {/* Brand row */}
                       <View style={styles.brandRow}>
                         <View style={styles.logoBox}>
-                          <Ionicons name="heart" size={wp(3)} color="#fff" />
+                          <Ionicons
+                            name="heart"
+                            size={moderateScale(11)}
+                            color="#fff"
+                          />
                         </View>
-                        <Text numberOfLines={1} style={styles.brandText}>
-                          {brand || "LokalFrnd RJ"}
-                        </Text>
+                        <AppText numberOfLines={1} style={styles.brandText}>
+                          {brand || 'LokalFrnd RJ'}
+                        </AppText>
                       </View>
 
-                      {/* Titles */}
-                      <Text numberOfLines={2} style={styles.title1}>
+                      <AppText numberOfLines={2} style={styles.title1}>
                         {title1}
-                      </Text>
-                      <Text numberOfLines={2} style={styles.title2}>
+                      </AppText>
+                      <AppText numberOfLines={2} style={styles.title2}>
                         {title2}
-                      </Text>
-
-                      {/* Subtitle */}
-                      <Text numberOfLines={2} style={styles.subtitle}>
+                      </AppText>
+                      <AppText numberOfLines={2} style={styles.subtitle}>
                         {subtitle}
-                      </Text>
+                      </AppText>
 
-                      {/* CTA Button */}
                       <TouchableOpacity
                         activeOpacity={0.85}
-                        style={[styles.button, { backgroundColor: "#fff" }]}
+                        style={[styles.button, { backgroundColor: '#fff' }]}
                       >
-                        <Text
+                        <AppText
                           numberOfLines={1}
                           style={[styles.buttonText, { color: buttonBg }]}
                         >
                           {buttonText}
-                        </Text>
+                        </AppText>
                         <Ionicons
                           name="arrow-forward"
-                          size={wp(2.8)}
+                          size={moderateScale(10)}
                           color={buttonBg}
                         />
                       </TouchableOpacity>
                     </View>
 
-                    {/* ── RIGHT FEATURE BOXES ── */}
+                    {/* RIGHT FEATURE BOXES */}
                     <View style={styles.rightContent}>
                       {features.map((f, i) => (
                         <View key={f.id || i} style={styles.rightBox}>
                           <Ionicons
-                            name={f.icon || "star"}
-                            size={wp(2.6)}
+                            name={f.icon || 'star'}
+                            size={moderateScale(10)}
                             color="#fff"
                           />
-                          <Text numberOfLines={2} style={styles.rightText}>
+                          <AppText numberOfLines={2} style={styles.rightText}>
                             {f.title}
-                          </Text>
+                          </AppText>
                         </View>
                       ))}
                     </View>
@@ -141,17 +145,25 @@ const OffersSectionScreen = () => {
             })}
           </ScrollView>
 
-          {/* Pagination dots */}
           <View style={styles.pagination}>
-            {activeOffers.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.pageDot,
-                  activeIndex === index && styles.pageDotActive,
-                ]}
-              />
-            ))}
+            {activeOffers.map((_, index) =>
+              activeIndex === index ? (
+                <LinearGradient
+                  key={index}
+                  colors={[
+                    colors.gradientPurpleStart,
+                    colors.gradientPurpleEnd,
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  useAngle
+                  angle={75.05}
+                  style={styles.pageDotActive}
+                />
+              ) : (
+                <View key={index} style={styles.pageDot} />
+              ),
+            )}
           </View>
         </>
       )}
@@ -161,165 +173,166 @@ const OffersSectionScreen = () => {
 
 export default OffersSectionScreen;
 
-const styles = StyleSheet.create({
-  container: {
-    marginTop: hp(1),
-  },
+const createStyles = (theme, width, height) => {
+  const { colors, spacing, radius } = theme;
 
-  sectionLabel: {
-    fontSize: wp(4.4),
-    fontWeight: "700",
-    color: "#111",
-    paddingHorizontal: wp(4),
-    marginBottom: hp(0.85),
-  },
+  return StyleSheet.create({
+    container: { marginTop: spacing.sm },
 
-  loading: {
-    textAlign: "center",
-    marginVertical: hp(2),
-    color: "#111",
-  },
+    sectionLabel: {
+      color: colors.text,
+      paddingHorizontal: spacing.lg,
+      marginBottom: spacing.xs,
+    },
 
-  slide: {
-    width,
-    alignItems: "center",
-  },
+    loading: {
+      textAlign: 'center',
+      marginVertical: spacing.xl,
+    },
 
-  card: {
-    width: width * 0.96,
-    height: hp(20),
-    borderRadius: wp(4),
-    overflow: "hidden",
-  },
+    slide: { width, alignItems: 'center' },
 
-  cardImage: {
-    borderRadius: wp(4),
-    height: hp(20),
-  },
+    // Card is a proportion of the screen — legitimate use of window dimensions,
+    // since this is screen-level (not component-level) layout.
+    card: {
+      width: width * 0.96,
+      height: height * 0.2,
+      borderRadius: radius.lg,
+      overflow: 'hidden',
+    },
 
-  // ── LEFT ──
-  leftContent: {
-    position: "absolute",
-    left: wp(5.2),
-    top: hp(2.2),
-    width: "42%",
-    zIndex: 10,
-    elevation: 10,
-  },
+    cardImage: {
+      borderRadius: radius.lg,
+      height: height * 0.2,
+    },
 
-  brandRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: hp(0.4),
-    width: "100%",
-  },
+    // Overlay content is positioned relative to the CARD, not the screen —
+    // percentages here are correct and intentional.
+    leftContent: {
+      position: 'absolute',
+      left: '5.2%',
+      top: '11%',
+      width: '42%',
+      zIndex: 10,
+      elevation: 10,
+    },
 
-  logoBox: {
-    width: wp(4),
-    height: wp(4),
-    borderRadius: wp(1),
-    backgroundColor: "#EC2C83",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: wp(0.8),
-  },
+    brandRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.xxs,
+      width: '100%',
+    },
 
-  brandText: {
-    color: "#fff",
-    fontSize: wp(3),
-    fontWeight: "900",
-    flex: 1,
-  },
+    logoBox: {
+      width: moderateScale(15),
+      height: moderateScale(15),
+      borderRadius: moderateScale(4),
+      backgroundColor: '#EC2C83', // brand accent for this promo card, intentionally fixed
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.xxs,
+    },
 
-  title1: {
-    color: "#FFFFFF",
-    fontSize: wp(3.8),
-    fontWeight: "900",
-    lineHeight: wp(4.6),
-  },
+    // Overlay text sits directly on a photo background — kept as fixed white/yellow
+    // rather than theme.colors, since these need to stay legible over an image
+    // regardless of light/dark app theme (same reasoning as StoryViewer).
+    brandText: {
+      color: '#fff',
+      fontSize: moderateScale(11),
+      fontWeight: '900',
+      flex: 1,
+    },
 
-  title2: {
-    color: "#FFD400",
-    fontSize: wp(3.8),
-    fontWeight: "900",
-    lineHeight: wp(4.6),
-    marginBottom: hp(0.3),
-  },
+    title1: {
+      color: '#FFFFFF',
+      fontSize: moderateScale(14),
+      fontWeight: '900',
+      lineHeight: moderateScale(17),
+    },
 
-  subtitle: {
-    color: "rgba(255,255,255,0.85)",
-    fontSize: wp(2),
-    fontWeight: "600",
-    lineHeight: wp(2.7),
-    marginBottom: hp(0.6),
-  },
+    title2: {
+      color: '#FFD400',
+      fontSize: moderateScale(14),
+      fontWeight: '900',
+      lineHeight: moderateScale(17),
+      marginBottom: spacing.xxs,
+    },
 
-  button: {
-    marginTop: hp(0.5),
-    alignSelf: "flex-start",
-    paddingHorizontal: wp(3),
-    height: hp(3.4),
-    borderRadius: wp(6),
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: wp(0.8),
-  },
+    subtitle: {
+      color: 'rgba(255,255,255,0.85)',
+      fontSize: moderateScale(8),
+      fontWeight: '600',
+      lineHeight: moderateScale(11),
+      marginBottom: spacing.xs,
+    },
 
-  buttonText: {
-    fontSize: wp(2.4),
-    fontWeight: "700",
-  },
+    button: {
+      marginTop: spacing.xxs,
+      alignSelf: 'flex-start',
+      paddingHorizontal: spacing.sm,
+      height: moderateScale(28),
+      borderRadius: radius.pill,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xxs,
+    },
 
-  // ── RIGHT ──
-  rightContent: {
-    position: "absolute",
-    right: wp(2.5),
-    top: hp(2.5),
-    width: "22%",
-    zIndex: 10,
-    elevation: 10,
-    gap: hp(0.4),
-  },
+    buttonText: {
+      fontSize: moderateScale(10),
+      fontWeight: '700',
+    },
 
-  rightBox: {
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
-    borderRadius: wp(1.6),
-    backgroundColor: "rgba(0,0,0,0.15)",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: wp(1),
-    paddingVertical: hp(0.5),
-    marginBottom: hp(0.4),
-  },
+    rightContent: {
+      position: 'absolute',
+      right: '2.5%',
+      top: '12%',
+      width: '22%',
+      zIndex: 10,
+      elevation: 10,
+      gap: spacing.xxs,
+    },
 
-  rightText: {
-    flex: 1,
-    color: "#fff",
-    fontSize: wp(1.7),
-    fontWeight: "800",
-    lineHeight: wp(2.2),
-    marginLeft: wp(0.5),
-  },
+    rightBox: {
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.25)',
+      borderRadius: radius.sm,
+      backgroundColor: 'rgba(0,0,0,0.15)',
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xxs,
+      paddingVertical: spacing.xxs,
+      marginBottom: spacing.xxs,
+    },
 
-  // ── PAGINATION ──
-  pagination: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: hp(1),
-  },
+    rightText: {
+      flex: 1,
+      color: '#fff',
+      fontSize: moderateScale(7),
+      fontWeight: '800',
+      lineHeight: moderateScale(9),
+      marginLeft: spacing.xxs,
+    },
 
-  pageDot: {
-    width: wp(2),
-    height: wp(2),
-    borderRadius: wp(1),
-    backgroundColor: "#D1D5DB",
-    marginHorizontal: wp(1),
-  },
+    pagination: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: spacing.sm,
+    },
+    pageDot: {
+      width: moderateScale(7),
+      height: moderateScale(7),
+      borderRadius: moderateScale(4),
+      backgroundColor: colors.border,
+      marginHorizontal: spacing.xxs,
+    },
 
-  pageDotActive: {
-    width: wp(5),
-    backgroundColor: "#8C37F8",
-  },
-});
+    pageDotActive: {
+      width: moderateScale(20),
+      height: moderateScale(7),
+      borderRadius: moderateScale(4),
+      marginHorizontal: spacing.xxs,
+    },
+  });
+};

@@ -1,50 +1,26 @@
-import React, {
-  useEffect,
-  useMemo,
-  useContext,
-  useState,
-  useCallback,
-} from 'react';
-import {
-  View,
-  Text,
-  SectionList,
-  StyleSheet,
-  Image,
-  StatusBar,
-  TouchableOpacity,
-} from 'react-native';
+import React, { useEffect, useMemo, useContext, useState, useCallback } from 'react';
+import { View, SectionList, StyleSheet, Image, StatusBar, TouchableOpacity } from 'react-native';
+import { moderateScale } from 'react-native-size-matters';
 import LinearGradient from 'react-native-linear-gradient';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  fetchNotifications,
-  markNotificationsRead,
-} from '../features/notification/notificationAction';
+import { fetchNotifications, markNotificationsRead } from '../features/notification/notificationAction';
 import WelcomeScreenbackgroundgpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage.js';
 import Icon from 'react-native-vector-icons/Ionicons';
-import {
-  FRIEND_ACCEPT_REQUEST,
-  FRIEND_REJECT_REQUEST,
-} from '../features/friend/friendType';
+import { FRIEND_ACCEPT_REQUEST, FRIEND_REJECT_REQUEST } from '../features/friend/friendType';
 import { SocketContext } from '../socket/SocketProvider';
-/* ─────────────────────────────────────────
-   TIME HELPERS — timezone-safe
-───────────────────────────────────────── */
-const parseDate = dateString => {
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
+
+const parseDate = (dateString) => {
   if (!dateString) return new Date();
-  // MySQL returns "2026-06-24T00:33:45.000Z" or "2026-06-24 00:33:45"
-  // Normalise the space format to ISO so all environments parse correctly
-  const iso = dateString
-    .replace(' ', 'T')
-    .replace(/(\d{2}:\d{2}:\d{2})$/, '$1Z');
+  const iso = dateString.replace(' ', 'T').replace(/(\d{2}:\d{2}:\d{2})$/, '$1Z');
   return new Date(iso);
 };
 
-const getDayLabel = dateString => {
+const getDayLabel = (dateString) => {
   const date = parseDate(dateString);
   const now = new Date();
 
-  // Compare calendar dates in LOCAL time
   const todayStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
   const dateStr = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 
@@ -56,7 +32,7 @@ const getDayLabel = dateString => {
   return 'Earlier';
 };
 
-const formatTimeAgo = dateString => {
+const formatTimeAgo = (dateString) => {
   const date = parseDate(dateString);
   const diffMs = Date.now() - date.getTime();
   const diffMin = Math.floor(diffMs / 60000);
@@ -67,37 +43,28 @@ const formatTimeAgo = dateString => {
   return `${Math.floor(diffMin / 1440)} d ago`;
 };
 
-/* ─────────────────────────────────────────
-   DEDUP helper — keeps only the latest
-   notification per (sender + type + session)
-───────────────────────────────────────── */
-const dedupNotifications = list => {
+const dedupNotifications = (list) => {
   const seen = new Map();
+  const sorted = [...list].sort((a, b) => parseDate(b.created_at) - parseDate(a.created_at));
 
-  // Sort newest-first so the first occurrence we see is the latest
-  const sorted = [...list].sort(
-    (a, b) => parseDate(b.created_at) - parseDate(a.created_at),
-  );
-
-  sorted.forEach(item => {
-    // Key: sender + type + session_id (null-safe)
+  sorted.forEach((item) => {
     const key = `${item.sender_id}_${item.type}_${item.session_id ?? 'none'}`;
     if (!seen.has(key)) {
       seen.set(key, item);
     }
   });
 
-  // Return in newest-first order
   return Array.from(seen.values());
 };
 
-/* ─────────────────────────────────────────
-   COMPONENT
-───────────────────────────────────────── */
 const NotificationScreen = ({ navigation }) => {
   const dispatch = useDispatch();
-  const { list = [], loading } = useSelector(state => state.notification);
+  const { list = [], loading } = useSelector((state) => state.notification);
   const { socketRef } = useContext(SocketContext);
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const [processingId, setProcessingId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -105,21 +72,17 @@ const NotificationScreen = ({ navigation }) => {
     dispatch(fetchNotifications());
     dispatch(markNotificationsRead());
   }, [dispatch]);
+
   useEffect(() => {
     const socket = socketRef.current;
-
     if (!socket) return;
 
-    const handleDelete = () => {
-      dispatch(fetchNotifications());
-    };
+    const handleDelete = () => dispatch(fetchNotifications());
 
     socket.on('notification_deleted', handleDelete);
-
-    return () => {
-      socket.off('notification_deleted', handleDelete);
-    };
+    return () => socket.off('notification_deleted', handleDelete);
   }, [dispatch, socketRef]);
+
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
@@ -130,27 +93,21 @@ const NotificationScreen = ({ navigation }) => {
     setTimeout(() => setRefreshing(false), 1000);
   }, [loadNotifications]);
 
-  /* ── Dedup then group by day ── */
   const sections = useMemo(() => {
     const deduped = dedupNotifications(list);
 
     const grouped = {};
-    deduped.forEach(item => {
+    deduped.forEach((item) => {
       const label = getDayLabel(item.created_at);
       if (!grouped[label]) grouped[label] = [];
       grouped[label].push(item);
     });
 
-    // Preserve Today → Yesterday → Earlier order
     const ORDER = ['Today', 'Yesterday', 'Earlier'];
-    return ORDER.filter(k => grouped[k]).map(k => ({
-      title: k,
-      data: grouped[k],
-    }));
+    return ORDER.filter((k) => grouped[k]).map((k) => ({ title: k, data: grouped[k] }));
   }, [list]);
 
-  /* ── Friend request actions ── */
-  const handleAccept = item => {
+  const handleAccept = (item) => {
     if (processingId) return;
     setProcessingId(item.id);
     dispatch({
@@ -161,7 +118,7 @@ const NotificationScreen = ({ navigation }) => {
     setTimeout(() => setProcessingId(null), 1000);
   };
 
-  const handleReject = item => {
+  const handleReject = (item) => {
     if (processingId) return;
     setProcessingId(item.id);
     dispatch({
@@ -172,21 +129,22 @@ const NotificationScreen = ({ navigation }) => {
     setTimeout(() => setProcessingId(null), 1000);
   };
 
-  /* ── Notification icon by type ── */
-  const getIcon = type => {
+  // Notification-type icon colors are semantic (success/error/info-like), kept
+  // as fixed values distinct from brand tokens — matching a status, not a brand accent.
+  const getIcon = (type) => {
     switch (type) {
       case 'FRIEND_REQUEST':
         return { name: 'person-add', color: '#8A2DFF' };
       case 'FRIEND_ACCEPT':
-        return { name: 'people', color: '#22C55E' };
+        return { name: 'people', color: colors.success };
       case 'MISSED_CALL':
-        return { name: 'call', color: '#EF4444' };
+        return { name: 'call', color: colors.error };
       case 'CALL':
-        return { name: 'call', color: '#3B82F6' };
+        return { name: 'call', color: colors.info };
       case 'MESSAGE':
-        return { name: 'chatbubble', color: '#F59E0B' };
+        return { name: 'chatbubble', color: colors.warning };
       default:
-        return { name: 'notifications', color: '#6B7280' };
+        return { name: 'notifications', color: colors.textMuted };
     }
   };
 
@@ -195,40 +153,29 @@ const NotificationScreen = ({ navigation }) => {
 
     return (
       <View style={styles.row}>
-        {/* Avatar with gradient border */}
         <View style={styles.avatarContainer}>
-          <LinearGradient
-            colors={['#B620E0', '#7B2FF7']}
-            style={styles.avatarBorder}
-          >
+          <LinearGradient colors={['#B620E0', '#7B2FF7']} style={styles.avatarBorder}>
             <Image
               source={{
-                uri:
-                  item.display_profile_image ||
-                  item.avatar_url ||
-                  'https://i.pravatar.cc/150?img=12',
+                uri: item.display_profile_image || item.avatar_url || 'https://i.pravatar.cc/150?img=12',
               }}
               style={styles.avatar}
             />
           </LinearGradient>
 
-          {/* Type badge */}
           <View style={[styles.badge, { backgroundColor: icon.color }]}>
-            <Icon name={icon.name} size={10} color="#fff" />
+            <Icon name={icon.name} size={moderateScale(10)} color={colors.textInverse} />
           </View>
         </View>
 
         <View style={styles.textContainer}>
-          <Text style={styles.name} numberOfLines={1}>
-            {item.sender_name || 'Notification'}
-          </Text>
-          <Text style={styles.subtitle} numberOfLines={2}>
+          <AppText variant="subtitle" numberOfLines={1}>{item.sender_name || 'Notification'}</AppText>
+          <AppText variant="bodySmall" color="textSecondary" style={styles.subtitle} numberOfLines={2}>
             {item.message}
-          </Text>
-          <Text style={styles.time}>{formatTimeAgo(item.created_at)}</Text>
+          </AppText>
+          <AppText variant="caption" color="textMuted" style={styles.time}>{formatTimeAgo(item.created_at)}</AppText>
         </View>
 
-        {/* Friend request buttons */}
         {item.type === 'FRIEND_REQUEST' && (
           <View style={styles.buttonContainer}>
             <TouchableOpacity
@@ -237,9 +184,9 @@ const NotificationScreen = ({ navigation }) => {
               onPress={() => handleAccept(item)}
               activeOpacity={0.8}
             >
-              <Text style={styles.acceptText}>
+              <AppText variant="caption" style={styles.acceptText}>
                 {processingId === item.id ? '…' : 'Accept'}
-              </Text>
+              </AppText>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -248,9 +195,9 @@ const NotificationScreen = ({ navigation }) => {
               onPress={() => handleReject(item)}
               activeOpacity={0.8}
             >
-              <Text style={styles.rejectText}>
+              <AppText variant="caption" style={styles.rejectText}>
                 {processingId === item.id ? '…' : 'Reject'}
-              </Text>
+              </AppText>
             </TouchableOpacity>
           </View>
         )}
@@ -260,24 +207,23 @@ const NotificationScreen = ({ navigation }) => {
 
   return (
     <WelcomeScreenbackgroundgpage>
-      <View style={styles.screen}>
-        <StatusBar barStyle="dark-content" />
+        <StatusBar barStyle={colors.statusBar} />
 
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Icon name="chevron-back" size={26} color="#000" />
+          <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={theme.hitSlop}>
+            <Icon name="chevron-back" size={moderateScale(26)} color={colors.icon} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Notifications</Text>
+          <AppText variant="h3" style={styles.headerTitle}>Notifications</AppText>
         </View>
 
         <SectionList
           sections={sections}
-          keyExtractor={item => item.id.toString()}
+          keyExtractor={(item) => item.id.toString()}
           renderItem={renderItem}
           renderSectionHeader={({ section }) => (
             <View style={styles.sectionHeader}>
               <View style={styles.sectionLine} />
-              <Text style={styles.sectionTitle}>{section.title}</Text>
+              <AppText variant="h4" style={styles.sectionTitle}>{section.title}</AppText>
             </View>
           )}
           showsVerticalScrollIndicator={false}
@@ -285,95 +231,83 @@ const NotificationScreen = ({ navigation }) => {
           refreshing={refreshing}
           onRefresh={onRefresh}
           ListEmptyComponent={
-            <Text style={styles.empty}>
+            <AppText variant="body" color="textMuted" style={styles.empty}>
               {loading ? 'Loading…' : 'No notifications yet'}
-            </Text>
+            </AppText>
           }
         />
-      </View>
     </WelcomeScreenbackgroundgpage>
   );
 };
 
 export default NotificationScreen;
 
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', paddingVertical: 25 },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginLeft: 10,
-    color: '#000',
-  },
+const createStyles = (theme) => {
+  const { colors, spacing, radius } = theme;
 
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 15,
-  },
-  sectionLine: {
-    width: 4,
-    height: 18,
-    backgroundColor: '#8A2DFF',
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#222' },
+  return StyleSheet.create({
+    screen: { flex: 1 },
+    header: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.xxl },
+    headerTitle: { marginLeft: spacing.sm },
 
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 12,
-    borderRadius: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xl, marginBottom: spacing.lg },
+    sectionLine: {
+      width: moderateScale(4),
+      height: moderateScale(18),
+      backgroundColor: '#8A2DFF',
+      borderRadius: radius.xs,
+      marginRight: spacing.sm,
+    },
+    sectionTitle: {},
 
-  avatarContainer: { position: 'relative', marginRight: 12 },
-  avatarBorder: { padding: 2, borderRadius: 40 },
-  avatar: { width: 52, height: 52, borderRadius: 26 },
-  badge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#fff',
-  },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      padding: spacing.md,
+      borderRadius: radius.lg,
+      marginBottom: spacing.md,
+      ...theme.shadows.sm,
+    },
 
-  textContainer: { flex: 1 },
-  name: { fontSize: 15, fontWeight: '600', color: '#222' },
-  subtitle: { fontSize: 13, color: '#555', marginTop: 3 },
-  time: { fontSize: 12, color: '#9A9A9A', marginTop: 3 },
+    avatarContainer: { position: 'relative', marginRight: spacing.md },
+    avatarBorder: { padding: 2, borderRadius: moderateScale(40) },
+    avatar: { width: moderateScale(52), height: moderateScale(52), borderRadius: moderateScale(26) },
+    badge: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      width: moderateScale(18),
+      height: moderateScale(18),
+      borderRadius: moderateScale(9),
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1.5,
+      borderColor: colors.card,
+    },
 
-  buttonContainer: { flexDirection: 'row', alignItems: 'center' },
-  acceptBtn: {
-    backgroundColor: '#B620E0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-    marginRight: 6,
-  },
-  acceptText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  rejectBtn: {
-    backgroundColor: '#E5E5EA',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-  },
-  rejectText: { color: '#555', fontSize: 12, fontWeight: '500' },
+    textContainer: { flex: 1 },
+    subtitle: { marginTop: spacing.xxs },
+    time: { marginTop: spacing.xxs },
 
-  listContent: { paddingBottom: 30, paddingHorizontal: 16 },
-  empty: { textAlign: 'center', marginTop: 40, color: '#666' },
-});
+    buttonContainer: { flexDirection: 'row', alignItems: 'center' },
+    acceptBtn: {
+      backgroundColor: '#B620E0',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.lg,
+      marginRight: spacing.xs,
+    },
+    acceptText: { color: colors.textInverse, fontWeight: '600' },
+    rejectBtn: {
+      backgroundColor: colors.disabled,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.lg,
+    },
+    rejectText: { color: colors.textSecondary },
+
+    listContent: { paddingBottom: spacing.xxl, paddingHorizontal: spacing.lg },
+    empty: { textAlign: 'center', marginTop: spacing.xxxl },
+  });
+};

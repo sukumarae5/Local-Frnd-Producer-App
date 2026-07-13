@@ -1,104 +1,149 @@
-import React from "react";
+import React, { useMemo } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   Image,
-  TouchableOpacity,
-  Dimensions,
-} from "react-native";
-import WelcomeScreenbackgroundgpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
+  StyleSheet,
+  useWindowDimensions,
+} from 'react-native';
+import WelcomeScreenbackgroundgpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
-import ContinueButton from "../components/Common/ContinueButton"; // adjust path if needed
-
-const { width } = Dimensions.get("window");
+import ContinueButton from '../components/Common/ContinueButton';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 const WelcomeScreen03 = ({ navigation }) => {
+  const { theme } = useAppTheme();
+  const { colors } = theme;
+
+  const { width, height } = useWindowDimensions();
+
+  const styles = useMemo(
+    () => createStyles(theme, width, height),
+    [theme, width, height],
+  );
+
   return (
     <WelcomeScreenbackgroundgpage>
       <View style={styles.container}>
-        
-        {/* LOGO */}
-        <Image
-          source={require("../components/BackgroundPages/main_log1.png")}
-          style={styles.logo}
-        />
 
-        {/* CENTER HEART IMAGE */}
-        <View style={styles.heartWrapper}>
+        {/* Logo */}
+        <View style={styles.logoSection}>
           <Image
-            source={require("../assets/coupleimage.png")} // 🔥 your center couple heart image
-            style={styles.coupleHeart}
+            source={require('../components/BackgroundPages/main_log1.png')}
+            style={styles.logo}
           />
         </View>
 
-        {/* FLOATING SMALL HEARTS */}
-       
-{/* ❤️ HEART 1 */}
-<MaskedView
-  style={[styles.smallHeart, { top: 240, left: 60, width: 18, height: 18,transform: [{ rotate: '-40deg' }], }]}
-  maskElement={<Ionicons name="heart" size={18} color="black" />}
->
-  <LinearGradient
-    colors={['#D51BF9', '#8C37F8']}
-    style={{ flex: 1 }}
-  />
-</MaskedView>
+        {/* Center */}
+        <View style={styles.centerSection}>
 
-{/* ❤️ HEART 2 */}
-<MaskedView
-  style={[
-    styles.smallHeart,
-    { top: 260, right: 40, width: 28, height: 28 ,transform: [{ rotate: '20deg' }],}, // 🔥 ADD THIS
-  ]}
-  maskElement={<Ionicons name="heart" size={28} color="black" />}
->
-  <LinearGradient
-    colors={['#D51BF9', '#8C37F8']}
-    style={{ flex: 1 }}
-  />
-</MaskedView>
+          <View style={styles.heartWrapper}>
 
-{/* ❤️ HEART 3 */}
-<MaskedView
-  style={[styles.smallHeart, { bottom: 280, left: -20, width: 40, height: 40 }]}
-  maskElement={<Ionicons name="heart" size={40} color="black" />}
->
-  <LinearGradient
-    colors={['#D51BF9', '#8C37F8']}
-    style={{ flex: 1 }}
-  />
-</MaskedView>
+            <Image
+              source={require('../assets/coupleimage.png')}
+              style={styles.coupleHeart}
+            />
 
-{/* ❤️ HEART 4 */}
-<MaskedView
-  style={[styles.smallHeart, { bottom: 280, left: 300, width: 20, height: 20,transform: [{ rotate: '20deg' }], }]}
-  maskElement={<Ionicons name="heart" size={20} color="black" />}
->
-  <LinearGradient
-    colors={['#D51BF9', '#8C37F8']}
-    style={{ flex: 1 }}
-  />
-</MaskedView>
-        {/* TEXT */}
-        <View style={styles.textWrapper}>
-          <Text style={styles.title}>Don’t wait anymore, find</Text>
-          <Text style={styles.title}>your soulmate right now!</Text>
+            {/* Heart 1 */}
+            <MaskedView
+              style={[styles.smallHeart, styles.heart1]}
+              maskElement={
+                <Ionicons
+                  name="heart"
+                  size={styles.icon18.width}
+                  color="black"
+                />
+              }>
+              <LinearGradient
+                colors={[
+                  colors.gradientPurpleStart,
+                  colors.gradientPurpleEnd,
+                ]}
+                style={styles.icon18}
+              />
+            </MaskedView>
+
+            {/* Heart 2 */}
+            <MaskedView
+              style={[styles.smallHeart, styles.heart2]}
+              maskElement={
+                <Ionicons
+                  name="heart"
+                  size={styles.icon28.width}
+                  color="black"
+                />
+              }>
+              <LinearGradient
+                colors={[
+                  colors.gradientPurpleStart,
+                  colors.gradientPurpleEnd,
+                ]}
+                style={styles.icon28}
+              />
+            </MaskedView>
+
+            {/* Heart 3 */}
+            <MaskedView
+              style={[styles.smallHeart, styles.heart3]}
+              maskElement={
+                <Ionicons
+                  name="heart"
+                  size={styles.icon40.width}
+                  color="black"
+                />
+              }>
+              <LinearGradient
+                colors={[
+                  colors.gradientPurpleStart,
+                  colors.gradientPurpleEnd,
+                ]}
+                style={styles.icon40}
+              />
+            </MaskedView>
+
+            {/* Heart 4 */}
+            <MaskedView
+              style={[styles.smallHeart, styles.heart4]}
+              maskElement={
+                <Ionicons
+                  name="heart"
+                  size={styles.icon20.width}
+                  color="black"
+                />
+              }>
+              <LinearGradient
+                colors={[
+                  colors.gradientPurpleStart,
+                  colors.gradientPurpleEnd,
+                ]}
+                style={styles.icon20}
+              />
+            </MaskedView>
+
+          </View>
+
+          <View style={styles.textWrapper}>
+            <AppText variant="h4" style={styles.title}>
+              Don't wait anymore, find
+            </AppText>
+
+            <AppText variant="h4" style={styles.title}>
+              your soulmate right now!
+            </AppText>
+          </View>
+
         </View>
 
-        {/* CALL TO ACTION BUTTON */}
-      {/* FIXED BUTTON */}
-<View style={styles.bottomFixed}>
-  <ContinueButton
-    title="GET STARTED"
-    onPress={() => {
-      console.log("Pressed");
-      navigation.navigate("Phone");
-    }}
-  />
-</View>
+        {/* Bottom */}
+        <View style={styles.bottomSection}>
+          <ContinueButton
+            title="GET STARTED"
+            onPress={() => navigation.navigate('Phone')}
+          />
+        </View>
+
       </View>
     </WelcomeScreenbackgroundgpage>
   );
@@ -106,60 +151,119 @@ const WelcomeScreen03 = ({ navigation }) => {
 
 export default WelcomeScreen03;
 
-/* ================= STYLES ================= */
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    paddingTop: 10,
-    width: "100%",
-  },
+const createStyles = (theme, width, height) => {
 
-  logo: {
-   
-    width: 120,
-    height: 120,
-    resizeMode: "contain",
-    marginBottom: 40,
-  },
+  const logoSize = Math.min(width * 0.32, 140);
 
-  heartWrapper: {
-    width: width * 0.8,
-    height: width * 0.65,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  const imageSize = Math.min(width * 0.82, 380);
 
-  coupleHeart: {
-    marginTop:100,
-    width: "90%",
-    height: "90%",
-    resizeMode: "contain",
-  },
+  const icon18 = Math.max(width * 0.05, 18);
+  const icon20 = Math.max(width * 0.055, 20);
+  const icon28 = Math.max(width * 0.075, 28);
+  const icon40 = Math.max(width * 0.10, 40);
 
-  smallHeart: {
-   
-    position: "absolute",
-    
-  },
+  return StyleSheet.create({
 
-  textWrapper: {
-    marginTop: 120,
-    alignItems: "center",
-  },
+    container: {
+      flex: 1,
+    },
 
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#5b4747ff",
-    textAlign: "center",
-  },
+    logoSection: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  bottomFixed: {
-    position: 'absolute',
-    bottom: 30,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-});
+    logo: {
+      width: logoSize,
+      height: logoSize,
+      resizeMode: 'contain',
+    },
+
+    centerSection: {
+      flex: 3,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+
+    heartWrapper: {
+      width: imageSize,
+      height: imageSize,
+      position: 'relative',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+
+    coupleHeart: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'contain',
+    },
+
+    textWrapper: {
+      marginTop: height * 0.02,
+      alignItems: 'center',
+      paddingHorizontal: width * 0.08,
+    },
+
+    title: {
+      textAlign: 'center',
+      color: '#5b4747',
+    },
+
+    bottomSection: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      paddingBottom: height * 0.035,
+    },
+
+    smallHeart: {
+      position: 'absolute',
+    },
+
+    heart1: {
+      top: '12%',
+      left: '10%',
+      transform: [{ rotate: '-35deg' }],
+    },
+
+    heart2: {
+      top: '22%',
+      right: '6%',
+      transform: [{ rotate: '25deg' }],
+    },
+
+    heart3: {
+      bottom: '20%',
+      left: '-3%',
+    },
+
+    heart4: {
+      bottom: '18%',
+      right: '4%',
+      transform: [{ rotate: '20deg' }],
+    },
+
+    icon18: {
+      width: icon18,
+      height: icon18,
+    },
+
+    icon20: {
+      width: icon20,
+      height: icon20,
+    },
+
+    icon28: {
+      width: icon28,
+      height: icon28,
+    },
+
+    icon40: {
+      width: icon40,
+      height: icon40,
+    },
+
+  });
+};

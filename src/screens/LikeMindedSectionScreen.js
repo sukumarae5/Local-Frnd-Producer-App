@@ -1,87 +1,52 @@
 // src/components/LikeMindedSection.js
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { View, StyleSheet, Image, FlatList, Animated, Easing, ActivityIndicator } from 'react-native';
+import { moderateScale } from 'react-native-size-matters';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { useDispatch, useSelector } from 'react-redux';
+import { getLikeMindedRequest } from '../features/LikeMinded/likeMindedAction';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
-
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  Dimensions,
-  FlatList,
-  Animated,
-  Easing,
-  ActivityIndicator,
-} from "react-native";
-
-import Icon from "react-native-vector-icons/Ionicons";
-import { useDispatch, useSelector } from "react-redux";
-
-import { getLikeMindedRequest } from "../features/LikeMinded/likeMindedAction";
-
-const { width, height } = Dimensions.get("window");
-
-const wp = (value) => (width * value) / 100;
-const hp = (value) => (height * value) / 100;
+// One-off decorative icon accents for this section only.
+const likeMindedColors = {
+  ringSolid: '#c20bf9',
+  ringDashed: '#C084FC',
+  heart: '#06f86f',
+  phone: '#b671fb',
+  chat: '#b671fb',
+  location: '#b671fb',
+  ripple: 'rgba(226,133,251,0.25)',
+  pillBg: '#F3E8FF',
+};
 
 const LikeMindedSectionScreen = () => {
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const {
-    loading = false,
-    data = [],
-    error = null,
-  } = useSelector(
-    (state) => state.likeMinded || {}
-  );
+  const { loading = false, data = [], error = null } = useSelector((state) => state.likeMinded || {});
 
-  const ripple1 = useRef(
-    new Animated.Value(0)
-  ).current;
-
-  const ripple2 = useRef(
-    new Animated.Value(0)
-  ).current;
+  const ripple1 = useRef(new Animated.Value(0)).current;
+  const ripple2 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     dispatch(getLikeMindedRequest());
   }, [dispatch]);
 
   useEffect(() => {
-    const createRippleAnimation = (
-      animatedValue,
-      delay
-    ) => {
-      return Animated.loop(
+    const createRippleAnimation = (animatedValue, delay) =>
+      Animated.loop(
         Animated.sequence([
           Animated.delay(delay),
-
-          Animated.timing(animatedValue, {
-            toValue: 1,
-            duration: 2000,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-
-          Animated.timing(animatedValue, {
-            toValue: 0,
-            duration: 0,
-            useNativeDriver: true,
-          }),
+          Animated.timing(animatedValue, { toValue: 1, duration: 2000, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+          Animated.timing(animatedValue, { toValue: 0, duration: 0, useNativeDriver: true }),
         ])
       );
-    };
 
-    const firstAnimation =
-      createRippleAnimation(ripple1, 0);
-
-    const secondAnimation =
-      createRippleAnimation(ripple2, 800);
+    const firstAnimation = createRippleAnimation(ripple1, 0);
+    const secondAnimation = createRippleAnimation(ripple2, 800);
 
     firstAnimation.start();
     secondAnimation.start();
@@ -94,211 +59,109 @@ const LikeMindedSectionScreen = () => {
 
   const rippleStyle1 = useMemo(
     () => ({
-      position: "absolute",
-      width: wp(23),
-      height: wp(23),
-      borderRadius: wp(13),
-      backgroundColor:
-        "rgba(226,133,251,0.25)",
-
-      transform: [
-        {
-          scale: ripple1.interpolate({
-            inputRange: [0, 1],
-            outputRange: [1, 1.6],
-          }),
-        },
-      ],
-
-      opacity: ripple1.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0.6, 0],
-      }),
+      position: 'absolute',
+      width: moderateScale(86),
+      height: moderateScale(86),
+      borderRadius: moderateScale(48),
+      backgroundColor: likeMindedColors.ripple,
+      transform: [{ scale: ripple1.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] }) }],
+      opacity: ripple1.interpolate({ inputRange: [0, 1], outputRange: [0.6, 0] }),
     }),
     [ripple1]
   );
 
   const rippleStyle2 = useMemo(
     () => ({
-      position: "absolute",
-      width: wp(23),
-      height: wp(23),
-      borderRadius: wp(13),
-      backgroundColor:
-        "rgba(226,133,251,0.25)",
-
-      transform: [
-        {
-          scale: ripple2.interpolate({
-            inputRange: [0, 1],
-            outputRange: [1, 1.6],
-          }),
-        },
-      ],
-
-      opacity: ripple2.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0.6, 0],
-      }),
+      position: 'absolute',
+      width: moderateScale(86),
+      height: moderateScale(86),
+      borderRadius: moderateScale(48),
+      backgroundColor: likeMindedColors.ripple,
+      transform: [{ scale: ripple2.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] }) }],
+      opacity: ripple2.interpolate({ inputRange: [0, 1], outputRange: [0.6, 0] }),
     }),
     [ripple2]
   );
 
   const getUserId = useCallback(
-    (item, index) => {
-      return String(
-        item?.id ??
-          item?.user_id ??
-          item?.like_minded_user_id ??
-          item?.liked_user_id ??
-          item?._id ??
-          index
-      );
-    },
+    (item, index) => String(item?.id ?? item?.user_id ?? item?.like_minded_user_id ?? item?.liked_user_id ?? item?._id ?? index),
     []
   );
 
-  const getUserName = useCallback((item) => {
-    return (
-      item?.name ||
-      item?.full_name ||
-      item?.username ||
-      item?.user_name ||
-      item?.display_name ||
-      item?.first_name ||
-      "User"
-    );
-  }, []);
+  const getUserName = useCallback(
+    (item) => item?.name || item?.full_name || item?.username || item?.user_name || item?.display_name || item?.first_name || 'User',
+    []
+  );
 
   const getProfileImage = useCallback(
-    (item) => {
-      return (
-        item?.profile_image ||
-        item?.profile_image_url ||
-        item?.profile_photo ||
-        item?.profile_pic ||
-        item?.image_url ||
-        item?.image ||
-        item?.avatar ||
-        item?.photo ||
-        item?.user_image ||
-        null
-      );
-    },
+    (item) =>
+      item?.profile_image ||
+      item?.profile_image_url ||
+      item?.profile_photo ||
+      item?.display_profile_image ||
+      item?.image_url ||
+      item?.image ||
+      item?.avatar ||
+      item?.photo ||
+      item?.user_image ||
+      null,
     []
   );
 
   const renderItem = useCallback(
     ({ item }) => {
       const name = getUserName(item);
-      const profileImage =
-        getProfileImage(item);
+      const profileImage = getProfileImage(item);
 
       return (
         <View style={styles.card}>
           <View style={styles.dottedRing}>
-            <Animated.View
-              style={rippleStyle1}
-            />
-
-            <Animated.View
-              style={rippleStyle2}
-            />
+            <Animated.View style={rippleStyle1} />
+            <Animated.View style={rippleStyle2} />
 
             <View style={styles.solidRing}>
               {profileImage ? (
-                <Image
-                  source={{
-                    uri: profileImage,
-                  }}
-                  style={styles.avatar}
-                  resizeMode="cover"
-                />
+                <Image source={{ uri: profileImage }} style={styles.avatar} resizeMode="cover" />
               ) : (
-                <View
-                  style={
-                    styles.avatarPlaceholder
-                  }
-                >
-                  <Icon
-                    name="person"
-                    size={wp(8)}
-                    color="#c20bf9"
-                  />
+                <View style={styles.avatarPlaceholder}>
+                  <Icon name="person" size={moderateScale(32)} color={likeMindedColors.ringSolid} />
                 </View>
               )}
             </View>
 
             <View style={styles.heartIcon}>
-              <Icon
-                name="heart"
-                size={wp(4)}
-                color="#06f86f"
-              />
+              <Icon name="heart" size={moderateScale(16)} color={likeMindedColors.heart} />
             </View>
-
             <View style={styles.phoneIcon}>
-              <Icon
-                name="call"
-                size={wp(4)}
-                color="#b671fb"
-              />
+              <Icon name="call" size={moderateScale(16)} color={likeMindedColors.phone} />
             </View>
-
             <View style={styles.chatIcon}>
-              <Icon
-                name="chatbubble-ellipses-outline"
-                size={wp(4)}
-                color="#b671fb"
-              />
+              <Icon name="chatbubble-ellipses-outline" size={moderateScale(16)} color={likeMindedColors.chat} />
             </View>
-
             <View style={styles.locationIcon}>
-              <Icon
-                name="location"
-                size={wp(4)}
-                color="#b671fb"
-              />
+              <Icon name="location" size={moderateScale(16)} color={likeMindedColors.location} />
             </View>
           </View>
 
           <View style={styles.namePill}>
-            <Text
-              style={styles.nameText}
-              numberOfLines={1}
-            >
-              {name}
-            </Text>
+            <AppText variant="bodySmall" style={styles.nameText} numberOfLines={1}>{name}</AppText>
           </View>
         </View>
       );
     },
-    [
-      getProfileImage,
-      getUserName,
-      rippleStyle1,
-      rippleStyle2,
-    ]
+    [getProfileImage, getUserName, rippleStyle1, rippleStyle2, styles]
   );
 
-  const keyExtractor = useCallback(
-    (item, index) =>
-      getUserId(item, index),
-    [getUserId]
-  );
+  const keyExtractor = useCallback((item, index) => getUserId(item, index), [getUserId]);
 
   const renderContent = () => {
     if (loading && data.length === 0) {
       return (
         <View style={styles.statusContainer}>
-          <ActivityIndicator
-            size="small"
-            color="#c20bf9"
-          />
-
-          <Text style={styles.loadingText}>
+          <ActivityIndicator size="small" color={likeMindedColors.ringSolid} />
+          <AppText variant="bodySmall" color="textMuted" style={styles.loadingText}>
             Loading like-minded users...
-          </Text>
+          </AppText>
         </View>
       );
     }
@@ -306,11 +169,9 @@ const LikeMindedSectionScreen = () => {
     if (error && data.length === 0) {
       return (
         <View style={styles.statusContainer}>
-          <Text style={styles.errorText}>
-            {error?.message ||
-              error?.error ||
-              "Unable to load like-minded users"}
-          </Text>
+          <AppText variant="bodySmall" color="error" style={styles.errorText}>
+            {error?.message || error?.error || 'Unable to load like-minded users'}
+          </AppText>
         </View>
       );
     }
@@ -318,9 +179,7 @@ const LikeMindedSectionScreen = () => {
     if (!loading && data.length === 0) {
       return (
         <View style={styles.statusContainer}>
-          <Text style={styles.emptyText}>
-            No like-minded users found
-          </Text>
+          <AppText variant="bodySmall" color="textMuted" style={styles.emptyText}>No like-minded users found</AppText>
         </View>
       );
     }
@@ -332,9 +191,7 @@ const LikeMindedSectionScreen = () => {
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={
-          styles.listContent
-        }
+        contentContainerStyle={styles.listContent}
         initialNumToRender={5}
         maxToRenderPerBatch={5}
         windowSize={5}
@@ -344,10 +201,7 @@ const LikeMindedSectionScreen = () => {
 
   return (
     <View>
-      <Text style={styles.sectionLabel}>
-        Like Minded
-      </Text>
-
+      <AppText variant="h4" style={styles.sectionLabel}>Like Minded</AppText>
       {renderContent()}
     </View>
   );
@@ -355,148 +209,69 @@ const LikeMindedSectionScreen = () => {
 
 export default LikeMindedSectionScreen;
 
-const styles = StyleSheet.create({
-  sectionLabel: {
-    fontSize: wp(5),
-    fontWeight: "700",
-    paddingTop: hp(2),
-    paddingHorizontal: wp(4),
-    color: "#000",
-  },
+const createStyles = (theme) => {
+  const { colors, spacing, radius } = theme;
 
-  listContent: {
-    paddingHorizontal: wp(4),
-    paddingTop: hp(2),
-    paddingBottom: hp(1),
-  },
+  return StyleSheet.create({
+    sectionLabel: { paddingTop: spacing.sm, paddingHorizontal: spacing.lg },
 
-  card: {
-    width: wp(36),
-    alignItems: "center",
-    marginLeft: wp(-5),
-    overflow: "visible",
-  },
+    listContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xs },
 
-  dottedRing: {
-    width: wp(23),
-    height: wp(23),
-    borderRadius: wp(13),
-    borderWidth: 2,
-    borderStyle: "dashed",
-    borderColor: "#C084FC",
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-    overflow: "visible",
-  },
+    card: { width: moderateScale(135), alignItems: 'center', marginLeft: -moderateScale(18), overflow: 'visible' },
 
-  solidRing: {
-    width: wp(17),
-    height: wp(17),
-    borderRadius: wp(10.5),
-    borderWidth: 17,
-    borderColor: "#c20bf9",
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    dottedRing: {
+      width: moderateScale(86),
+      height: moderateScale(86),
+      borderRadius: moderateScale(48),
+      borderWidth: 2,
+      borderStyle: 'dashed',
+      borderColor: likeMindedColors.ringDashed,
+      justifyContent: 'center',
+      alignItems: 'center',
+      position: 'relative',
+      overflow: 'visible',
+    },
 
-  avatar: {
-    width: wp(14),
-    height: wp(14),
-    borderRadius: wp(8.5),
-  },
+    solidRing: {
+      width: moderateScale(64),
+      height: moderateScale(64),
+      borderRadius: moderateScale(40),
+      borderWidth: moderateScale(17),
+      borderColor: likeMindedColors.ringSolid,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  avatarPlaceholder: {
-    width: wp(14),
-    height: wp(14),
-    borderRadius: wp(8.5),
-    backgroundColor: "#F3E8FF",
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    avatar: { width: moderateScale(52), height: moderateScale(52), borderRadius: moderateScale(32) },
 
-  heartIcon: {
-    position: "absolute",
-    top: -8,
-    right: -8,
-    width: wp(6),
-    height: wp(6),
-    borderRadius: wp(4),
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    avatarPlaceholder: {
+      width: moderateScale(52),
+      height: moderateScale(52),
+      borderRadius: moderateScale(32),
+      backgroundColor: likeMindedColors.pillBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  phoneIcon: {
-    position: "absolute",
-    top: -8,
-    left: -8,
-    width: wp(8),
-    height: wp(8),
-    borderRadius: wp(4),
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    heartIcon: { position: 'absolute', top: -8, right: -8, width: moderateScale(22), height: moderateScale(22), borderRadius: moderateScale(15), justifyContent: 'center', alignItems: 'center' },
+    phoneIcon: { position: 'absolute', top: -8, left: -8, width: moderateScale(30), height: moderateScale(30), borderRadius: moderateScale(15), justifyContent: 'center', alignItems: 'center' },
+    chatIcon: { position: 'absolute', bottom: -8, left: -8, width: moderateScale(30), height: moderateScale(30), borderRadius: moderateScale(15), justifyContent: 'center', alignItems: 'center' },
+    locationIcon: { position: 'absolute', bottom: -8, right: -8, width: moderateScale(30), height: moderateScale(30), borderRadius: moderateScale(15), justifyContent: 'center', alignItems: 'center' },
 
-  chatIcon: {
-    position: "absolute",
-    bottom: -8,
-    left: -8,
-    width: wp(8),
-    height: wp(8),
-    borderRadius: wp(4),
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    namePill: {
+      marginTop: spacing.sm,
+      maxWidth: moderateScale(112),
+      backgroundColor: likeMindedColors.pillBg,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xxs,
+      borderRadius: radius.xl,
+    },
 
-  locationIcon: {
-    position: "absolute",
-    bottom: -8,
-    right: -8,
-    width: wp(8),
-    height: wp(8),
-    borderRadius: wp(4),
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    nameText: { fontWeight: '600', color: colors.text, textAlign: 'center' },
 
-  namePill: {
-    marginTop: hp(1.5),
-    maxWidth: wp(30),
-    backgroundColor: "#F3E8FF",
-    paddingHorizontal: wp(4),
-    paddingVertical: hp(0.6),
-    borderRadius: wp(6),
-  },
-
-  nameText: {
-    fontSize: wp(3.5),
-    fontWeight: "600",
-    color: "#000",
-    textAlign: "center",
-  },
-
-  statusContainer: {
-    minHeight: hp(15),
-    paddingHorizontal: wp(4),
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  loadingText: {
-    marginTop: hp(1),
-    fontSize: wp(3.4),
-    color: "#666",
-  },
-
-  errorText: {
-    fontSize: wp(3.4),
-    color: "#D32F2F",
-    textAlign: "center",
-  },
-
-  emptyText: {
-    fontSize: wp(3.4),
-    color: "#777",
-    textAlign: "center",
-  },
-});
+    statusContainer: { minHeight: moderateScale(112), paddingHorizontal: spacing.lg, justifyContent: 'center', alignItems: 'center' },
+    loadingText: { marginTop: spacing.sm },
+    errorText: { textAlign: 'center' },
+    emptyText: { textAlign: 'center' },
+  });
+};

@@ -1,59 +1,50 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useMemo } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   Modal,
   ScrollView,
-  Dimensions,
   ActivityIndicator,
   Alert,
-} from "react-native";
+} from 'react-native';
+import { moderateScale } from 'react-native-size-matters';
 
-import Icon from "react-native-vector-icons/Ionicons";
-import { useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useDispatch, useSelector } from "react-redux";
+import Icon from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useDispatch, useSelector } from 'react-redux';
 
 import {
   deleteUserRequest,
   resetUserState,
   userlogoutrequest,
-} from "../features/user/userAction";
+} from '../features/user/userAction';
 
-import { SocketContext } from "../socket/SocketProvider";
-import WelcomeScreenbackgroungpage from "../components/BackgroundPages/WelcomeScreenbackgroungpage";
+import { SocketContext } from '../socket/SocketProvider';
+import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
+import LinearGradient from 'react-native-linear-gradient';
 
-const { height } = Dimensions.get("window");
-
-const getErrorMessage = (error) => {
-  if (typeof error === "string") {
-    return error;
-  }
-
-  if (typeof error?.message === "string") {
-    return error.message;
-  }
-
-  if (typeof error?.error === "string") {
-    return error.error;
-  }
-
-  return "Unable to delete your account. Please try again.";
+const getErrorMessage = error => {
+  if (typeof error === 'string') return error;
+  if (typeof error?.message === 'string') return error.message;
+  if (typeof error?.error === 'string') return error.error;
+  return 'Unable to delete your account. Please try again.';
 };
 
 const SettingScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const { socketRef } = useContext(SocketContext);
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const {
-    deleting,
-    deleteSuccess,
-    deleteError,
-    deleteResponse,
-  } = useSelector((state) => state.user);
+  const { deleting, deleteSuccess, deleteError, deleteResponse } = useSelector(
+    state => state.user,
+  );
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -61,17 +52,15 @@ const SettingScreen = () => {
   const clearUserSession = async () => {
     try {
       socketRef?.current?.disconnect();
-
-      await AsyncStorage.multiRemove(["twittoke", "user_id"]);
-
+      await AsyncStorage.multiRemove(['twittoke', 'user_id']);
       dispatch(userlogoutrequest());
 
       navigation.reset({
         index: 0,
-        routes: [{ name: "Phone" }],
+        routes: [{ name: 'Phone' }],
       });
     } catch (error) {
-      console.log("Clear session error:", error);
+      console.log('Clear session error:', error);
     }
   };
 
@@ -81,29 +70,21 @@ const SettingScreen = () => {
   };
 
   const handleDeleteAccount = () => {
-    if (deleting) {
-      return;
-    }
-
-    // Do not clear local data here.
-    // First wait for DELETE_USER_SUCCESS.
+    if (deleting) return;
     dispatch(deleteUserRequest());
   };
 
   useEffect(() => {
-    if (!deleteSuccess) {
-      return;
-    }
+    if (!deleteSuccess) return;
 
     const message =
-      deleteResponse?.message ||
-      "Your account has been permanently deleted.";
+      deleteResponse?.message || 'Your account has been permanently deleted.';
 
     setShowDeleteModal(false);
 
-    Alert.alert("Account Deleted", message, [
+    Alert.alert('Account Deleted', message, [
       {
-        text: "OK",
+        text: 'OK',
         onPress: async () => {
           dispatch(resetUserState());
           await clearUserSession();
@@ -113,16 +94,12 @@ const SettingScreen = () => {
   }, [deleteSuccess, deleteResponse]);
 
   useEffect(() => {
-    if (!deleteError) {
-      return;
-    }
+    if (!deleteError) return;
 
-    Alert.alert("Delete Failed", getErrorMessage(deleteError), [
+    Alert.alert('Delete Failed', getErrorMessage(deleteError), [
       {
-        text: "OK",
-        onPress: () => {
-          dispatch(resetUserState());
-        },
+        text: 'OK',
+        onPress: () => dispatch(resetUserState()),
       },
     ]);
   }, [deleteError, dispatch]);
@@ -135,336 +112,377 @@ const SettingScreen = () => {
 
   return (
     <WelcomeScreenbackgroungpage>
-      <View style={styles.container}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContainer}
-        >
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              activeOpacity={0.7}
-              hitSlop={{
-                top: 10,
-                bottom: 10,
-                left: 10,
-                right: 10,
-              }}
-            >
-              <Icon name="arrow-back" size={22} color="#000" />
-            </TouchableOpacity>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContainer}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+            hitSlop={theme.hitSlop}
+          >
+            <Icon
+              name="arrow-back"
+              size={moderateScale(22)}
+              color={colors.icon}
+            />
+          </TouchableOpacity>
 
-            <Text style={styles.headerTitle}>Settings</Text>
+          <AppText variant="h3" style={styles.headerTitle}>
+            Settings
+          </AppText>
+        </View>
+
+        <TouchableOpacity
+          style={styles.deleteItem}
+          onPress={() => {
+            dispatch(resetUserState());
+            setShowDeleteModal(true);
+          }}
+          activeOpacity={0.8}
+          disabled={deleting}
+        >
+          <View style={styles.deleteIcon}>
+            <Icon
+              name="trash-outline"
+              size={moderateScale(20)}
+              color={colors.textInverse}
+            />
           </View>
 
-          <TouchableOpacity
-            style={styles.deleteItem}
-            onPress={() => {
-              dispatch(resetUserState());
-              setShowDeleteModal(true);
-            }}
-            activeOpacity={0.8}
-            disabled={deleting}
-          >
-            <View style={styles.deleteIcon}>
-              <Icon name="trash-outline" size={20} color="#fff" />
-            </View>
+          <AppText variant="subtitle" style={styles.rowText}>
+            Delete Account
+          </AppText>
 
-            <Text style={styles.deleteText}>Delete Account</Text>
+          <Icon
+            name="chevron-forward"
+            size={moderateScale(18)}
+            color={colors.textMuted}
+          />
+        </TouchableOpacity>
 
-            <Icon name="chevron-forward" size={18} color="#aaa" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.logoutItem}
-            onPress={() => setShowLogoutModal(true)}
-            activeOpacity={0.8}
-            disabled={deleting}
-          >
-            <View style={styles.logoutIcon}>
-              <Icon name="log-out-outline" size={20} color="#fff" />
-            </View>
-
-            <Text style={styles.logoutText}>Log Out</Text>
-
-            <Icon name="chevron-forward" size={18} color="#aaa" />
-          </TouchableOpacity>
-        </ScrollView>
-
-        {/* Logout modal */}
-        <Modal
-          transparent
-          visible={showLogoutModal}
-          animationType="fade"
-          onRequestClose={() => setShowLogoutModal(false)}
+        <TouchableOpacity
+          style={styles.logoutItem}
+          onPress={() => setShowLogoutModal(true)}
+          activeOpacity={0.8}
+          disabled={deleting}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalBox}>
-              <View style={styles.modalIcon}>
-                <Icon name="person-outline" size={24} color="#fff" />
-              </View>
+          <LinearGradient
+            colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]}
+            useAngle
+            angle={75.05}
+            style={styles.logoutIcon}
+          >
+            <Icon
+              name="log-out-outline"
+              size={moderateScale(20)}
+              color={colors.textInverse}
+            />
+          </LinearGradient>
 
-              <Text style={styles.modalTitle}>Logout?</Text>
+          <AppText variant="subtitle" style={styles.rowText}>
+            Log Out
+          </AppText>
 
-              <Text style={styles.modalSub}>
-                Are you sure you want to logout?
-              </Text>
+          <Icon
+            name="chevron-forward"
+            size={moderateScale(18)}
+            color={colors.textMuted}
+          />
+        </TouchableOpacity>
+      </ScrollView>
 
-              <View style={styles.modalButtons}>
+      {/* Logout modal */}
+      <Modal
+        transparent
+        visible={showLogoutModal}
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <LinearGradient
+              colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]}
+              useAngle
+              angle={75.05}
+              style={styles.modalIcon}
+            >
+              <Icon
+                name="log-out-outline"
+                size={moderateScale(24)}
+                color={colors.textInverse}
+              />
+            </LinearGradient>
+
+            <AppText variant="h4" style={styles.modalTitle}>
+              Logout?
+            </AppText>
+
+            <AppText
+              variant="bodySmall"
+              color="textMuted"
+              style={styles.modalSub}
+            >
+              Are you sure you want to logout?
+            </AppText>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setShowLogoutModal(false)}
+                activeOpacity={0.8}
+              >
+                <AppText variant="button" style={styles.cancelText}>
+                  CANCEL
+                </AppText>
+              </TouchableOpacity>
+
+              <LinearGradient
+                colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]}
+                useAngle
+                angle={75.05}
+                style={styles.confirmBtn}
+              >
                 <TouchableOpacity
-                  style={styles.cancelBtn}
-                  onPress={() => setShowLogoutModal(false)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.cancelText}>CANCEL</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.confirmBtn}
+                  style={styles.buttonFill}
                   onPress={handleConfirmLogout}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.confirmText}>CONFIRM</Text>
+                  <AppText variant="button" style={styles.confirmText}>
+                    CONFIRM
+                  </AppText>
                 </TouchableOpacity>
-              </View>
+              </LinearGradient>
             </View>
           </View>
-        </Modal>
+        </View>
+      </Modal>
 
-        {/* Delete-account modal */}
-        <Modal
-          transparent
-          visible={showDeleteModal}
-          animationType="fade"
-          onRequestClose={() => {
-            if (!deleting) {
-              setShowDeleteModal(false);
-            }
-          }}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalBox}>
-              <View style={styles.deleteModalIcon}>
-                <Icon name="trash-outline" size={24} color="#fff" />
-              </View>
+      {/* Delete-account modal */}
+      <Modal
+        transparent
+        visible={showDeleteModal}
+        animationType="fade"
+        onRequestClose={() => {
+          if (!deleting) setShowDeleteModal(false);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <View style={styles.deleteModalIcon}>
+              <Icon
+                name="trash-outline"
+                size={moderateScale(24)}
+                color={colors.textInverse}
+              />
+            </View>
 
-              <Text style={styles.modalTitle}>Delete Account?</Text>
+            <AppText variant="h4" style={styles.modalTitle}>
+              Delete Account?
+            </AppText>
 
-              <Text style={styles.modalSub}>
-                This will permanently delete your account. This action cannot be
-                undone.
-              </Text>
+            <AppText
+              variant="bodySmall"
+              color="textMuted"
+              style={styles.modalSub}
+            >
+              This will permanently delete your account. This action cannot be
+              undone.
+            </AppText>
 
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[
-                    styles.cancelBtn,
-                    deleting && styles.disabledButton,
-                  ]}
-                  onPress={() => setShowDeleteModal(false)}
-                  activeOpacity={0.8}
-                  disabled={deleting}
-                >
-                  <Text style={styles.cancelText}>CANCEL</Text>
-                </TouchableOpacity>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.cancelBtn, deleting && styles.disabledButton]}
+                onPress={() => setShowDeleteModal(false)}
+                activeOpacity={0.8}
+                disabled={deleting}
+              >
+                <AppText variant="button" style={styles.cancelText}>
+                  CANCEL
+                </AppText>
+              </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[
-                    styles.deleteConfirmBtn,
-                    deleting && styles.disabledButton,
-                  ]}
-                  onPress={handleDeleteAccount}
-                  activeOpacity={0.8}
-                  disabled={deleting}
-                >
-                  {deleting ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.confirmText}>DELETE</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                style={[
+                  styles.deleteConfirmBtn,
+                  deleting && styles.disabledButton,
+                ]}
+                onPress={handleDeleteAccount}
+                activeOpacity={0.8}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color={colors.textInverse} />
+                ) : (
+                  <AppText variant="button" style={styles.confirmText}>
+                    DELETE
+                  </AppText>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
-      </View>
+        </View>
+      </Modal>
     </WelcomeScreenbackgroungpage>
   );
 };
 
 export default SettingScreen;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+const createStyles = theme => {
+  const { colors, spacing, radius } = theme;
 
-  scrollContainer: {
-    flexGrow: 1,
-    paddingBottom: height * 0.05,
-  },
+  return StyleSheet.create({
+    container: { flex: 1 },
 
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: height * 0.01,
-    marginBottom: 10,
-  },
+    scrollContainer: {
+      flexGrow: 1,
+      paddingBottom: spacing.xxxl,
+    },
 
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginLeft: 10,
-    color: "#000",
-  },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+      marginBottom: spacing.sm,
+    },
 
-  logoutItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    backgroundColor: "#fff",
-    marginTop: 25,
-  },
+    headerTitle: {
+      marginLeft: spacing.sm,
+    },
 
-  logoutIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#C44DFF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 14,
-  },
+    logoutItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.xl,
+      backgroundColor: colors.card,
+      marginTop: spacing.xxl,
+    },
 
-  logoutText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#000",
-  },
+    logoutIcon: {
+      width: moderateScale(34),
+      height: moderateScale(34),
+      borderRadius: moderateScale(17),
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: spacing.md,
+    },
 
-  deleteItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    backgroundColor: "#fff",
-    marginTop: 12,
-  },
+    deleteItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.xl,
+      backgroundColor: colors.card,
+      marginTop: spacing.md,
+    },
 
-  deleteIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#FF3B30",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 14,
-  },
+    deleteIcon: {
+      width: moderateScale(34),
+      height: moderateScale(34),
+      borderRadius: moderateScale(17),
+      backgroundColor: colors.error,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: spacing.md,
+    },
 
-  deleteText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#060101",
-  },
+    rowText: {
+      flex: 1,
+    },
 
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: colors.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  modalBox: {
-    width: "80%",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    alignItems: "center",
-  },
+    modalBox: {
+      width: '80%',
+      backgroundColor: colors.card,
+      borderRadius: radius.lg,
+      padding: spacing.xl,
+      alignItems: 'center',
+    },
 
-  modalIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#C44DFF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
+    modalIcon: {
+      width: moderateScale(48),
+      height: moderateScale(48),
+      borderRadius: moderateScale(24),
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+      overflow: 'hidden',
+    },
 
-  deleteModalIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#FF3B30",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
+    deleteModalIcon: {
+      width: moderateScale(48),
+      height: moderateScale(48),
+      borderRadius: moderateScale(24),
+      backgroundColor: colors.error,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.md,
+    },
 
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 6,
-    color: "#000",
-  },
+    modalTitle: {
+      marginBottom: spacing.xs,
+    },
 
-  modalSub: {
-    fontSize: 13,
-    color: "#777",
-    textAlign: "center",
-    marginBottom: 20,
-    lineHeight: 19,
-  },
+    modalSub: {
+      textAlign: 'center',
+      marginBottom: spacing.xl,
+    },
 
-  modalButtons: {
-    flexDirection: "row",
-    width: "100%",
-  },
+    modalButtons: {
+      flexDirection: 'row',
+      width: '100%',
+    },
 
-  cancelBtn: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: 10,
-    backgroundColor: "#F4E6FF",
-    marginRight: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    cancelBtn: {
+      flex: 1,
+      minHeight: moderateScale(44),
+      borderRadius: radius.md,
+      backgroundColor: `${colors.secondary}1F`,
+      marginRight: spacing.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
 
-  cancelText: {
-    color: "#C44DFF",
-    fontWeight: "600",
-  },
+    cancelText: {
+      color: colors.gradientPurpleStart,
+    },
 
-  confirmBtn: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: 10,
-    backgroundColor: "#C44DFF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    confirmBtn: {
+      flex: 1,
+      minHeight: moderateScale(44),
+      borderRadius: radius.md,
+      overflow: 'hidden',
+    },
+    deleteConfirmBtn: {
+      flex: 1,
+      minHeight: moderateScale(44),
+      borderRadius: radius.md,
+      backgroundColor: colors.gradientPurpleStart,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
 
-  deleteConfirmBtn: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: 10,
-    backgroundColor: "#FF3B30",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    disabledButton: {
+      opacity: 0.6,
+    },
 
-  disabledButton: {
-    opacity: 0.6,
-  },
-
-  confirmText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-});
+    confirmText: {
+      color: colors.textInverse,
+    },
+    buttonFill: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+  });
+};

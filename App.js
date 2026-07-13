@@ -4,6 +4,8 @@ import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import store from './src/reduxStore/store';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+
 import { CommonActions } from '@react-navigation/native';
 import SocketProvider from './src/socket/SocketProvider';
 import LandingScreen from './src/screens/LandingScreen';
@@ -14,12 +16,10 @@ import HomeScreen from './src/screens/HomeScreen';
 import GenderScreen from './src/screens/GenderScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import PlanScreen from './src/screens/PlansScreen';
-import UplodePhotoScreen from './src/screens/UplodePhotoScreen';
 import VideocallScreen from './src/screens/VideocallScreen';
 import AudiocallScreen from './src/screens/AudiocallScreen';
 import GirlsavatarScreen from './src/screens/GirlsavatarScreen';
 import BoysavatarScreen from './src/screens/BoysavatarScreen';
-import ChoosePlanScreen from './src/screens/ChoosePlanScreen';
 import OnboardScreen from './src/screens/OnboardScreen';
 import ReciverHomeScreen from './src/screens/ReciverHomeScreen';
 import WelcomeScreen02 from './src/screens/WelcomeScreen02';
@@ -66,6 +66,7 @@ import GlobalIncomingCall from './src/components/GlobalIncomingCall';
 import { useNavigationContainerRef } from '@react-navigation/native';
 import TermsofUseScreen from './src/screens/TermsofUseScreen';
 import CummunityGuidelineScreen from './src/screens/CummunityGuidelineScreen'
+import { ThemeProvider, useAppTheme, buildNavigationTheme } from './src/theme';
 
 const Stack = createNativeStackNavigator();
 
@@ -152,7 +153,6 @@ function MainNavigator({ navigationRef, isNavReady }) {
       />
       <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
       <Stack.Screen name="PlanScreen" component={PlanScreen} />
-      <Stack.Screen name="ChoosePlanScreen" component={ChoosePlanScreen} />
       <Stack.Screen name="PaymentScreen" component={PaymentScreen} />
       <Stack.Screen
         name="PaymentSuccessScreen"
@@ -161,7 +161,6 @@ function MainNavigator({ navigationRef, isNavReady }) {
 
       <Stack.Screen name="StoriesScreen" component={StoriesScreen} />
       <Stack.Screen name="StoryViewer" component={StoryViewer} />
-      <Stack.Screen name="UplodePhotoScreen" component={UplodePhotoScreen} />
       <Stack.Screen name="VideocallScreen" component={VideocallScreen} />
       <Stack.Screen name="AudiocallScreen" component={AudiocallScreen} />
       <Stack.Screen name="CallStatusScreen" component={CallStatusScreen} />
@@ -204,26 +203,66 @@ function MainNavigator({ navigationRef, isNavReady }) {
   );
 }
 
+// export default function App() {
+//   const navigationRef = useNavigationContainerRef();
+//   const [isNavReady, setIsNavReady] = useState(false);
+//   return (
+//     <Provider store={store}>
+//       <SocketProvider>
+//         <NavigationContainer
+//           ref={navigationRef}
+//           onReady={() => {
+//             console.log('✅ NAVIGATION READY');
+//             setIsNavReady(true);
+//           }}
+//         >
+//           <MainNavigator
+//             navigationRef={navigationRef}
+//             isNavReady={isNavReady}
+//           />
+//           <GlobalIncomingCall navigationRef={navigationRef} />
+//         </NavigationContainer>
+//       </SocketProvider>
+//     </Provider>
+//   );
+// }
+
 export default function App() {
   const navigationRef = useNavigationContainerRef();
   const [isNavReady, setIsNavReady] = useState(false);
+
   return (
     <Provider store={store}>
-      <SocketProvider>
-        <NavigationContainer
-          ref={navigationRef}
-          onReady={() => {
-            console.log('✅ NAVIGATION READY');
-            setIsNavReady(true);
-          }}
-        >
-          <MainNavigator
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AppContent
             navigationRef={navigationRef}
             isNavReady={isNavReady}
+            setIsNavReady={setIsNavReady}
           />
-          <GlobalIncomingCall navigationRef={navigationRef} />
-        </NavigationContainer>
-      </SocketProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
     </Provider>
+  );
+}
+
+// Separate component so it can call useAppTheme() *inside* ThemeProvider
+function AppContent({ navigationRef, isNavReady, setIsNavReady }) {
+  const { theme } = useAppTheme();
+
+  return (
+    <SocketProvider>
+      <NavigationContainer
+        ref={navigationRef}
+        theme={buildNavigationTheme(theme)}
+        onReady={() => {
+          console.log('✅ NAVIGATION READY');
+          setIsNavReady(true);
+        }}
+      >
+        <MainNavigator navigationRef={navigationRef} isNavReady={isNavReady} />
+        <GlobalIncomingCall navigationRef={navigationRef} />
+      </NavigationContainer>
+    </SocketProvider>
   );
 }

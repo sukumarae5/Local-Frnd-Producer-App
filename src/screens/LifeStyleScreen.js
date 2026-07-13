@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   TextInput,
   TouchableOpacity,
   ScrollView,
   Alert,
   ActivityIndicator,
-  Dimensions,
   KeyboardAvoidingView,
   Platform,
   Keyboard,
+  StyleSheet,
+  useWindowDimensions,
 } from 'react-native';
+import { moderateScale } from 'react-native-size-matters';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
@@ -26,13 +26,16 @@ import {
 
 import { newUserDataRequest } from '../features/user/userAction';
 import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
-
-const { width, height } = Dimensions.get('window');
-const RF = size => (width / 375) * size;
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 const LifeStyleScreen = ({ navigation }) => {
   const scrollRef = useRef(null);
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const { width, height } = useWindowDimensions();
+  const styles = useMemo(() => createStyles(theme, width, height), [theme, width, height]);
 
   const [about, setAbout] = useState('');
   const [selectedChoices, setSelectedChoices] = useState({});
@@ -43,24 +46,16 @@ const LifeStyleScreen = ({ navigation }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResponseHandled, setIsResponseHandled] = useState(false);
 
-  const { loading, data = [], options = [] } = useSelector(
-    state => state.lifestyle,
-  );
-
-  const apiResponse = useSelector(state => state.user.userDataResponse);
+  const { loading, data = [], options = [] } = useSelector((state) => state.lifestyle);
+  const apiResponse = useSelector((state) => state.user.userDataResponse);
 
   useEffect(() => {
-    const showSub = Keyboard.addListener('keyboardDidShow', e => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
       setKeyboardHeight(e.endCoordinates.height);
-
-      setTimeout(() => {
-        scrollRef.current?.scrollToEnd({ animated: true });
-      }, 150);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
     });
 
-    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardHeight(0);
-    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
 
     return () => {
       showSub.remove();
@@ -77,7 +72,6 @@ const LifeStyleScreen = ({ navigation }) => {
         console.log('Error loading user id:', error);
       }
     };
-
     loadUserId();
   }, []);
 
@@ -99,12 +93,10 @@ const LifeStyleScreen = ({ navigation }) => {
         {
           text: 'OK',
           onPress: () => {
-            if (apiResponse.success) {
-              navigation.navigate('InterestScreen');
-            }
+            if (apiResponse.success) navigation.navigate('InterestScreen');
           },
         },
-      ],
+      ]
     );
   }, [apiResponse, isSubmitting, isResponseHandled, navigation]);
 
@@ -113,50 +105,38 @@ const LifeStyleScreen = ({ navigation }) => {
       setIsResponseHandled(false);
       setIsSubmitting(false);
     });
-
     return unsubscribe;
   }, [navigation]);
 
-  const normalizedCategories = useMemo(() => {
-    return data.map(item => ({
-      id: item.id ?? item.category_id,
-      name: item.name ?? item.category_name,
-    }));
-  }, [data]);
+  const normalizedCategories = useMemo(
+    () => data.map((item) => ({ id: item.id ?? item.category_id, name: item.name ?? item.category_name })),
+    [data]
+  );
 
-  const normalizedOptions = useMemo(() => {
-    return options.map(item => ({
-      id: item.lifestyle_id ?? item.id,
-      name: item.lifestyle_name ?? item.name,
-      category_id: item.category_id,
-    }));
-  }, [options]);
+  const normalizedOptions = useMemo(
+    () =>
+      options.map((item) => ({
+        id: item.lifestyle_id ?? item.id,
+        name: item.lifestyle_name ?? item.name,
+        category_id: item.category_id,
+      })),
+    [options]
+  );
 
   const handleSelect = (categoryId, optionId) => {
-    setSelectedChoices(prev => ({
-      ...prev,
-      [categoryId]: optionId,
-    }));
-
+    setSelectedChoices((prev) => ({ ...prev, [categoryId]: optionId }));
     setOpenDropdownId(null);
   };
 
-  const getSelectedOptionName = categoryId => {
+  const getSelectedOptionName = (categoryId) => {
     const selectedId = selectedChoices[categoryId];
-
     if (!selectedId) return '';
-
-    const selectedOption = normalizedOptions.find(
-      opt => Number(opt.id) === Number(selectedId),
-    );
-
+    const selectedOption = normalizedOptions.find((opt) => Number(opt.id) === Number(selectedId));
     return selectedOption?.name || '';
   };
 
   const handleAboutFocus = () => {
-    setTimeout(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
-    }, 300);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300);
   };
 
   const handleSubmit = () => {
@@ -166,7 +146,7 @@ const LifeStyleScreen = ({ navigation }) => {
     }
 
     const lifestyleIds = Object.values(selectedChoices)
-      .filter(value => value !== '' && value !== null && value !== undefined)
+      .filter((value) => value !== '' && value !== null && value !== undefined)
       .map(Number);
 
     if (lifestyleIds.length === 0) {
@@ -179,17 +159,10 @@ const LifeStyleScreen = ({ navigation }) => {
 
     dispatch({
       type: USER_LIFESTYLE_REQUEST,
-      payload: {
-        user_id: userId,
-        lifestyles: lifestyleIds,
-      },
+      payload: { user_id: userId, lifestyles: lifestyleIds },
     });
 
-    dispatch(
-      newUserDataRequest({
-        bio: about,
-      }),
-    );
+    dispatch(newUserDataRequest({ bio: about }));
   };
 
   return (
@@ -203,39 +176,29 @@ const LifeStyleScreen = ({ navigation }) => {
           <ScrollView
             ref={scrollRef}
             style={styles.scrollView}
-            contentContainerStyle={[
-              styles.inner,
-              {
-                paddingBottom:
-                  keyboardHeight > 0 ? height * 0.16 : height * 0.035,
-              },
-            ]}
+            contentContainerStyle={[styles.inner, { paddingBottom: keyboardHeight > 0 ? height * 0.16 : height * 0.035 }]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
             nestedScrollEnabled
           >
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.headerRow}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="chevron-back" size={RF(22)} color="#111" />
-              <Text style={styles.header}>Life Style</Text>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerRow} activeOpacity={0.8}>
+              <Ionicons name="chevron-back" size={moderateScale(22)} color={colors.icon} />
+              <AppText variant="h4" style={styles.header}>Life Style</AppText>
             </TouchableOpacity>
 
             {loading ? (
               <View style={styles.loaderWrapper}>
-                <ActivityIndicator size="large" color="#B03EF7" />
-                <Text style={styles.loadingText}>
+                <ActivityIndicator size="large" color={colors.accentFuchsia} />
+                <AppText variant="bodySmall" color="textMuted" style={styles.loadingText}>
                   Loading lifestyle data...
-                </Text>
+                </AppText>
               </View>
             ) : (
               <>
-                {normalizedCategories.map(category => {
+                {normalizedCategories.map((category) => {
                   const relatedOptions = normalizedOptions.filter(
-                    opt => Number(opt.category_id) === Number(category.id),
+                    (opt) => Number(opt.category_id) === Number(category.id)
                   );
 
                   const selectedName = getSelectedOptionName(category.id);
@@ -243,60 +206,43 @@ const LifeStyleScreen = ({ navigation }) => {
 
                   return (
                     <View key={category.id} style={styles.card}>
-                      <Text style={styles.label}>{category.name}</Text>
+                      <AppText variant="subtitle" style={styles.label}>{category.name}</AppText>
 
                       <TouchableOpacity
-                        style={[
-                          styles.dropdown,
-                          isOpen && styles.activeDropdown,
-                        ]}
+                        style={[styles.dropdown, isOpen && styles.activeDropdown]}
                         activeOpacity={0.8}
-                        onPress={() =>
-                          setOpenDropdownId(isOpen ? null : category.id)
-                        }
+                        onPress={() => setOpenDropdownId(isOpen ? null : category.id)}
                       >
-                        <Text
-                          style={[
-                            styles.dropdownText,
-                            !selectedName && styles.placeholderText,
-                          ]}
+                        <AppText
+                          variant="bodySmall"
+                          style={[styles.dropdownText, !selectedName && styles.placeholderText]}
                         >
                           {selectedName || 'Select...'}
-                        </Text>
+                        </AppText>
 
                         <Ionicons
                           name={isOpen ? 'chevron-up' : 'chevron-down'}
-                          size={RF(18)}
-                          color="#777"
+                          size={moderateScale(18)}
+                          color={colors.iconMuted}
                         />
                       </TouchableOpacity>
 
                       {isOpen && (
-                        <ScrollView
-                          style={styles.dropdownList}
-                          nestedScrollEnabled
-                          keyboardShouldPersistTaps="handled"
-                        >
+                        <ScrollView style={styles.dropdownList} nestedScrollEnabled keyboardShouldPersistTaps="handled">
                           {relatedOptions.length > 0 ? (
-                            relatedOptions.map(opt => (
+                            relatedOptions.map((opt) => (
                               <TouchableOpacity
                                 key={opt.id}
                                 style={styles.dropdownItem}
                                 activeOpacity={0.8}
-                                onPress={() =>
-                                  handleSelect(category.id, opt.id)
-                                }
+                                onPress={() => handleSelect(category.id, opt.id)}
                               >
-                                <Text style={styles.dropdownItemText}>
-                                  {opt.name}
-                                </Text>
+                                <AppText variant="bodySmall" style={styles.dropdownItemText}>{opt.name}</AppText>
                               </TouchableOpacity>
                             ))
                           ) : (
                             <View style={styles.dropdownItem}>
-                              <Text style={styles.noDataText}>
-                                No options found
-                              </Text>
+                              <AppText variant="bodySmall" color="textMuted">No options found</AppText>
                             </View>
                           )}
                         </ScrollView>
@@ -306,12 +252,12 @@ const LifeStyleScreen = ({ navigation }) => {
                 })}
 
                 <View style={styles.card}>
-                  <Text style={styles.label}>About</Text>
+                  <AppText variant="subtitle" style={styles.label}>About</AppText>
 
                   <TextInput
                     style={styles.textArea}
                     placeholder="Type Here..."
-                    placeholderTextColor="#B5B5B5"
+                    placeholderTextColor={colors.placeholder}
                     multiline
                     value={about}
                     onChangeText={setAbout}
@@ -329,20 +275,10 @@ const LifeStyleScreen = ({ navigation }) => {
             <View
               style={[
                 styles.footer,
-                {
-                  marginBottom:
-                    Platform.OS === 'android' && keyboardHeight > 0
-                      ? keyboardHeight
-                      : 0,
-                },
+                { marginBottom: Platform.OS === 'android' && keyboardHeight > 0 ? keyboardHeight : 0 },
               ]}
             >
-              <TouchableOpacity
-                style={styles.buttonWrapper}
-                onPress={handleSubmit}
-                disabled={isSubmitting}
-                activeOpacity={0.85}
-              >
+              <TouchableOpacity style={styles.buttonWrapper} onPress={handleSubmit} disabled={isSubmitting} activeOpacity={0.85}>
                 <LinearGradient
                   colors={['#D800F4', '#8C35F5']}
                   start={{ x: 0, y: 0 }}
@@ -350,9 +286,9 @@ const LifeStyleScreen = ({ navigation }) => {
                   style={styles.button}
                 >
                   {isSubmitting ? (
-                    <ActivityIndicator color="#fff" />
+                    <ActivityIndicator color={colors.textInverse} />
                   ) : (
-                    <Text style={styles.buttonText}>CONTINUE</Text>
+                    <AppText variant="button" style={styles.buttonText}>CONTINUE</AppText>
                   )}
                 </LinearGradient>
               </TouchableOpacity>
@@ -366,153 +302,93 @@ const LifeStyleScreen = ({ navigation }) => {
 
 export default LifeStyleScreen;
 
-const styles = StyleSheet.create({
-  keyboardView: {
-    flex: 1,
-  },
+const createStyles = (theme, width, height) => {
+  const { colors, spacing, radius } = theme;
 
-  mainContainer: {
-    flex: 1,
-  },
+  return StyleSheet.create({
+    keyboardView: { flex: 1 },
+    mainContainer: { flex: 1 },
+    scrollView: { flex: 1 },
 
-  scrollView: {
-    flex: 1,
-  },
+    inner: {
+      flexGrow: 1,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm,
+    },
 
-  inner: {
-    flexGrow: 1,
-    paddingHorizontal: width * 0.04,
-    paddingTop: height * 0.018,
-  },
+    headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xl },
+    header: { marginLeft: spacing.xxs },
 
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: height * 0.03,
-  },
+    card: { marginBottom: spacing.md },
 
-  header: {
-    fontSize: RF(18),
-    fontWeight: '600',
-    marginLeft: width * 0.018,
-    color: '#111',
-  },
+    label: { marginBottom: spacing.xxs },
 
-  card: {
-    backgroundColor: 'transparent',
-    borderWidth: 0,
-    elevation: 0,
-    padding: 0,
-    marginBottom: height * 0.018,
-  },
+    dropdown: {
+      backgroundColor: colors.card,
+      height: moderateScale(46),
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
 
-  label: {
-    fontSize: RF(14),
-    fontWeight: '500',
-    marginBottom: height * 0.008,
-    color: '#111',
-  },
+    activeDropdown: { borderColor: colors.accentFuchsia },
 
-  dropdown: {
-    backgroundColor: '#fff',
-    height: height * 0.058,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E7E7E7',
-    paddingHorizontal: width * 0.035,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+    dropdownText: { flex: 1, color: colors.text },
+    placeholderText: { color: colors.placeholder },
 
-  activeDropdown: {
-    borderColor: '#C72CFF',
-  },
+    dropdownList: {
+      maxHeight: height * 0.25,
+      backgroundColor: colors.card,
+      borderRadius: radius.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginTop: spacing.xxs,
+      overflow: 'hidden',
+    },
 
-  dropdownText: {
-    flex: 1,
-    fontSize: RF(14),
-    color: '#444',
-    fontWeight: '400',
-  },
+    dropdownItem: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
 
-  placeholderText: {
-    color: '#9A9A9A',
-  },
+    dropdownItemText: { color: colors.text },
 
-  dropdownList: {
-    maxHeight: height * 0.25,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E7E7E7',
-    marginTop: 5,
-    overflow: 'hidden',
-  },
+    textArea: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.sm,
+      minHeight: height * 0.15,
+      backgroundColor: colors.card,
+      color: colors.text,
+    },
 
-  dropdownItem: {
-    paddingVertical: height * 0.015,
-    paddingHorizontal: width * 0.035,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F1F1',
-  },
+    footer: {
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.xs,
+      paddingBottom: spacing.xs,
+    },
 
-  dropdownItemText: {
-    fontSize: RF(14),
-    color: '#333',
-    fontWeight: '400',
-  },
+    buttonWrapper: { width: '100%' },
 
-  noDataText: {
-    fontSize: RF(13),
-    color: '#999',
-  },
+    button: {
+      height: moderateScale(48),
+      borderRadius: radius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
 
-  textArea: {
-    borderWidth: 1,
-    borderColor: '#E7E7E7',
-    borderRadius: 8,
-    paddingHorizontal: width * 0.035,
-    paddingTop: height * 0.015,
-    paddingBottom: height * 0.015,
-    minHeight: height * 0.15,
-    backgroundColor: '#fff',
-    color: '#111',
-    fontSize: RF(14),
-  },
+    buttonText: { color: colors.textInverse },
 
-  footer: {
-    paddingHorizontal: width * 0.04,
-    paddingTop: height * 0.012,
-    paddingBottom: height * 0.012,
-    backgroundColor: 'transparent',
-  },
-
-  buttonWrapper: {
-    width: '100%',
-  },
-
-  button: {
-    height: height * 0.06,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  buttonText: {
-    color: '#fff',
-    fontSize: RF(15),
-    fontWeight: '700',
-  },
-
-  loaderWrapper: {
-    marginTop: height * 0.06,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  loadingText: {
-    marginTop: 10,
-    fontSize: RF(14),
-    color: '#666',
-  },
-});
+    loaderWrapper: { marginTop: height * 0.06, alignItems: 'center', justifyContent: 'center' },
+    loadingText: { marginTop: spacing.sm },
+  });
+};

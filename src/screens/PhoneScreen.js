@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   userRegisterRequest,
@@ -8,30 +8,48 @@ import {
 
 import {
   View,
-  Text,
-  StyleSheet,
   TextInput,
+  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 
+import LinearGradient from 'react-native-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
 import Icon from 'react-native-vector-icons/Ionicons';
-import AuthLayout from '../components/Common/AuthLayout'; // ✅ USE THIS
+
+import AuthLayout from '../components/Common/AuthLayout';
 import ContinueButton from '../components/Common/ContinueButton';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 const PhoneScreen = ({ navigation }) => {
   const dispatch = useDispatch();
+
   const { success, mode } = useSelector(state => state.auth);
 
+  const { theme } = useAppTheme();
+
+  const { colors, spacing } = theme;
+
+  const { width } = useWindowDimensions();
+
+  const styles = useMemo(() => createStyles(theme, width), [theme, width]);
+
   const [mobile_number, setMobile_number] = useState('');
+
   const phoneInputRef = useRef(null);
 
   const handlePhoneChange = text => {
-    const numeric = text.replace(/[^0-9]/g, '');
-    if (numeric.length <= 10) setMobile_number(numeric);
+    const value = text.replace(/[^0-9]/g, '');
+
+    if (value.length <= 10) {
+      setMobile_number(value);
+    }
   };
 
   useEffect(() => {
@@ -41,67 +59,129 @@ const PhoneScreen = ({ navigation }) => {
   useEffect(() => {
     if (success === null) return;
 
-    if (success === true) {
-      navigation.navigate('Otp', { mobile_number, mode });
-    }
+    if (success) {
+      navigation.navigate('Otp', {
+        mobile_number,
+        mode,
+      });
+    } else {
+      dispatch(
+        userLoginRequest({
+          mobile_number,
+        }),
+      );
 
-    if (success === false) {
-      dispatch(userLoginRequest({ mobile_number }));
-      navigation.navigate('Otp', { mobile_number });
+      navigation.navigate('Otp', {
+        mobile_number,
+      });
     }
   }, [success]);
 
   const handleNext = () => {
     if (mobile_number.length !== 10) {
-      Alert.alert('Invalid', 'Please enter a valid 10 digit number');
+      Alert.alert(
+        'Invalid Number',
+        'Please enter a valid 10 digit mobile number.',
+      );
       return;
     }
-    dispatch(userRegisterRequest({ mobile_number }));
+
+    dispatch(
+      userRegisterRequest({
+        mobile_number,
+      }),
+    );
   };
 
   return (
     <AuthLayout>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
-          style={{ flex: 1 }}
+          style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          {/* CONTENT CENTER */}
           <View style={styles.contentWrapper}>
+            {/* Title */}
+
             <View style={styles.headerWrapper}>
-              <Text style={styles.title}>Sign Up With</Text>
-              <Text style={styles.subTitle}>Phone Number</Text>
+              <AppText variant="h3" style={styles.title}>
+                Sign Up With
+              </AppText>
+
+              <AppText variant="subtitle" style={styles.subTitle}>
+                Phone Number
+              </AppText>
             </View>
+
+            {/* Input */}
 
             <View style={styles.inputContainer}>
               <View style={styles.labelRow}>
-                <Icon name="call-outline" size={18} style={styles.phoneIcon} />
-                <Text style={styles.label}>Mobile Number</Text>
+                <MaskedView
+                  style={styles.phoneMask}
+                  maskElement={
+                    <Icon name="call-outline" size={22} color="#000" />
+                  }
+                >
+                  <LinearGradient
+                    colors={[
+                      colors.gradientPurpleStart,
+                      colors.gradientPurpleEnd,
+                    ]}
+                    style={{
+                      flex: 1,
+                    }}
+                  />
+                </MaskedView>
+
+                <AppText variant="subtitle" style={styles.label}>
+                  Mobile Number
+                </AppText>
               </View>
 
-              <TextInput
-                ref={phoneInputRef}
-                style={styles.input}
-                placeholder="Enter phone number"
-                placeholderTextColor="#bbb"
-                keyboardType="number-pad"
-                value={mobile_number}
-                onChangeText={handlePhoneChange}
-                maxLength={10}
-              />
+              <LinearGradient
+                colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]}
+                start={{
+                  x: 0,
+                  y: 0,
+                }}
+                end={{
+                  x: 1,
+                  y: 1,
+                }}
+                style={styles.inputGradient}
+              >
+                <View style={styles.inputWrapper}>
+                  <TextInput
+                    ref={phoneInputRef}
+                    style={styles.input}
+                    placeholder="Enter phone number"
+                    placeholderTextColor={colors.placeholder}
+                    keyboardType="number-pad"
+                    maxLength={10}
+                    value={mobile_number}
+                    onChangeText={handlePhoneChange}
+                  />
+                </View>
+              </LinearGradient>
             </View>
           </View>
 
-          {/* FIXED BUTTON */}
+          {/* Bottom */}
+
           <View style={styles.bottomFixed}>
             <ContinueButton
+              title="CONTINUE"
               onPress={handleNext}
               disabled={mobile_number.length !== 10}
             />
 
-            <Text style={styles.helpText}>
-              Need Help <Text style={styles.clickHere}>Click Here..</Text>
-            </Text>
+            <AppText variant="bodySmall" style={styles.helpText}>
+              Need Help{' '}
+              <AppText variant="bodySmall" style={styles.clickHere}>
+                Click Here..
+              </AppText>
+            </AppText>
           </View>
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
@@ -110,103 +190,99 @@ const PhoneScreen = ({ navigation }) => {
 };
 
 export default PhoneScreen;
-const styles = StyleSheet.create({
-  contentWrapper: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    paddingHorizontal: 24,
-  },
 
-  headerWrapper: {
-    width: 165,
-    alignSelf: 'center',
-    alignItems: 'center',
-    marginTop: 10, // 👈 reduce from 20
-  },
+const createStyles = (theme, width) => {
+  const { colors, spacing, radius, fontSizes } = theme;
 
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#161616',
-  },
+  const maxWidth = Math.min(width * 0.9, 420);
 
-  subTitle: {
-    fontSize: 16,
-    color: '#555',
-    marginTop: 10,
-  },
+  return StyleSheet.create({
+    flex: {
+      flex: 1,
+    },
 
-  inputContainer: {
-    width: 335,
-    alignSelf: 'center',
-    marginTop: 25, // 👈 reduce from 40
-  },
- 
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
+    contentWrapper: {
+      flex: 1,
+      paddingHorizontal: spacing.xl,
+    },
 
-  phoneIcon: {
-    marginRight: 6,
-    color: '#C724C7',
-  },
+    headerWrapper: {
+      alignSelf: 'center',
+      alignItems: 'center',
+      width: '100%',
+      maxWidth: maxWidth,
+      marginTop: spacing.md,
+    },
 
-  label: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#151414',
-  },
+    title: {
+      color: colors.text,
+      textAlign: 'center',
+    },
 
-  input: {
-    borderWidth: 1,
-    borderColor: '#C724C7',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'ios' ? 16 : 12,
-    fontSize: 17,
-    color: '#5a555a',
-  },
+    subTitle: {
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+      textAlign: 'center',
+    },
 
-  bottomFixed: {
-    position: 'absolute',
-    bottom: 30,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
+    inputContainer: {
+      width: '100%',
+      maxWidth: maxWidth,
+      alignSelf: 'center',
+      marginTop: spacing.xl,
+    },
 
-  nextButton: {
-    width: '100%',
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
+    labelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
 
-  nextDisabled: {
-    backgroundColor: '#444',
-  },
+    phoneMask: {
+      width: 22,
+      height: 22,
+      marginRight: spacing.xs,
+    },
 
-  nextActive: {
-    backgroundColor: '#bb78ee',
-  },
+    label: {
+      color: colors.text,
+    },
 
-  nextText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
+    // Gradient Border
+    inputGradient: {
+      borderRadius: radius.md,
+      padding: 1.5,
+    },
 
-  helpText: {
-    marginTop: 20,
-    fontSize: 15,
-    color: '#555',
-  },
+    // White/Dark background inside gradient
+    inputWrapper: {
+      backgroundColor: colors.background,
+      borderRadius: radius.md - 1,
+    },
 
-  clickHere: {
-    color: '#B023E8',
-    fontWeight: '600',
-  },
-});
+    input: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: Platform.OS === 'ios' ? spacing.md : spacing.sm,
+
+      fontSize: fontSizes.lg,
+      color: colors.text,
+    },
+
+    bottomFixed: {
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.xl,
+      alignItems: 'center',
+    },
+
+    helpText: {
+      marginTop: spacing.lg,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+
+    clickHere: {
+      color: colors.linkPurple,
+      fontWeight: '700',
+    },
+  });
+};

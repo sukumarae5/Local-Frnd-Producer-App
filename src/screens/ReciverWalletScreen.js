@@ -1,14 +1,6 @@
-import React, { useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Dimensions,
-  TouchableOpacity,
-  StatusBar,
-  Image,
-} from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { View, ScrollView, TouchableOpacity, StatusBar, Image, StyleSheet } from 'react-native';
+import { moderateScale } from 'react-native-size-matters';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useSelector, useDispatch } from 'react-redux';
@@ -17,19 +9,45 @@ import ReceiverHeader from '../components/ReceiverHeader';
 import ringImg from '../assets/ring.png';
 import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
 import GoOnlineCard from '../components/GoOnlineCard';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
-const { width } = Dimensions.get('window');
-const scale = size => (width / 375) * size;
+// Wallet-specific brand palette — distinct from the app-wide theme tokens,
+// used consistently within this screen only. Promote to colors.js if reused elsewhere.
+const walletColors = {
+  gradientStart: '#FF4FB8',
+  gradientMid: '#B026FF',
+  gradientEnd: '#6D28D9',
+  convertStart: '#FF4FB8',
+  convertEnd: '#8B5CF6',
+  deepPurpleText: '#3B0764',
+  mutedPurpleText: '#7E6B8F',
+  accentPurple: '#7C3AED',
+  circleTintPink: 'rgba(255, 79, 184, 0.12)',
+  circleTintPurple: 'rgba(139, 92, 246, 0.13)',
+  liveText: '#FF4FB8',
+  yellowConversion: '#FFF7AD',
+  pinkOnGradient: '#FCE7F3',
+  iconCirclePink: '#FCE7F3',
+  iconCircleLavender: '#EDE9FE',
+  historyBg: '#F3E8FF',
+  infoBg: '#F5F3FF',
+  infoText: '#6D5A7B',
+};
 
 const ReciverWalletScreen = ({ navigation }) => {
   const dispatch = useDispatch();
-  const { userdata } = useSelector(state => state.user);
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
+  const { userdata } = useSelector((state) => state.user);
 
   const rings = userdata?.user?.rings_balance ?? 0;
   const avatar = userdata?.images?.avatar || userdata?.images?.profile_image;
   const money = rings * 1.2;
-const MIN_WITHDRAW = 10;
-const canWithdraw = rings >= MIN_WITHDRAW;
+  const MIN_WITHDRAW = 10;
+  const canWithdraw = rings >= MIN_WITHDRAW;
 
   useEffect(() => {
     dispatch(userDatarequest());
@@ -38,16 +56,9 @@ const canWithdraw = rings >= MIN_WITHDRAW;
   return (
     <WelcomeScreenbackgroungpage>
       <View style={styles.main}>
-        <StatusBar
-          barStyle="dark-content"
-          backgroundColor="transparent"
-          translucent
-        />
+        <StatusBar barStyle={colors.statusBar} backgroundColor="transparent" translucent />
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.container}
-        >
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
           <ReceiverHeader
             navigation={navigation}
             coins={rings}
@@ -59,40 +70,32 @@ const canWithdraw = rings >= MIN_WITHDRAW;
           <View style={styles.bgCircleOne} />
           <View style={styles.bgCircleTwo} />
 
-          {/* HERO SECTION */}
           <View style={styles.heroSection}>
-
-            <Text style={styles.title}>Lokal Frnd Wallet</Text>
-
-            <Text style={styles.subTitle}>
+            <AppText variant="h1" style={styles.title}>Lokal Frnd Wallet</AppText>
+            <AppText variant="bodySmall" style={styles.subTitle}>
               Convert your rewarded rings into real money
-            </Text>
+            </AppText>
           </View>
 
-          {/* BALANCE CARD */}
           <LinearGradient
-            colors={['#FF4FB8', '#B026FF', '#6D28D9']}
+            colors={[walletColors.gradientStart, walletColors.gradientMid, walletColors.gradientEnd]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.balanceCard}
           >
             <View style={styles.balanceTopRow}>
               <View>
-                <Text style={styles.balanceLabel}>Available Rings</Text>
+                <AppText variant="bodySmall" style={styles.balanceLabel}>Available Rings</AppText>
 
                 <View style={styles.ringBalanceRow}>
                   <Image source={ringImg} style={styles.bigRingIcon} />
-                  <Text style={styles.balanceAmount}>{rings}</Text>
+                  <AppText variant="h1" style={styles.balanceAmount}>{rings}</AppText>
                 </View>
               </View>
 
               <View style={styles.liveBadge}>
-                <Icon
-                  name="sparkles-outline"
-                  size={14}
-                  color="#FF4FB8"
-                />
-                <Text style={styles.liveBadgeText}>Live</Text>
+                <Icon name="sparkles-outline" size={moderateScale(14)} color={walletColors.liveText} />
+                <AppText variant="caption" style={styles.liveBadgeText}>Live</AppText>
               </View>
             </View>
 
@@ -100,155 +103,86 @@ const canWithdraw = rings >= MIN_WITHDRAW;
 
             <View style={styles.conversionRow}>
               <View>
-                <Text style={styles.conversionLabel}>
-                  Conversion Rate
-                </Text>
-
-                <Text style={styles.conversionText}>
-                  1 Ring = ₹1.20
-                </Text>
+                <AppText variant="bodySmall" style={styles.conversionLabel}>Conversion Rate</AppText>
+                <AppText variant="h4" style={styles.conversionText}>1 Ring = ₹1.20</AppText>
               </View>
 
               <View style={styles.moneyBox}>
-                <Text style={styles.moneyLabel}>You Earn</Text>
-
-                <Text style={styles.moneyValue}>
-                  ₹{money.toFixed(0)}
-                </Text>
+                <AppText variant="caption" style={styles.moneyLabel}>You Earn</AppText>
+                <AppText variant="h3" style={styles.moneyValue}>₹{money.toFixed(0)}</AppText>
               </View>
             </View>
           </LinearGradient>
 
-          {/* SECTION HEADER */}
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>
-              Rewards Summary
-            </Text>
+            <AppText variant="h4" style={styles.sectionTitle}>Rewards Summary</AppText>
 
-            <TouchableOpacity
-              activeOpacity={0.8}
-              style={styles.historyButton}
-            >
-              <Icon
-                name="time-outline"
-                size={15}
-                color="#7C3AED"
-              />
-
-              <Text style={styles.historyText}>History</Text>
+            <TouchableOpacity activeOpacity={0.8} style={styles.historyButton}>
+              <Icon name="time-outline" size={moderateScale(15)} color={walletColors.accentPurple} />
+              <AppText variant="caption" style={styles.historyText}>History</AppText>
             </TouchableOpacity>
           </View>
 
-          {/* SUMMARY CARD */}
           <View style={styles.summaryCard}>
             <View style={styles.summaryItem}>
-              <View
-                style={[
-                  styles.summaryIconCircle,
-                  { backgroundColor: '#FCE7F3' },
-                ]}
-              >
-                <Image
-                  source={ringImg}
-                  style={styles.smallRingIcon}
-                />
+              <View style={[styles.summaryIconCircle, { backgroundColor: walletColors.iconCirclePink }]}>
+                <Image source={ringImg} style={styles.smallRingIcon} />
               </View>
 
               <View style={styles.summaryTextBox}>
-                <Text style={styles.summaryLabel}>
-                  Total Rings Rewarded
-                </Text>
-
-                <Text style={styles.summaryValue}>
-                  {rings} Rings
-                </Text>
+                <AppText variant="bodySmall" style={styles.summaryLabel}>Total Rings Rewarded</AppText>
+                <AppText variant="h3" style={styles.summaryValue}>{rings} Rings</AppText>
               </View>
             </View>
 
             <View style={styles.centerConvertIcon}>
               <LinearGradient
-                colors={['#FF4FB8', '#8B5CF6']}
+                colors={[walletColors.convertStart, walletColors.convertEnd]}
                 style={styles.convertGradient}
               >
-                <Icon
-                  name="swap-vertical-outline"
-                  size={24}
-                  color="#fff"
-                />
+                <Icon name="swap-vertical-outline" size={moderateScale(24)} color={colors.textInverse} />
               </LinearGradient>
             </View>
 
             <View style={styles.summaryItem}>
-              <View
-                style={[
-                  styles.summaryIconCircle,
-                  { backgroundColor: '#EDE9FE' },
-                ]}
-              >
-                <Icon
-                  name="cash-outline"
-                  size={25}
-                  color="#7C3AED"
-                />
+              <View style={[styles.summaryIconCircle, { backgroundColor: walletColors.iconCircleLavender }]}>
+                <Icon name="cash-outline" size={moderateScale(25)} color={walletColors.accentPurple} />
               </View>
 
               <View style={styles.summaryTextBox}>
-                <Text style={styles.summaryLabel}>
-                  Total Money Converted
-                </Text>
-
-                <Text style={styles.summaryValue}>
-                  ₹{money.toFixed(0)}
-                </Text>
+                <AppText variant="bodySmall" style={styles.summaryLabel}>Total Money Converted</AppText>
+                <AppText variant="h3" style={styles.summaryValue}>₹{money.toFixed(0)}</AppText>
               </View>
             </View>
           </View>
 
-          {/* WITHDRAW BUTTON */}
-         <TouchableOpacity
-  disabled={!canWithdraw}
-  onPress={() => navigation.navigate("WithdrawFormScreen",{
-    rings: rings,
-  })}
-  style={[
-    styles.withdrawButton,
-    { opacity: canWithdraw ? 1 : 0.5 }
-  ]}
->
+          <TouchableOpacity
+            disabled={!canWithdraw}
+            onPress={() => navigation.navigate('WithdrawFormScreen', { rings })}
+            style={[styles.withdrawButton, { opacity: canWithdraw ? 1 : 0.5 }]}
+          >
             <LinearGradient
-              colors={['#FF4FB8', '#8B5CF6']}
+              colors={[walletColors.convertStart, walletColors.convertEnd]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.withdrawGradient}
             >
-              <Icon
-                name="card-outline"
-                size={20}
-                color="#fff"
-              />
-
-              <Text style={styles.withdrawText}>
-                Convert Rings to Money
-              </Text>
+              <Icon name="card-outline" size={moderateScale(20)} color={colors.textInverse} />
+              <AppText variant="subtitle" style={styles.withdrawText}>Convert Rings to Money</AppText>
             </LinearGradient>
           </TouchableOpacity>
-{!canWithdraw && (
-  <Text style={{ textAlign: "center", marginTop: 10 }}>
-    Minimum 10 rupees rings required
-  </Text>
-)}
-          {/* INFO CARD */}
-          <View style={styles.infoCard}>
-            <Icon
-              name="information-circle-outline"
-              size={21}
-              color="#7C3AED"
-            />
 
-            <Text style={styles.infoText}>
-              Your rings are calculated automatically based on
-              your wallet balance.
-            </Text>
+          {!canWithdraw && (
+            <AppText variant="bodySmall" style={styles.minWithdrawText}>
+              Minimum 10 rupees rings required
+            </AppText>
+          )}
+
+          <View style={styles.infoCard}>
+            <Icon name="information-circle-outline" size={moderateScale(21)} color={walletColors.accentPurple} />
+            <AppText variant="caption" style={styles.infoText}>
+              Your rings are calculated automatically based on your wallet balance.
+            </AppText>
           </View>
 
           <View style={styles.goOnlineWrap}>
@@ -262,299 +196,223 @@ const canWithdraw = rings >= MIN_WITHDRAW;
 
 export default ReciverWalletScreen;
 
-const styles = StyleSheet.create({
-  main: {
-    flex: 1,
-  },
+const createStyles = (theme) => {
+  const { spacing, radius } = theme;
 
-  container: {
-    flexGrow: 1,
-    paddingHorizontal: scale(16),
-    paddingTop: scale(10),
-    paddingBottom: scale(80),
-  },
+  return StyleSheet.create({
+    main: { flex: 1 },
 
-  bgCircleOne: {
-    position: 'absolute',
-    width: scale(220),
-    height: scale(220),
-    borderRadius: scale(110),
-    backgroundColor: 'rgba(255, 79, 184, 0.12)',
-    top: scale(80),
-    right: scale(-90),
-  },
+    container: {
+      flexGrow: 1,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+      paddingBottom: moderateScale(80),
+    },
 
-  bgCircleTwo: {
-    position: 'absolute',
-    width: scale(180),
-    height: scale(180),
-    borderRadius: scale(90),
-    backgroundColor: 'rgba(139, 92, 246, 0.13)',
-    top: scale(260),
-    left: scale(-80),
-  },
+    bgCircleOne: {
+      position: 'absolute',
+      width: moderateScale(220),
+      height: moderateScale(220),
+      borderRadius: moderateScale(110),
+      backgroundColor: walletColors.circleTintPink,
+      top: moderateScale(80),
+      right: -moderateScale(90),
+    },
 
-  heroSection: {
-    alignItems: 'center',
-    marginTop: scale(25),
-    marginBottom: scale(22),
-  },
+    bgCircleTwo: {
+      position: 'absolute',
+      width: moderateScale(180),
+      height: moderateScale(180),
+      borderRadius: moderateScale(90),
+      backgroundColor: walletColors.circleTintPurple,
+      top: moderateScale(260),
+      left: -moderateScale(80),
+    },
 
+    heroSection: {
+      alignItems: 'center',
+      marginTop: spacing.xxl,
+      marginBottom: spacing.xl,
+    },
 
-  title: {
-    marginTop: scale(5),
-    fontSize: scale(30),
-    fontWeight: '900',
-    color: '#3B0764',
-    textAlign: 'center',
-  },
+    title: {
+      marginTop: spacing.xs,
+      color: walletColors.deepPurpleText,
+      textAlign: 'center',
+    },
 
-  subTitle: {
-    marginTop: scale(8),
-    fontSize: scale(14),
-    color: '#7E6B8F',
-    textAlign: 'center',
-    fontWeight: '500',
-    paddingHorizontal: scale(20),
-    lineHeight: scale(20),
-  },
+    subTitle: {
+      marginTop: spacing.sm,
+      color: walletColors.mutedPurpleText,
+      textAlign: 'center',
+      fontWeight: '500',
+      paddingHorizontal: spacing.lg,
+      lineHeight: moderateScale(20),
+    },
 
-  balanceCard: {
-    borderRadius: scale(28),
-    padding: scale(22),
-    marginBottom: scale(24),
-    shadowColor: '#8B5CF6',
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    elevation: 10,
-  },
+    balanceCard: {
+      borderRadius: radius.xl,
+      padding: spacing.xl,
+      marginBottom: spacing.xxl,
+      shadowColor: walletColors.convertEnd,
+      shadowOpacity: 0.35,
+      shadowRadius: 18,
+      elevation: 10,
+    },
 
-  balanceTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
+    balanceTopRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+    },
 
-  balanceLabel: {
-    fontSize: scale(14),
-    color: '#FCE7F3',
-    fontWeight: '600',
-  },
+    balanceLabel: { color: walletColors.pinkOnGradient, fontWeight: '600' },
 
-  ringBalanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: scale(8),
-  },
+    ringBalanceRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs },
 
-  bigRingIcon: {
-    width: scale(34),
-    height: scale(34),
-    marginRight: scale(10),
-  },
+    bigRingIcon: { width: moderateScale(34), height: moderateScale(34), marginRight: spacing.sm },
 
-  balanceAmount: {
-    fontSize: scale(38),
-    fontWeight: '900',
-    color: '#fff',
-  },
+    balanceAmount: { color: '#fff' },
 
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: scale(11),
-    paddingVertical: scale(6),
-    borderRadius: scale(18),
-  },
+    liveBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#fff',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.xl,
+    },
 
-  liveBadgeText: {
-    marginLeft: scale(4),
-    fontSize: scale(12),
-    fontWeight: '800',
-    color: '#FF4FB8',
-  },
+    liveBadgeText: { marginLeft: spacing.xxs, fontWeight: '800', color: walletColors.liveText },
 
-  divider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    marginVertical: scale(18),
-  },
+    divider: {
+      height: 1,
+      backgroundColor: 'rgba(255,255,255,0.25)',
+      marginVertical: spacing.lg,
+    },
 
-  conversionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
+    conversionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 
-  conversionLabel: {
-    fontSize: scale(13),
-    color: '#FCE7F3',
-    fontWeight: '600',
-  },
+    conversionLabel: { color: walletColors.pinkOnGradient, fontWeight: '600' },
 
-  conversionText: {
-    marginTop: scale(4),
-    fontSize: scale(19),
-    color: '#FFF7AD',
-    fontWeight: '900',
-  },
+    conversionText: { marginTop: spacing.xxs, color: walletColors.yellowConversion },
 
-  moneyBox: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    paddingHorizontal: scale(15),
-    paddingVertical: scale(10),
-    borderRadius: scale(18),
-    alignItems: 'center',
-  },
+    moneyBox: {
+      backgroundColor: 'rgba(255,255,255,0.18)',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.xl,
+      alignItems: 'center',
+    },
 
-  moneyLabel: {
-    fontSize: scale(11),
-    color: '#FCE7F3',
-    fontWeight: '600',
-  },
+    moneyLabel: { color: walletColors.pinkOnGradient, fontWeight: '600' },
 
-  moneyValue: {
-    marginTop: scale(2),
-    fontSize: scale(22),
-    color: '#fff',
-    fontWeight: '900',
-  },
+    moneyValue: { marginTop: spacing.xxs, color: '#fff' },
 
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: scale(12),
-  },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
 
-  sectionTitle: {
-    fontSize: scale(19),
-    fontWeight: '900',
-    color: '#3B0764',
-  },
+    sectionTitle: { color: walletColors.deepPurpleText },
 
-  historyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3E8FF',
-    paddingHorizontal: scale(12),
-    paddingVertical: scale(7),
-    borderRadius: scale(18),
-  },
+    historyButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: walletColors.historyBg,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.xl,
+    },
 
-  historyText: {
-    marginLeft: scale(4),
-    fontSize: scale(12),
-    fontWeight: '800',
-    color: '#7C3AED',
-  },
+    historyText: { marginLeft: spacing.xxs, fontWeight: '800', color: walletColors.accentPurple },
 
-  summaryCard: {
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    borderRadius: scale(26),
-    padding: scale(18),
-    borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.15)',
-    shadowColor: '#7C3AED',
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    elevation: 5,
-  },
+    summaryCard: {
+      backgroundColor: 'rgba(255,255,255,0.92)',
+      borderRadius: radius.xl,
+      padding: spacing.lg,
+      borderWidth: 1,
+      borderColor: 'rgba(139, 92, 246, 0.15)',
+      shadowColor: walletColors.accentPurple,
+      shadowOpacity: 0.12,
+      shadowRadius: 14,
+      elevation: 5,
+    },
 
-  summaryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FAF5FF',
-    borderRadius: scale(22),
-    padding: scale(15),
-  },
+    summaryItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#FAF5FF',
+      borderRadius: radius.xl,
+      padding: spacing.md,
+    },
 
-  summaryIconCircle: {
-    width: scale(52),
-    height: scale(52),
-    borderRadius: scale(26),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+    summaryIconCircle: {
+      width: moderateScale(52),
+      height: moderateScale(52),
+      borderRadius: moderateScale(26),
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  smallRingIcon: {
-    width: scale(27),
-    height: scale(27),
-  },
+    smallRingIcon: { width: moderateScale(27), height: moderateScale(27) },
 
-  summaryTextBox: {
-    marginLeft: scale(13),
-    flex: 1,
-  },
+    summaryTextBox: { marginLeft: spacing.md, flex: 1 },
 
-  summaryLabel: {
-    fontSize: scale(13),
-    color: '#7E6B8F',
-    fontWeight: '600',
-  },
+    summaryLabel: { color: walletColors.mutedPurpleText, fontWeight: '600' },
 
-  summaryValue: {
-    marginTop: scale(4),
-    fontSize: scale(22),
-    fontWeight: '900',
-    color: '#3B0764',
-  },
+    summaryValue: { marginTop: spacing.xxs, color: walletColors.deepPurpleText },
 
-  centerConvertIcon: {
-    alignItems: 'center',
-    marginVertical: scale(14),
-  },
+    centerConvertIcon: { alignItems: 'center', marginVertical: spacing.md },
 
-  convertGradient: {
-    width: scale(46),
-    height: scale(46),
-    borderRadius: scale(23),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+    convertGradient: {
+      width: moderateScale(46),
+      height: moderateScale(46),
+      borderRadius: moderateScale(23),
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  withdrawButton: {
-    marginTop: scale(20),
-    borderRadius: scale(24),
-    overflow: 'hidden',
-  },
+    withdrawButton: {
+      marginTop: spacing.xl,
+      borderRadius: radius.xl,
+      overflow: 'hidden',
+    },
 
-  withdrawGradient: {
-    height: scale(54),
-    borderRadius: scale(24),
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+    withdrawGradient: {
+      height: moderateScale(54),
+      borderRadius: radius.xl,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  withdrawText: {
-    marginLeft: scale(8),
-    color: '#fff',
-    fontSize: scale(16),
-    fontWeight: '900',
-  },
+    withdrawText: { marginLeft: spacing.sm, color: '#fff' },
 
-  infoCard: {
-    marginTop: scale(14),
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F3FF',
-    borderRadius: scale(18),
-    padding: scale(13),
-  },
+    minWithdrawText: { textAlign: 'center', marginTop: spacing.sm },
 
-  infoText: {
-    marginLeft: scale(8),
-    flex: 1,
-    fontSize: scale(12),
-    color: '#6D5A7B',
-    fontWeight: '600',
-    lineHeight: scale(18),
-  },
+    infoCard: {
+      marginTop: spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: walletColors.infoBg,
+      borderRadius: radius.xl,
+      padding: spacing.md,
+    },
 
-  goOnlineWrap: {
-    paddingBottom: scale(30),
-    marginTop: scale(16),
-  },
-});
+    infoText: {
+      marginLeft: spacing.sm,
+      flex: 1,
+      color: walletColors.infoText,
+      fontWeight: '600',
+      lineHeight: moderateScale(18),
+    },
+
+    goOnlineWrap: {
+      paddingBottom: spacing.xxl,
+      marginTop: spacing.md,
+    },
+  });
+};

@@ -17,6 +17,11 @@ export const CHAT_FILE_UPLOAD_FAILED  = "CHAT_FILE_UPLOAD_FAILED";
 
 export const CHAT_MESSAGE_ADD = "CHAT_MESSAGE_ADD";
 
+// NEW: used for optimistic voice-note bubbles — remove the temp bubble once
+// the real message arrives via socket, or mark it failed if upload fails.
+export const CHAT_MESSAGE_REMOVE = "CHAT_MESSAGE_REMOVE";
+export const CHAT_MESSAGE_UPDATE = "CHAT_MESSAGE_UPDATE";
+
 export const CHAT_CLEAR = "CHAT_CLEAR";
 
 export const CHAT_UNREAD_CLEAR = "CHAT_UNREAD_CLEAR";

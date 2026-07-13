@@ -10,19 +10,7 @@ import callSaga from '../features/calls/callSaga';
 import friendSaga from '../features/friend/friendSaga';
 import interestSaga from '../features/interest/interestSaga';
 import lifestyleSaga from '../features/lifeStyle/lifestyleSaga';
-// import lifestyleOptionsSaga from "../features/lifeStyle/lifestyleSaga"
-// import userLifestyleSaga from"../features/lifeStyle/lifestyleSaga"
-import otherusersSaga from "../features/Otherusers/otherUserSaga"
-import chatSaga from "../features/chat/chatSaga"
-import ratingSaga from "../features/rating/ratingSaga"
-import notificationSaga from "../features/notification/notificationSaga"
-import statusSaga from "../features/Status/statusSaga"
-import watchCoins from"../features/conis/coinSaga"
-import offersSaga from"../features/Offers/offersSaga"
-import  watchPurchase  from "../features/purchase/purchaseSaga";
-import {watchWithdraw}  from "../features/withdraw/withdrawSaga";
-import chatOptionsSaga from "../features/chat/chatOptionsSaga"
-import likeMindedSaga  from "../features/LikeMinded/likeMindedSaga"
+import likeMindedSaga from '../features/LikeMinded/likeMindedSaga';
 import otherusersSaga from '../features/Otherusers/otherUserSaga';
 import chatSaga from '../features/chat/chatSaga';
 import ratingSaga from '../features/rating/ratingSaga';
@@ -48,21 +36,17 @@ export default function* rootSaga() {
     locationSaga(),
     interestSaga(),
     lifestyleSaga(),
-    // lifestyleOptionsSaga(),
-    // userLifestyleSaga(),
     otherusersSaga(),
     chatSaga(),
-        ratingSaga(),
-        notificationSaga(),
-        statusSaga(),
-        watchCoins(),
-        offersSaga(),
-        watchPurchase(),
-        watchWithdraw(),
-        chatOptionsSaga(),
-        likeMindedSaga(),
-
+    ratingSaga(),
+    notificationSaga(),
+    statusSaga(),
+    watchCoins(),
+    offersSaga(),
+    watchPurchase(),
+    watchWithdraw(),
+    chatOptionsSaga(),
+    likeMindedSaga(),
     profileImageSaga(),
-
-  ])
+  ]);
 }

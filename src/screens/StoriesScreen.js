@@ -1,44 +1,43 @@
-import React, { useEffect } from "react";
+import React, { useEffect } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   Image,
   StyleSheet,
-  Dimensions,
   Alert,
   PermissionsAndroid,
-  Platform
-} from "react-native";
-import { useSelector, useDispatch } from "react-redux";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import { launchImageLibrary, launchCamera } from "react-native-image-picker";
+  Platform,
+} from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
+import { useNavigation } from '@react-navigation/native';
+import { moderateScale } from 'react-native-size-matters';
+import LinearGradient from 'react-native-linear-gradient';
 import {
   createStatusRequest,
   getMyStatusRequest,
-  getFriendStatusRequest
-} from "../features/Status/statusActions";
-import { useNavigation } from "@react-navigation/native";
-
-const { width } = Dimensions.get("window");
+  getFriendStatusRequest,
+} from '../features/Status/statusActions';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 const StoriesScreen = () => {
   const navigation = useNavigation();
   const dispatch = useDispatch();
+  const { theme } = useAppTheme();
+  const { colors, spacing } = theme;
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
 
-  const { status, myStatus, friendStatus } = useSelector(
-    (state) => state.status
-  );
-console.log(friendStatus)
+  const { myStatus, friendStatus } = useSelector(state => state.status);
+
   const stories = myStatus?.data || [];
 
-  // ✅ SAFE FRIEND DATA
   const friendStories = Array.isArray(friendStatus)
     ? friendStatus
     : friendStatus?.data || [];
 
-  /* 🔥 GROUP FRIEND STORIES */
   const groupedFriendStories = Object.values(
     (friendStories || []).reduce((acc, item) => {
       if (!item?.user_id) return acc;
@@ -47,13 +46,13 @@ console.log(friendStatus)
         acc[item.user_id] = {
           user_id: item.user_id,
           user_name: item.name,
-          stories: []
+          stories: [],
         };
       }
 
       acc[item.user_id].stories.push(item);
       return acc;
-    }, {})
+    }, {}),
   );
 
   useEffect(() => {
@@ -61,12 +60,10 @@ console.log(friendStatus)
     dispatch(getFriendStatusRequest());
   }, []);
 
-  /* CAMERA */
-
   const requestCameraPermission = async () => {
-    if (Platform.OS === "android") {
+    if (Platform.OS === 'android') {
       const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.CAMERA
+        PermissionsAndroid.PERMISSIONS.CAMERA,
       );
       return granted === PermissionsAndroid.RESULTS.GRANTED;
     }
@@ -75,100 +72,135 @@ console.log(friendStatus)
 
   const openCamera = async () => {
     const permitted = await requestCameraPermission();
-    if (!permitted) return Alert.alert("Permission Denied");
+    if (!permitted) return Alert.alert('Permission Denied');
 
-    launchCamera({ mediaType: "photo" }, (res) => {
+    launchCamera({ mediaType: 'photo' }, res => {
       const img = res.assets?.[0];
       if (!img) return;
 
-      dispatch(createStatusRequest({
-        uri: img.uri,
-        type: img.type,
-        name: img.fileName || "story.jpg"
-      }));
+      dispatch(
+        createStatusRequest({
+          uri: img.uri,
+          type: img.type,
+          name: img.fileName || 'story.jpg',
+        }),
+      );
     });
   };
 
   const openGallery = () => {
-    launchImageLibrary({ mediaType: "photo" }, (res) => {
+    launchImageLibrary({ mediaType: 'photo' }, res => {
       const img = res.assets?.[0];
       if (!img) return;
 
-      dispatch(createStatusRequest({
-        uri: img.uri,
-        type: img.type,
-        name: img.fileName || "story.jpg"
-      }));
+      dispatch(
+        createStatusRequest({
+          uri: img.uri,
+          type: img.type,
+          name: img.fileName || 'story.jpg',
+        }),
+      );
     });
   };
 
   const openSelectOption = () => {
-    Alert.alert("Add Story", "Choose", [
-      { text: "Camera", onPress: openCamera },
-      { text: "Gallery", onPress: openGallery },
-      { text: "Cancel", style: "cancel" }
+    Alert.alert('Add Story', 'Choose', [
+      { text: 'Camera', onPress: openCamera },
+      { text: 'Gallery', onPress: openGallery },
+      { text: 'Cancel', style: 'cancel' },
     ]);
   };
 
   return (
     <View style={styles.container}>
-      {/* <Text style={styles.sectionLabel}>Stories</Text> */}
-
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-
-        {/* ➕ ADD STORY */}
-        <TouchableOpacity style={styles.storyContainer} onPress={openSelectOption}>
-          <View style={styles.addCircle}>
-            <Icon name="plus" size={30} color="#fff" />
-          </View>
-          <Text style={styles.storyName}>Add Story</Text>
+        <TouchableOpacity
+          style={styles.storyContainer}
+          onPress={openSelectOption}
+        >
+          <LinearGradient
+            colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            useAngle
+            angle={75.05}
+            style={styles.addCircle}
+          >
+            <Icon
+              name="plus"
+              size={moderateScale(30)}
+              color={colors.textInverse}
+            />
+          </LinearGradient>
+          <AppText variant="caption" style={styles.storyName}>
+            Add Story
+          </AppText>
         </TouchableOpacity>
 
-        {/* 👤 YOUR STORY */}
         {stories.length > 0 && (
           <TouchableOpacity
             style={styles.storyContainer}
             onPress={() =>
-              navigation.navigate("StoryViewer", {
+              navigation.navigate('StoryViewer', {
                 stories,
                 index: 0,
-                isMyStatus: true   // ✅ IMPORTANT
+                isMyStatus: true,
               })
             }
           >
-            <View style={styles.storyRing}>
-              <Image source={{ uri: stories[0]?.media_url }} style={styles.storyAvatar} />
-            </View>
-            <Text style={styles.storyName}>Your Story</Text>
+            <LinearGradient
+              colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              useAngle
+              angle={75.05}
+              style={styles.storyRing}
+            >
+              <Image
+                source={{ uri: stories[0]?.media_url }}
+                style={styles.storyAvatar}
+              />
+            </LinearGradient>
+            <AppText variant="caption" style={styles.storyName}>
+              Your Story
+            </AppText>
           </TouchableOpacity>
         )}
 
-        {/* 👥 FRIEND STORIES */}
         {groupedFriendStories.map((item, index) => (
           <TouchableOpacity
             key={index}
             style={styles.storyContainer}
             onPress={() =>
-              navigation.navigate("StoryViewer", {
+              navigation.navigate('StoryViewer', {
                 stories: item.stories,
                 index: 0,
-                isMyStatus: false   // ✅ IMPORTANT
+                isMyStatus: false,
               })
             }
           >
-            <View style={styles.storyRing}>
+            <LinearGradient
+              colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              useAngle
+              angle={75.05}
+              style={styles.storyRing}
+            >
               <Image
                 source={{ uri: item.stories?.[0]?.media_url }}
                 style={styles.storyAvatar}
               />
-            </View>
-
-            <Text style={styles.storyName}>
-              {item.user_name || "Friend"}
-            </Text>
+            </LinearGradient>
+            <AppText
+              variant="caption"
+              style={styles.storyName}
+              numberOfLines={1}
+            >
+              {item.user_name || 'Friend'}
+            </AppText>
           </TouchableOpacity>
         ))}
-
       </ScrollView>
     </View>
   );
@@ -176,53 +208,47 @@ console.log(friendStatus)
 
 export default StoriesScreen;
 
-/* STYLES */
+const createStyles = theme => {
+  const { colors, spacing } = theme;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 0,
-    paddingHorizontal: 16
-  },
+  return StyleSheet.create({
+    container: {
+      paddingHorizontal: spacing.lg,
+    },
 
-  sectionLabel: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 10,
-  },
+    storyContainer: {
+      alignItems: 'center',
+      marginRight: spacing.md,
+      maxWidth: moderateScale(72),
+    },
 
-  storyContainer: {
-    alignItems: "center",
-    marginRight: 15
-  },
+    addCircle: {
+      width: moderateScale(60),
+      height: moderateScale(60),
+      borderRadius: moderateScale(30),
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  addCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#8B5CF6",
-    justifyContent: "center",
-    alignItems: "center"
-  },
+    storyRing: {
+      width: moderateScale(66),
+      height: moderateScale(66),
+      borderRadius: moderateScale(33),
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: moderateScale(3),
+    },
 
-  storyAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30
-  },
+    storyAvatar: {
+      width: moderateScale(60),
+      height: moderateScale(60),
+      borderRadius: moderateScale(30),
+    },
 
-  storyRing: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    borderWidth: 3,
-    borderColor: "#25D366",
-    justifyContent: "center",
-    alignItems: "center"
-  },
-
-  storyName: {
-  marginTop: 5,
-  color: "#000" 
-}
-});
+    storyName: {
+      marginTop: spacing.xs,
+      color: colors.text,
+      textAlign: 'center',
+    },
+  });
+};

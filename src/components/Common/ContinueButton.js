@@ -1,22 +1,16 @@
-import React from 'react';
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  Dimensions,
-} from 'react-native';
+import React, { useMemo } from 'react';
+import { TouchableOpacity, ActivityIndicator, StyleSheet, useWindowDimensions } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { moderateScale } from 'react-native-size-matters';
+import { useAppTheme } from '../../theme';
+import { AppText } from '../index';
 
-const { width } = Dimensions.get('window');
+const ContinueButton = ({ title = 'CONTINUE', onPress, disabled = false, loading = false, style = {} }) => {
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const { width } = useWindowDimensions();
+  const styles = useMemo(() => createStyles(theme, width), [theme, width]);
 
-const ContinueButton = ({
-  title = 'CONTINUE',
-  onPress,
-  disabled = false,
-  loading = false,
-  style = {},
-}) => {
   return (
     <TouchableOpacity
       activeOpacity={0.8}
@@ -31,9 +25,9 @@ const ContinueButton = ({
         style={[styles.button, (disabled || loading) && { opacity: 0.8 }]}
       >
         {loading ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={colors.textInverse} />
         ) : (
-          <Text style={styles.text}>{title}</Text>
+          <AppText variant="button" style={styles.text}>{title}</AppText>
         )}
       </LinearGradient>
     </TouchableOpacity>
@@ -42,21 +36,23 @@ const ContinueButton = ({
 
 export default ContinueButton;
 
-const styles = StyleSheet.create({
-  wrapper: {
-    width: width - 48,
-    alignSelf: 'center',
-  },
-  button: {
-    height: 50,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  text: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-});
+const createStyles = (theme, width) => {
+  const { colors, spacing, radius } = theme;
+
+  return StyleSheet.create({
+    wrapper: {
+      width: width - spacing.xxxl * 1.5, // proportional inset, matches original width-48 intent
+      alignSelf: 'center',
+    },
+    button: {
+      height: moderateScale(50),
+      borderRadius: radius.sm,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    text: {
+      color: colors.textInverse,
+      letterSpacing: 1,
+    },
+  });
+};

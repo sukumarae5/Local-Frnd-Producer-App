@@ -8,7 +8,6 @@ import React, {
 } from 'react';
 import {
   View,
-  Text,
   FlatList,
   TouchableOpacity,
   StyleSheet,
@@ -16,9 +15,10 @@ import {
   TextInput,
   StatusBar,
   RefreshControl,
-  Platform,
 } from 'react-native';
+import { moderateScale } from 'react-native-size-matters';
 import LinearGradient from 'react-native-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
@@ -27,12 +27,8 @@ import { chatListRequest } from '../features/chat/chatAction';
 import { friendCallRequest } from '../features/calls/callAction';
 import { SocketContext } from '../socket/SocketProvider';
 import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
-
-// ── Pre-load the notification sound once at module level ────────────────────
-// Place a file called "message_tone.mp3" in:
-//   Android: android/app/src/main/res/raw/message_tone.mp3
-//   iOS:     ios/<AppName>/message_tone.mp3  (add to Xcode bundle)
-// Sound.setCategory('Playback', true); // true = mixWithOthers so it doesn't kill music
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
 let msgSound = null;
 
@@ -46,32 +42,28 @@ const loadSound = async () => {
 
 const playMessageSound = async () => {
   try {
-    if (!msgSound) {
-      await loadSound();
-    }
-
-    await msgSound?.stop(); // reset
-    await msgSound?.play(); // play
+    if (!msgSound) await loadSound();
+    await msgSound?.stop();
+    await msgSound?.play();
   } catch (err) {
     console.log('Playback error:', err);
   }
 };
-// ────────────────────────────────────────────────────────────────────────────
 
 const MessagesScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { socketRef } = useContext(SocketContext);
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const chatList = useSelector(state => state.chat.chatList) ?? [];
   const unread = useSelector(state => state.chat.unread) ?? {};
   const myId = useSelector(state => state.user.userdata?.user?.user_id);
   const userdata = useSelector(state => state.user.userdata);
 
-  // Chat options state — muted[conversationId], blocked[userId]
   const mutedMap = useSelector(state => state.chatOptions?.muted) ?? {};
   const blockedMap = useSelector(state => state.chatOptions?.blocked) ?? {};
-
-  // conversationIds map: otherUserId → conversationId (from chat reducer)
   const conversationIds =
     useSelector(state => state.chat.conversationIds) ?? {};
 
@@ -79,14 +71,12 @@ const MessagesScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [callingId, setCallingId] = useState(null);
 
-  // ── Load chat list on focus ────────────────────────────────────────────
   useFocusEffect(
     useCallback(() => {
       dispatch(chatListRequest());
     }, [dispatch]),
   );
 
-  // ── Real-time socket refresh + in-app sound ────────────────────────────
   useEffect(() => {
     const socket = socketRef.current;
     if (!socket) return;
@@ -97,7 +87,6 @@ const MessagesScreen = ({ navigation }) => {
       timeout = setTimeout(() => dispatch(chatListRequest()), 500);
     };
 
-    // Play sound when a new message arrives for this user (not sent by me)
     const onChatReceive = msg => {
       const senderId = msg.sender_id ?? msg.senderId;
       if (Number(senderId) !== Number(myId)) {
@@ -131,7 +120,6 @@ const MessagesScreen = ({ navigation }) => {
     [navigation],
   );
 
-  // ── Dedup + search filter ──────────────────────────────────────────────
   const uniqueChats = useMemo(() => {
     const map = new Map();
     chatList.forEach(item => map.set(item.user_id, item));
@@ -148,7 +136,6 @@ const MessagesScreen = ({ navigation }) => {
 
   const isEmpty = uniqueChats.length === 0;
 
-  // ── Call handler ───────────────────────────────────────────────────────
   const startFriendCall = useCallback(
     async (item, type = 'AUDIO') => {
       if (callingId === item.user_id) return;
@@ -164,7 +151,6 @@ const MessagesScreen = ({ navigation }) => {
     [dispatch, navigation, callingId],
   );
 
-  // ── Row renderer ───────────────────────────────────────────────────────
   const renderItem = useCallback(
     ({ item }) => {
       const count = unread[item.user_id] || 0;
@@ -177,7 +163,6 @@ const MessagesScreen = ({ navigation }) => {
 
       const firstLetter = item.name?.[0]?.toUpperCase() || '?';
 
-      // Look up mute/block status for this chat item
       const convId = conversationIds[item.user_id];
       const isMuted = convId ? !!mutedMap[convId] : false;
       const isBlocked = !!blockedMap[item.user_id];
@@ -188,78 +173,91 @@ const MessagesScreen = ({ navigation }) => {
           activeOpacity={0.85}
           onPress={() => openChat(item)}
         >
-          {/* ── AVATAR ── */}
           <View style={styles.avatarWrap}>
             {avatar ? (
               <Image source={{ uri: avatar }} style={styles.avatar} />
             ) : (
               <View style={styles.placeholderAvatar}>
-                <Text style={styles.placeholderText}>{firstLetter}</Text>
+                <AppText variant="h4" style={styles.placeholderText}>
+                  {firstLetter}
+                </AppText>
               </View>
             )}
 
-            {/* Online dot — hide when blocked */}
             {!isBlocked && Number(item.is_online) === 1 && (
               <View style={styles.onlineDot} />
             )}
 
-            {/* Mute badge */}
             {isMuted && (
               <View style={styles.muteBadge}>
-                <Ionicons name="notifications-off" size={9} color="#fff" />
+                <Ionicons
+                  name="notifications-off"
+                  size={moderateScale(9)}
+                  color={colors.textInverse}
+                />
               </View>
             )}
 
-            {/* Block badge */}
             {isBlocked && (
               <View style={styles.blockBadge}>
-                <Ionicons name="ban" size={9} color="#fff" />
+                <Ionicons
+                  name="ban"
+                  size={moderateScale(9)}
+                  color={colors.textInverse}
+                />
               </View>
             )}
           </View>
 
-          {/* ── CENTER TEXT ── */}
           <View style={styles.centerPart}>
             <View style={styles.nameRow}>
-              <Text style={styles.name} numberOfLines={1}>
+              <AppText variant="subtitle" style={styles.name} numberOfLines={1}>
                 {item.name}
-              </Text>
-              {/* Mute label inline */}
+              </AppText>
+
               {isMuted && (
                 <View style={styles.muteTag}>
                   <Ionicons
                     name="notifications-off-outline"
-                    size={10}
-                    color="#8B2FC9"
+                    size={moderateScale(10)}
+                    color={colors.secondary}
                   />
-                  <Text style={styles.muteTagText}>Muted</Text>
+                  <AppText variant="overline" style={styles.muteTagText}>
+                    Muted
+                  </AppText>
                 </View>
               )}
-              {/* Block label inline */}
+
               {isBlocked && (
                 <View style={styles.blockTag}>
-                  <Ionicons name="ban-outline" size={10} color="#E53935" />
-                  <Text style={styles.blockTagText}>Blocked</Text>
+                  <Ionicons
+                    name="ban-outline"
+                    size={moderateScale(10)}
+                    color={colors.error}
+                  />
+                  <AppText variant="overline" style={styles.blockTagText}>
+                    Blocked
+                  </AppText>
                 </View>
               )}
             </View>
 
             {count > 0 && !isMuted ? (
-              <Text style={styles.newMsgText}>
+              <AppText variant="bodySmall" style={styles.newMsgText}>
                 {count} New Message{count > 1 ? 's' : ''}
-              </Text>
+              </AppText>
             ) : (
-              <Text style={styles.last} numberOfLines={1}>
-                {isBlocked
-                  ? 'You blocked this user'
-                  : isMuted
-                  ? item.last_message || ''
-                  : item.last_message || ''}
-              </Text>
+              <AppText
+                variant="bodySmall"
+                color="textMuted"
+                style={styles.last}
+                numberOfLines={1}
+              >
+                {isBlocked ? 'You blocked this user' : item.last_message || ''}
+              </AppText>
             )}
           </View>
 
-          {/* ── CALL ICONS — disabled when blocked ── */}
           <View style={styles.callSection}>
             <TouchableOpacity
               style={[styles.callBtn, isBlocked && styles.callBtnDisabled]}
@@ -267,11 +265,38 @@ const MessagesScreen = ({ navigation }) => {
               disabled={callingId === item.user_id || isBlocked}
               activeOpacity={isBlocked ? 1 : 0.7}
             >
-              <Ionicons
-                name="call-outline"
-                size={20}
-                color={isBlocked ? '#ccc' : '#C51DAF'}
-              />
+              {isBlocked ? (
+                <Ionicons
+                  name="call-outline"
+                  size={moderateScale(20)}
+                  color={colors.disabled}
+                />
+              ) : (
+                <MaskedView
+                  maskElement={
+                    <Ionicons
+                      name="call-outline"
+                      size={moderateScale(20)}
+                      color="black"
+                    />
+                  }
+                >
+                  <LinearGradient
+                    colors={[
+                      colors.gradientPurpleStart,
+                      colors.gradientPurpleEnd,
+                    ]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    useAngle
+                    angle={75.05}
+                    style={{
+                      width: moderateScale(20),
+                      height: moderateScale(20),
+                    }}
+                  />
+                </MaskedView>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -280,11 +305,38 @@ const MessagesScreen = ({ navigation }) => {
               disabled={callingId === item.user_id || isBlocked}
               activeOpacity={isBlocked ? 1 : 0.7}
             >
-              <Ionicons
-                name="videocam-outline"
-                size={20}
-                color={isBlocked ? '#ccc' : '#C51DAF'}
-              />
+              {isBlocked ? (
+                <Ionicons
+                  name="videocam-outline"
+                  size={moderateScale(20)}
+                  color={colors.disabled}
+                />
+              ) : (
+                <MaskedView
+                  maskElement={
+                    <Ionicons
+                      name="videocam-outline"
+                      size={moderateScale(20)}
+                      color="black"
+                    />
+                  }
+                >
+                  <LinearGradient
+                    colors={[
+                      colors.gradientPurpleStart,
+                      colors.gradientPurpleEnd,
+                    ]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    useAngle
+                    angle={75.05}
+                    style={{
+                      width: moderateScale(20),
+                      height: moderateScale(20),
+                    }}
+                  />
+                </MaskedView>
+              )}
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -298,58 +350,75 @@ const MessagesScreen = ({ navigation }) => {
       mutedMap,
       blockedMap,
       conversationIds,
+      colors,
+      styles,
     ],
   );
 
-  // ──────────────────────────────────────────────────────────────────────
   return (
     <WelcomeScreenbackgroungpage>
+      <StatusBar
+        barStyle={colors.statusBar}
+        backgroundColor={colors.background}
+      />
       <View style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-
-        {/* HEADER */}
         <View style={styles.headerContainer}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={22} color="#4A4A4A" />
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            hitSlop={theme.hitSlop}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={moderateScale(22)}
+              color={colors.icon}
+            />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Messages</Text>
+          <AppText variant="h3" style={styles.headerTitle}>
+            Messages
+          </AppText>
         </View>
 
-        {/* SEARCH */}
         <View style={styles.searchRow}>
           <LinearGradient
-            colors={['#D51BF9', '#8C37F8']}
+            colors={[colors.gradientPurpleStart, colors.gradientPurpleEnd]}
             style={styles.searchGradientBorder}
           >
             <View style={styles.searchBox}>
-              <Ionicons name="search" size={18} color="#999" />
+              <Ionicons
+                name="search"
+                size={moderateScale(18)}
+                color={colors.gradientPurpleStart}
+              />
               <TextInput
                 placeholder="Search"
                 value={search}
                 onChangeText={setSearch}
                 style={styles.searchInput}
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.placeholder}
               />
               {search.length > 0 && (
                 <TouchableOpacity onPress={() => setSearch('')}>
-                  <Ionicons name="close-circle" size={18} color="#999" />
+                  <Ionicons
+                    name="close-circle"
+                    size={moderateScale(18)}
+                    color={colors.iconMuted}
+                  />
                 </TouchableOpacity>
               )}
             </View>
           </LinearGradient>
         </View>
 
-        {/* EMPTY STATE */}
         {isEmpty ? (
           <View style={styles.emptyContainer}>
             <Ionicons
               name={search ? 'search-outline' : 'chatbubble-outline'}
-              size={60}
-              color="#ccc"
+              size={moderateScale(60)}
+              color={colors.border}
             />
-            <Text style={styles.emptyTitle}>
+            <AppText variant="h4" style={styles.emptyTitle}>
               {search ? 'No results found' : 'No Messages'}
-            </Text>
+            </AppText>
 
             {!search && (
               <TouchableOpacity
@@ -360,7 +429,9 @@ const MessagesScreen = ({ navigation }) => {
                     : navigation.navigate('GoOnlineScreen')
                 }
               >
-                <Text style={styles.primaryBtnText}>Find Friends</Text>
+                <AppText variant="button" style={styles.primaryBtnText}>
+                  Find Friends
+                </AppText>
               </TouchableOpacity>
             )}
           </View>
@@ -371,7 +442,12 @@ const MessagesScreen = ({ navigation }) => {
             renderItem={renderItem}
             showsVerticalScrollIndicator={false}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[colors.magenta]}
+                tintColor={colors.magenta}
+              />
             }
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             contentContainerStyle={styles.listContent}
@@ -384,152 +460,149 @@ const MessagesScreen = ({ navigation }) => {
 
 export default MessagesScreen;
 
-/* ═══════════════════════════════ STYLES ═══════════════════════════════ */
+const createStyles = theme => {
+  const { colors, spacing, radius } = theme;
 
-const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 20 },
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      paddingHorizontal: spacing.lg, // 20-24dp
+    },
 
-  headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    marginLeft: 12,
-    color: '#000',
-  },
+    headerContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+    },
+    headerTitle: { marginLeft: spacing.md },
 
-  searchRow: { marginBottom: 14 },
-  searchGradientBorder: { borderRadius: 25, padding: 1.5 },
-  searchBox: {
-    height: 40,
-    backgroundColor: '#fff',
-    borderRadius: 25,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-  },
-  searchInput: { flex: 1, marginLeft: 8, fontSize: 14, color: '#000' },
+    searchRow: { marginBottom: spacing.md },
+    searchGradientBorder: { borderRadius: radius.xl, padding: 1.5 },
+    searchBox: {
+      height: moderateScale(40),
+      backgroundColor: colors.card,
+      borderRadius: radius.xl,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+    },
+    searchInput: { flex: 1, marginLeft: spacing.sm, color: colors.text },
 
-  listContent: { paddingBottom: 20 },
+    listContent: { paddingBottom: spacing.xl },
 
-  /* ROW */
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+    },
 
-  /* AVATAR */
-  avatarWrap: { marginRight: 12, position: 'relative' },
-  avatar: { width: 48, height: 48, borderRadius: 24 },
-  placeholderAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#C51DAF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholderText: { color: '#fff', fontWeight: '700', fontSize: 18 },
+    avatarWrap: { marginRight: spacing.md, position: 'relative' },
+    avatar: {
+      width: moderateScale(48),
+      height: moderateScale(48),
+      borderRadius: moderateScale(24),
+    },
+    placeholderAvatar: {
+      width: moderateScale(48),
+      height: moderateScale(48),
+      borderRadius: moderateScale(24),
+      backgroundColor: colors.magenta,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    placeholderText: { color: colors.textInverse },
 
-  onlineDot: {
-    position: 'absolute',
-    right: 1,
-    bottom: 1,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#31D158',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
+    onlineDot: {
+      position: 'absolute',
+      right: 1,
+      bottom: 1,
+      width: moderateScale(12),
+      height: moderateScale(12),
+      borderRadius: moderateScale(6),
+      backgroundColor: colors.online,
+      borderWidth: 2,
+      borderColor: colors.card,
+    },
 
-  // Mute badge — purple, top-right corner of avatar
-  muteBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#8B2FC9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#fff',
-  },
+    muteBadge: {
+      position: 'absolute',
+      top: -2,
+      right: -2,
+      width: moderateScale(16),
+      height: moderateScale(16),
+      borderRadius: moderateScale(8),
+      backgroundColor: colors.secondary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: colors.card,
+    },
 
-  // Block badge — red, top-right corner
-  blockBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#E53935',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#fff',
-  },
+    blockBadge: {
+      position: 'absolute',
+      top: -2,
+      right: -2,
+      width: moderateScale(16),
+      height: moderateScale(16),
+      borderRadius: moderateScale(8),
+      backgroundColor: colors.error,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: colors.card,
+    },
 
-  /* CENTER */
-  centerPart: { flex: 1 },
+    centerPart: { flex: 1 },
 
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  name: { fontSize: 16, fontWeight: '700', color: '#000', flexShrink: 1 },
+    nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
+    name: { flexShrink: 1 },
 
-  muteTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    backgroundColor: '#F3E7FF',
-    borderRadius: 8,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-  },
-  muteTagText: { fontSize: 10, color: '#8B2FC9', fontWeight: '600' },
+    muteTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xxs,
+      backgroundColor: `${colors.secondary}1F`,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.xxs,
+      paddingVertical: 2,
+    },
+    muteTagText: { color: colors.secondary },
 
-  blockTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    backgroundColor: '#FFF0F0',
-    borderRadius: 8,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-  },
-  blockTagText: { fontSize: 10, color: '#E53935', fontWeight: '600' },
+    blockTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xxs,
+      backgroundColor: `${colors.error}1A`,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.xxs,
+      paddingVertical: 2,
+    },
+    blockTagText: { color: colors.error },
 
-  last: { fontSize: 13, color: '#8E8E8E', marginTop: 4 },
-  newMsgText: {
-    fontSize: 13,
-    marginTop: 4,
-    color: '#C51DAF',
-    fontWeight: '600',
-  },
+    last: { marginTop: spacing.xxs },
+    newMsgText: {
+      marginTop: spacing.xxs,
+      color: colors.magenta,
+      fontWeight: '600',
+    },
 
-  /* CALL SECTION */
-  callSection: { flexDirection: 'row' },
-  callBtn: { padding: 6, marginLeft: 4 },
-  callBtnDisabled: { opacity: 0.4 },
+    callSection: { flexDirection: 'row' },
+    callBtn: { padding: spacing.xs, marginLeft: spacing.xxs },
+    callBtnDisabled: { opacity: 0.4 },
 
-  separator: { height: 1, backgroundColor: '#f2f2f2' },
+    separator: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.divider,
+    },
 
-  /* EMPTY */
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 10,
-    marginBottom: 20,
-    color: '#444',
-  },
-  primaryBtn: {
-    backgroundColor: '#C51DAF',
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  primaryBtnText: { color: '#fff', fontWeight: '600' },
-});
+    emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    emptyTitle: { marginTop: spacing.sm, marginBottom: spacing.xl },
+    primaryBtn: {
+      backgroundColor: colors.magenta,
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.xl,
+    },
+    primaryBtnText: { color: colors.textInverse },
+  });
+};

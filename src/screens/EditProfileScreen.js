@@ -1,68 +1,63 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   ScrollView,
   TextInput,
   TouchableOpacity,
   Image,
   Alert,
-  Dimensions,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   PermissionsAndroid,
+  StyleSheet,
+  useWindowDimensions,
 } from 'react-native';
-import {
-  useNavigation,
-  useRoute,
-  useFocusEffect,
-} from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { moderateScale } from 'react-native-size-matters';
 import { useDispatch, useSelector } from 'react-redux';
 
-import {
-  FETCH_LIFESTYLE_OPTIONS_REQUEST,
-  FETCH_LIFESTYLE_REQUEST,
-} from '../features/lifeStyle/lifestyleTypes';
+import { FETCH_LIFESTYLE_OPTIONS_REQUEST, FETCH_LIFESTYLE_REQUEST } from '../features/lifeStyle/lifestyleTypes';
 import { fetchInterestsRequest } from '../features/interest/interestActions';
-import {
-  fetchCitiesRequest,
-  fetchStatesRequest,
-} from '../features/Countries/locationActions';
+import { fetchCitiesRequest, fetchStatesRequest } from '../features/Countries/locationActions';
 import { languageApiFetchRequest } from '../features/language/languageAction';
 import WelcomeScreenbackgroungpage from '../components/BackgroundPages/WelcomeScreenbackgroungpage';
 import { newUserDataRequest } from '../features/user/userAction';
 import { RESET_USER_STATE } from '../features/user/userType';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { userdeletephotorequest } from '../features/photo/photoAction';
+import {
+  userpostphotorequest,
+  userdeletephotorequest,
+} from '../features/photo/photoAction';
 import ContinueButton from '../components/Common/ContinueButton';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
-import {
-  uploadProfileImageRequest,
-  deleteProfileImageRequest,
-} from '../features/profileImage/profileImageAction';
+import { uploadProfileImageRequest, deleteProfileImageRequest } from '../features/profileImage/profileImageAction';
+import { useAppTheme } from '../theme';
+import { AppText } from '../components';
 
-const { width, height } = Dimensions.get('window');
-const wp = percent => (width * percent) / 100;
-const hp = percent => (height * percent) / 100;
+// One-off accent for this screen only, consistently reused across its own
+// avatar ring, camera button, accordion arrows, radios, etc.
+const PURPLE = '#B832F9';
 
 const EditProfileScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const dispatch = useDispatch();
 
-  // ✅ HOOK 1 — selector (always first, never conditional)
-  const { userdata, userDataResponse } = useSelector(state => state.user);
-  const { loading } = useSelector(state => state.profileImage);
+  // ✅ HOOK 1 — theme (always called, never conditional)
+  const { theme } = useAppTheme();
+  const { colors, spacing, radius } = theme;
+  const { width, height } = useWindowDimensions();
+  const styles = useMemo(() => createStyles(theme, width, height), [theme, width, height]);
 
-  // ✅ HOOK 2-14 — all useState in fixed order
+  // ✅ HOOK 2 — selector (always first among data hooks, never conditional)
+  const { userdata, userDataResponse } = useSelector((state) => state.user);
+  const { loading } = useSelector((state) => state.profileImage);
 
-  const [profileImg, setProfileImg] = useState(
-    userdata?.images?.display_profile_image || null,
-  );
+  // ✅ HOOK 3-15 — all useState in fixed order
+  const [profileImg, setProfileImg] = useState(userdata?.images?.display_profile_image || null);
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -70,21 +65,18 @@ const EditProfileScreen = () => {
   const [gender, setGender] = useState('Female');
   const [language, setLanguage] = useState('');
   const [locationText, setLocationText] = useState('');
-  const [locationIds, setLocationIds] = useState({
-    city_id: null,
-    state_id: null,
-    country_id: null,
-  });
+  const [locationIds, setLocationIds] = useState({ city_id: null, state_id: null, country_id: null });
   const [selectedLifestyles, setSelectedLifestyles] = useState([]);
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [openSection, setOpenSection] = useState(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const isResponseHandled = useRef(false);
 
-  // ✅ HOOK 15 — useRef
+  // ✅ HOOK 16 — useRef
   const isFormInitialized = useRef(false);
 
-  // ✅ HOOK 16 — initial API load
+  // ✅ HOOK 17 — initial API load
   useEffect(() => {
     dispatch(languageApiFetchRequest());
     dispatch(fetchInterestsRequest());
@@ -92,19 +84,18 @@ const EditProfileScreen = () => {
     dispatch({ type: FETCH_LIFESTYLE_OPTIONS_REQUEST });
   }, []);
 
-  // ✅ HOOK 17 — focus listener — NO dispatch, only reset ref
+  // ✅ HOOK 18 — focus listener — NO dispatch, only reset ref
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       isFormInitialized.current = false;
-      isResponseHandled.current = false; // ✅ only reset ref
-      // ❌ REMOVE dispatch(RESET_USER_STATE) — this was wiping userDataResponse
+      isResponseHandled.current = false;
     });
     return unsubscribe;
   }, [navigation]);
 
-  // ✅ HOOK 18 — alert effect — clear Redux only AFTER user taps OK
+  // ✅ HOOK 19 — alert effect — clear Redux only AFTER user taps OK
   useEffect(() => {
-    if (!userDataResponse || isResponseHandled.current) return; // ✅ .current fixed
+    if (!userDataResponse || isResponseHandled.current) return;
 
     const isSuccess = userDataResponse?.success === true;
     const safeMessage =
@@ -120,13 +111,13 @@ const EditProfileScreen = () => {
       {
         text: 'OK',
         onPress: () => {
-          dispatch({ type: RESET_USER_STATE }); // ✅ clear ONLY after OK tap
+          dispatch({ type: RESET_USER_STATE });
         },
       },
     ]);
-  }, [userDataResponse]); // ✅ removed isResponseHandled from deps — it's a ref
+  }, [userDataResponse]);
 
-  // ✅ HOOK 19 — form prefill on focus (useFocusEffect always last)
+  // ✅ HOOK 20 — form prefill on focus (useFocusEffect always last)
   useFocusEffect(
     useCallback(() => {
       if (!userdata) return;
@@ -149,18 +140,16 @@ const EditProfileScreen = () => {
         country_id: country?.id ?? null,
       });
 
-      setLocationText(
-        `${city?.name ?? ''}, ${state?.name ?? ''}, ${country?.name ?? ''}`,
-      );
+      setLocationText(`${city?.name ?? ''}, ${state?.name ?? ''}, ${country?.name ?? ''}`);
 
       if (userdata?.lifestyles?.length) {
         setSelectedLifestyles(
-          userdata.lifestyles.map(item => ({
+          userdata.lifestyles.map((item) => ({
             categoryId: item.category.id,
             categoryName: item.category.name,
             id: item.subcategory.id,
             name: item.subcategory.name,
-          })),
+          }))
         );
       }
 
@@ -169,11 +158,11 @@ const EditProfileScreen = () => {
       }
 
       isFormInitialized.current = true;
-    }, [userdata]),
+    }, [userdata])
   );
 
   // ✅ Regular functions — AFTER all hooks
-  const formatDateForApi = date => {
+  const formatDateForApi = (date) => {
     if (!date) return '';
     const d = new Date(date);
     if (isNaN(d.getTime())) return '';
@@ -185,33 +174,26 @@ const EditProfileScreen = () => {
 
   const requestCameraPermission = async () => {
     if (Platform.OS !== 'android') return true;
-
-    const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.CAMERA,
-    );
-
+    const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA);
     return granted === PermissionsAndroid.RESULTS.GRANTED;
   };
 
-  const uploadImage = asset => {
-  if (!asset) return;
+  const uploadImage = (asset) => {
+    if (!asset) return;
 
-  const formData = new FormData();
+    const formData = new FormData();
+    formData.append('photo', {
+      uri: asset.uri,
+      type: asset.type || 'image/jpeg',
+      name: asset.fileName || `profile_${Date.now()}.jpg`,
+    });
 
-  formData.append("photo", {
-    uri: asset.uri,
-    type: asset.type || "image/jpeg",
-    name: asset.fileName || `profile_${Date.now()}.jpg`,
-  });
-
-  dispatch(
-    uploadProfileImageRequest(formData, () => {
-      dispatch({
-        type: "USER_DATA_REQUEST",
-      });
-    }),
-  );
-};
+    dispatch(
+      uploadProfileImageRequest(formData, () => {
+        dispatch({ type: 'USER_DATA_REQUEST' });
+      })
+    );
+  };
 
   const openCamera = async () => {
     const allowed = await requestCameraPermission();
@@ -221,38 +203,23 @@ const EditProfileScreen = () => {
       return;
     }
 
-    launchCamera(
-      {
-        mediaType: 'photo',
-        quality: 0.8,
-      },
-      response => {
-        if (response.didCancel || response.errorCode) return;
-
-        if (response.assets?.length) {
-          setProfileImg(response.assets[0].uri);
-
-          uploadImage(response.assets[0]);
-        }
-      },
-    );
+    launchCamera({ mediaType: 'photo', quality: 0.8 }, (response) => {
+      if (response.didCancel || response.errorCode) return;
+      if (response.assets?.length) {
+        setProfileImg(response.assets[0].uri);
+        uploadImage(response.assets[0]);
+      }
+    });
   };
+
   const openGallery = () => {
-    launchImageLibrary(
-      {
-        mediaType: 'photo',
-        quality: 0.8,
-      },
-      response => {
-        if (response.didCancel || response.errorCode) return;
-
-        if (response.assets?.length) {
-          setProfileImg(response.assets[0].uri);
-
-          uploadImage(response.assets[0]);
-        }
-      },
-    );
+    launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, (response) => {
+      if (response.didCancel || response.errorCode) return;
+      if (response.assets?.length) {
+        setProfileImg(response.assets[0].uri);
+        uploadImage(response.assets[0]);
+      }
+    });
   };
 
   const pickImage = () => {
@@ -260,45 +227,28 @@ const EditProfileScreen = () => {
       'Profile Photo',
       'Choose an option',
       [
-        {
-          text: 'Camera',
-          onPress: openCamera,
-        },
-        {
-          text: 'Gallery',
-          onPress: openGallery,
-        },
-        profileImg ||
-        userdata?.images?.display_profile_image ||
-        userdata?.images?.avatar
+        { text: 'Camera', onPress: openCamera },
+        { text: 'Gallery', onPress: openGallery },
+        profileImg || userdata?.images?.display_profile_image || userdata?.images?.avatar
           ? {
               text: 'Remove Photo',
               style: 'destructive',
               onPress: () => {
                 dispatch(
                   deleteProfileImageRequest(() => {
-                    dispatch({
-                      type: 'USER_DATA_REQUEST',
-                    });
-                  }),
+                    dispatch({ type: 'USER_DATA_REQUEST' });
+                  })
                 );
               },
             }
           : null,
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ].filter(Boolean),
+        { text: 'Cancel', style: 'cancel' },
+      ].filter(Boolean)
     );
   };
 
   const openGeneralInfo = () => {
-    navigation.navigate('EditUserGeneralInfoScreen', {
-      language,
-      locationText,
-      locationIds,
-    });
+    navigation.navigate('EditUserGeneralInfoScreen', { language, locationText, locationIds });
 
     if (userdata?.location?.country?.id) {
       dispatch(fetchStatesRequest(userdata.location.country.id));
@@ -309,16 +259,14 @@ const EditProfileScreen = () => {
   };
 
   const openLifestyle = () => {
-    navigation.navigate('EditUserLifestyleScreen', {
-      selected: selectedLifestyles,
-    });
+    navigation.navigate('EditUserLifestyleScreen', { selected: selectedLifestyles });
   };
 
   const handleSave = () => {
     const payload = {
       name: fullName,
-      username: username,
-      email: email,
+      username,
+      email,
       date_of_birth: formatDateForApi(dob),
       gender: gender?.toLowerCase() === 'male' ? 'Male' : 'Female',
     };
@@ -332,101 +280,176 @@ const EditProfileScreen = () => {
     }
   };
 
-  const handleDeleteImage = photo_id => {
+  const handleDeleteImage = (photo_id) => {
     Alert.alert('Delete Photo', 'Are you sure?', [
       { text: 'Cancel' },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: () => {
-          dispatch(
-            userdeletephotorequest({ photo_id }, () => {
-              console.log('✅ Deleted');
-            }),
-          );
+          dispatch(userdeletephotorequest({ photo_id }, () => {}));
         },
       },
     ]);
   };
 
-  const interestText = selectedInterests.map(i => i.name).join(', ');
-  const displayImage =
-    profileImg ??
-    userdata?.images?.display_profile_image ??
-    userdata?.images?.avatar ??
-    null;
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+const validateImage = asset => {
+  if (!asset) return false;
+
+  if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+    Alert.alert('Large Image', 'Please select an image smaller than 5 MB.');
+    return false;
+  }
+
+  return true;
+};
+
+const uploadGalleryPhoto = asset => {
+  const formData = new FormData();
+
+  formData.append('photos', {
+    uri: asset.uri,
+    type: asset.type || 'image/jpeg',
+    name: asset.fileName || `photo_${Date.now()}.jpg`,
+  });
+
+  setUploadingPhoto(true);
+
+  dispatch(
+    userpostphotorequest(formData, response => {
+      setUploadingPhoto(false);
+
+      if (response.success) {
+        dispatch({ type: 'USER_DATA_REQUEST' });
+
+        Alert.alert('Success', response.message);
+      } else {
+        Alert.alert('Upload Failed', response.message);
+      }
+    }),
+  );
+};
+
+const openGalleryPicker = () => {
+  if ((userdata?.images?.gallery?.length || 0) >= 4) {
+    Alert.alert('Limit Reached', 'Maximum 4 photos allowed.');
+    return;
+  }
+
+  launchImageLibrary(
+    {
+      mediaType: 'photo',
+      quality: 0.6,
+      maxWidth: 1080,
+      maxHeight: 1080,
+    },
+    response => {
+      if (response.didCancel || response.errorCode) return;
+
+      const asset = response.assets?.[0];
+
+      if (!validateImage(asset)) return;
+
+      uploadGalleryPhoto(asset);
+    },
+  );
+};
+
+const openGalleryCamera = async () => {
+  const allowed = await requestCameraPermission();
+
+  if (!allowed) {
+    Alert.alert('Permission', 'Camera permission denied.');
+    return;
+  }
+
+  launchCamera(
+    {
+      mediaType: 'photo',
+      quality: 0.6,
+      maxWidth: 1080,
+      maxHeight: 1080,
+    },
+    response => {
+      if (response.didCancel || response.errorCode) return;
+
+      const asset = response.assets?.[0];
+
+      if (!validateImage(asset)) return;
+
+      uploadGalleryPhoto(asset);
+    },
+  );
+};
+
+const openGalleryOptions = () => {
+  Alert.alert('Upload Photo', 'Choose an option', [
+    {
+      text: 'Camera',
+      onPress: openGalleryCamera,
+    },
+    {
+      text: 'Gallery',
+      onPress: openGalleryPicker,
+    },
+    {
+      text: 'Cancel',
+      style: 'cancel',
+    },
+  ]);
+};
+
+  const interestText = selectedInterests.map((i) => i.name).join(', ');
+  const displayImage = profileImg ?? userdata?.images?.display_profile_image ?? userdata?.images?.avatar ?? null;
 
   return (
     <WelcomeScreenbackgroungpage>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <View style={{ flex: 1 }}>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.scrollContent}
-          >
-            {/* HEADER */}
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={styles.flex}>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent}>
             <View style={styles.header}>
-              <TouchableOpacity onPress={() => navigation.goBack()}>
-                <Icon name="chevron-back" size={26} />
+              <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={theme.hitSlop}>
+                <Icon name="chevron-back" size={moderateScale(26)} color={colors.icon} />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Edit Profile</Text>
+              <AppText variant="h3" style={styles.headerTitle}>Edit Profile</AppText>
             </View>
 
-            {/* AVATAR */}
             <View style={styles.avatarSection}>
-              <TouchableOpacity
-                style={styles.avatarRing}
-                onPress={!loading ? pickImage : null}
-                activeOpacity={0.8}
-              >
-                <>
-                  <Image
-                    source={
-                      displayImage
-                        ? { uri: displayImage }
-                        : require('../assets/boy1.jpg')
-                    }
-                    style={styles.avatar}
-                  />
+              <TouchableOpacity style={styles.avatarRing} onPress={!loading ? pickImage : null} activeOpacity={0.8}>
+                <Image source={displayImage ? { uri: displayImage } : require('../assets/boy1.jpg')} style={styles.avatar} />
 
-                  {loading && (
-                    <View style={styles.uploadLoader}>
-                      <ActivityIndicator size="large" color="#ffffff" />
-                    </View>
-                  )}
-                </>
+                {loading && (
+                  <View style={styles.uploadLoader}>
+                    <ActivityIndicator size="large" color="#ffffff" />
+                  </View>
+                )}
+
                 {!loading && (
                   <View style={styles.cameraBtn}>
-                    <Icon name="camera" size={14} color="#fff" />
+                    <Icon name="camera" size={moderateScale(14)} color="#fff" />
                   </View>
                 )}
               </TouchableOpacity>
             </View>
 
-            {/* FORM */}
             <View style={styles.form}>
-              <Text style={styles.label}>Full Name</Text>
-              <Input value={fullName} onChange={setFullName} />
+              <AppText variant="bodySmall" style={styles.label}>Full Name</AppText>
+              <Input value={fullName} onChange={setFullName} styles={styles} colors={colors} />
 
-              <Text style={styles.label}>Username</Text>
-              <Input value={username} onChange={setUsername} />
+              <AppText variant="bodySmall" style={styles.label}>Username</AppText>
+              <Input value={username} onChange={setUsername} styles={styles} colors={colors} />
 
-              <Text style={styles.label}>Email</Text>
-              <Input value={email} onChange={setEmail} />
+              <AppText variant="bodySmall" style={styles.label}>Email</AppText>
+              <Input value={email} onChange={setEmail} styles={styles} colors={colors} />
 
-              <Text style={styles.label}>Date Of Birth</Text>
-              <TouchableOpacity
-                style={styles.inputBox}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text style={{ flex: 1, color: dob ? '#000' : '#999' }}>
+              <AppText variant="bodySmall" style={styles.label}>Date Of Birth</AppText>
+              <TouchableOpacity style={styles.inputBox} onPress={() => setShowDatePicker(true)}>
+                <AppText variant="body" style={[styles.dobText, { color: dob ? colors.text : colors.placeholder }]}>
                   {dob || 'Select Date of Birth'}
-                </Text>
-                <Icon name="calendar-outline" size={20} color="#999" />
+                </AppText>
+                <Icon name="calendar-outline" size={moderateScale(20)} color={colors.iconMuted} />
               </TouchableOpacity>
 
               {showDatePicker && (
@@ -439,143 +462,84 @@ const EditProfileScreen = () => {
                 />
               )}
 
-              <Text style={styles.label}>Gender</Text>
+              <AppText variant="bodySmall" style={styles.label}>Gender</AppText>
               <View style={styles.genderRow}>
-                <Gender label="Female" value={gender} setValue={setGender} />
-                <Gender label="Male" value={gender} setValue={setGender} />
+                <Gender label="Female" value={gender} setValue={setGender} styles={styles} colors={colors} />
+                <Gender label="Male" value={gender} setValue={setGender} styles={styles} colors={colors} />
               </View>
 
-              {/* GENERAL INFORMATION */}
-              <AccordionHeader
-                title="General Information"
-                sectionKey="general"
-                openSection={openSection}
-                setOpenSection={setOpenSection}
-              />
+              <AccordionHeader title="General Information" sectionKey="general" openSection={openSection} setOpenSection={setOpenSection} styles={styles} />
               {openSection === 'general' && (
                 <View style={styles.generalContainer}>
-                  <Text style={styles.label}>Language</Text>
-                  <TouchableOpacity
-                    style={styles.selectInput}
-                    onPress={openGeneralInfo}
-                  >
-                    <Text>{language || 'Select Language'}</Text>
-                    <Icon name="chevron-down" />
+                  <AppText variant="bodySmall" style={styles.label}>Language</AppText>
+                  <TouchableOpacity style={styles.selectInput} onPress={openGeneralInfo}>
+                    <AppText variant="body">{language || 'Select Language'}</AppText>
+                    <Icon name="chevron-down" color={colors.iconMuted} />
                   </TouchableOpacity>
 
-                  <Text style={styles.label}>Country</Text>
-                  <TouchableOpacity
-                    style={styles.selectInput}
-                    onPress={openGeneralInfo}
-                  >
-                    <Text>
-                      {userdata?.location?.country?.name || 'Select Country'}
-                    </Text>
-                    <Icon name="chevron-down" />
+                  <AppText variant="bodySmall" style={styles.label}>Country</AppText>
+                  <TouchableOpacity style={styles.selectInput} onPress={openGeneralInfo}>
+                    <AppText variant="body">{userdata?.location?.country?.name || 'Select Country'}</AppText>
+                    <Icon name="chevron-down" color={colors.iconMuted} />
                   </TouchableOpacity>
 
                   {locationIds.country_id && (
                     <>
-                      <Text style={styles.label}>State</Text>
-                      <TouchableOpacity
-                        style={styles.selectInput}
-                        onPress={openGeneralInfo}
-                      >
-                        <Text>
-                          {userdata?.location?.state?.name || 'Select State'}
-                        </Text>
-                        <Icon name="chevron-down" />
+                      <AppText variant="bodySmall" style={styles.label}>State</AppText>
+                      <TouchableOpacity style={styles.selectInput} onPress={openGeneralInfo}>
+                        <AppText variant="body">{userdata?.location?.state?.name || 'Select State'}</AppText>
+                        <Icon name="chevron-down" color={colors.iconMuted} />
                       </TouchableOpacity>
                     </>
                   )}
 
                   {locationIds.state_id && (
                     <>
-                      <Text style={styles.label}>City</Text>
-                      <TouchableOpacity
-                        style={styles.selectInput}
-                        onPress={openGeneralInfo}
-                      >
-                        <Text>
-                          {userdata?.location?.city?.name || 'Select City'}
-                        </Text>
-                        <Icon name="chevron-down" />
+                      <AppText variant="bodySmall" style={styles.label}>City</AppText>
+                      <TouchableOpacity style={styles.selectInput} onPress={openGeneralInfo}>
+                        <AppText variant="body">{userdata?.location?.city?.name || 'Select City'}</AppText>
+                        <Icon name="chevron-down" color={colors.iconMuted} />
                       </TouchableOpacity>
                     </>
                   )}
                 </View>
               )}
 
-              {/* LIFESTYLE */}
-              <AccordionHeader
-                title="Life Style"
-                sectionKey="lifestyle"
-                openSection={openSection}
-                setOpenSection={setOpenSection}
-              />
+              <AccordionHeader title="Life Style" sectionKey="lifestyle" openSection={openSection} setOpenSection={setOpenSection} styles={styles} />
               {openSection === 'lifestyle' && (
                 <View style={styles.generalContainer}>
                   {userdata?.lifestyles && userdata.lifestyles.length > 0 ? (
                     userdata.lifestyles.map((item, index) => (
-                      <TouchableOpacity
-                        key={index}
-                        style={styles.selectInput}
-                        onPress={openLifestyle}
-                      >
-                        <Text>
-                          {item.category.name} : {item.subcategory.name}
-                        </Text>
-                        <Icon name="chevron-down" />
+                      <TouchableOpacity key={index} style={styles.selectInput} onPress={openLifestyle}>
+                        <AppText variant="body">{item.category.name} : {item.subcategory.name}</AppText>
+                        <Icon name="chevron-down" color={colors.iconMuted} />
                       </TouchableOpacity>
                     ))
                   ) : (
                     <View style={styles.emptyLifestyleBox}>
-                      <Text style={styles.emptyText}>
-                        No lifestyle available
-                      </Text>
-                      <TouchableOpacity
-                        style={styles.addNowBtn}
-                        onPress={openLifestyle}
-                      >
-                        <Text style={styles.addNowText}>Add Now</Text>
+                      <AppText variant="bodySmall" color="textMuted" style={styles.emptyText}>No lifestyle available</AppText>
+                      <TouchableOpacity style={styles.addNowBtn} onPress={openLifestyle}>
+                        <AppText variant="subtitle" style={styles.addNowText}>Add Now</AppText>
                       </TouchableOpacity>
                     </View>
                   )}
                 </View>
               )}
 
-              {/* INTEREST */}
-              <AccordionHeader
-                title="Interest"
-                sectionKey="interest"
-                openSection={openSection}
-                setOpenSection={setOpenSection}
-              />
+              <AccordionHeader title="Interest" sectionKey="interest" openSection={openSection} setOpenSection={setOpenSection} styles={styles} />
               {openSection === 'interest' && (
                 <TouchableOpacity
                   style={styles.inputBox}
-                  onPress={() =>
-                    navigation.navigate('EditUserInterestScreen', {
-                      selected: selectedInterests,
-                    })
-                  }
+                  onPress={() => navigation.navigate('EditUserInterestScreen', { selected: selectedInterests })}
                 >
-                  <Text style={{ flex: 1 }}>
-                    {interestText || 'Select Interest'}
-                  </Text>
-                  <Icon name="chevron-forward" />
+                  <AppText variant="body" style={styles.dobText}>{interestText || 'Select Interest'}</AppText>
+                  <Icon name="chevron-forward" color={colors.iconMuted} />
                 </TouchableOpacity>
               )}
 
-              {/* GALLERY */}
-              <AccordionHeader
-                title="Gallery"
-                sectionKey="gallery"
-                openSection={openSection}
-                setOpenSection={setOpenSection}
-              />
+              <AccordionHeader title="Gallery" sectionKey="gallery" openSection={openSection} setOpenSection={setOpenSection} styles={styles} />
               {openSection === 'gallery' && (
-                <View style={{ marginTop: 12 }}>
+                <View style={styles.galleryWrap}>
                   <View style={styles.galleryGrid}>
                     {Array.from({ length: 4 }).map((_, index) => {
                       const image = userdata?.images?.gallery?.[index];
@@ -591,16 +555,10 @@ const EditProfileScreen = () => {
                                 })
                               }
                             >
-                              <Image
-                                source={{ uri: image.photo_url }}
-                                style={styles.galleryImage}
-                              />
+                              <Image source={{ uri: image.photo_url }} style={styles.galleryImage} />
                             </TouchableOpacity>
-                            <TouchableOpacity
-                              style={styles.deleteBtn}
-                              onPress={() => handleDeleteImage(image.photo_id)}
-                            >
-                              <Icon name="close" size={14} color="#fff" />
+                            <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteImage(image.photo_id)}>
+                              <Icon name="close" size={moderateScale(14)} color="#fff" />
                             </TouchableOpacity>
                           </View>
                         );
@@ -609,14 +567,9 @@ const EditProfileScreen = () => {
                         <TouchableOpacity
                           key={index}
                           style={[styles.galleryItem, styles.emptyGallery]}
-                          onPress={() =>
-                            navigation.navigate('AddYourPhotosScreen', {
-                              from: 'EditProfile',
-                              existingPhotos: userdata?.images?.gallery || [],
-                            })
-                          }
+                         onPress={openGalleryOptions}
                         >
-                          <Icon name="add" size={28} color="#999" />
+                          <Icon name="add" size={moderateScale(28)} color={colors.iconMuted} />
                         </TouchableOpacity>
                       );
                     })}
@@ -625,6 +578,11 @@ const EditProfileScreen = () => {
               )}
             </View>
           </ScrollView>
+          {uploadingPhoto && (
+          <View style={styles.uploadOverlay}>
+            <ActivityIndicator size="large" color="#fff" />
+          </View>
+        )}
         </View>
       </KeyboardAvoidingView>
 
@@ -638,8 +596,10 @@ const EditProfileScreen = () => {
 export default EditProfileScreen;
 
 /* ================= SMALL COMPONENTS ================= */
+// Pure presentational components — receive styles/colors as props rather
+// than calling useAppTheme() themselves, avoiding redundant context reads.
 
-const Input = ({ value, onChange, placeholder }) => {
+const Input = ({ value, onChange, placeholder, styles, colors }) => {
   const [isFocused, setIsFocused] = useState(false);
   const isActive = isFocused || value?.length > 0;
   return (
@@ -651,49 +611,31 @@ const Input = ({ value, onChange, placeholder }) => {
         style={styles.input}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        placeholderTextColor="#aaa"
+        placeholderTextColor={colors.placeholder}
       />
     </View>
   );
 };
 
-const Gender = ({ label, value, setValue }) => {
-  const isDisabled =
-    (value === 'Male' && label === 'Female') ||
-    (value === 'Female' && label === 'Male');
+const Gender = ({ label, value, setValue, styles, colors }) => {
+  const isDisabled = (value === 'Male' && label === 'Female') || (value === 'Female' && label === 'Male');
   return (
-    <TouchableOpacity
-      style={[styles.genderItem, isDisabled && { opacity: 0.4 }]}
-      disabled={isDisabled}
-      onPress={() => setValue(label)}
-    >
+    <TouchableOpacity style={[styles.genderItem, isDisabled && { opacity: 0.4 }]} disabled={isDisabled} onPress={() => setValue(label)}>
       <View style={[styles.radio, value === label && styles.radioActive]}>
         {value === label && <View style={styles.radioDot} />}
       </View>
-      <Text style={{ color: isDisabled ? '#999' : '#000' }}>{label}</Text>
+      <AppText variant="body" style={{ color: isDisabled ? colors.textMuted : colors.text }}>{label}</AppText>
     </TouchableOpacity>
   );
 };
 
-const AccordionHeader = ({
-  title,
-  sectionKey,
-  openSection,
-  setOpenSection,
-}) => {
+const AccordionHeader = ({ title, sectionKey, openSection, setOpenSection, styles }) => {
   const isOpen = openSection === sectionKey;
   return (
-    <TouchableOpacity
-      style={styles.accordionRow}
-      onPress={() => setOpenSection(isOpen ? null : sectionKey)}
-    >
-      <Text style={styles.accordionTitle}>{title}</Text>
+    <TouchableOpacity style={styles.accordionRow} onPress={() => setOpenSection(isOpen ? null : sectionKey)}>
+      <AppText variant="subtitle" style={styles.accordionTitle}>{title}</AppText>
       <View style={styles.accordionArrow}>
-        <Icon
-          name={isOpen ? 'chevron-up' : 'chevron-forward'}
-          size={14}
-          color="#fff"
-        />
+        <Icon name={isOpen ? 'chevron-up' : 'chevron-forward'} size={moderateScale(14)} color="#fff" />
       </View>
     </TouchableOpacity>
   );
@@ -701,186 +643,184 @@ const AccordionHeader = ({
 
 /* ================= STYLES ================= */
 
-const PURPLE = '#B832F9';
+const createStyles = (theme, width, height) => {
+  const { colors, spacing, radius } = theme;
 
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: wp(4),
-    paddingVertical: hp(2),
-  },
-  headerTitle: {
-    fontSize: wp(5),
-    fontWeight: '600',
-    marginLeft: wp(2),
-    color: '#000', // ✅ ADD
-  },
-  avatarSection: { alignItems: 'center', marginVertical: hp(3) },
-  avatarRing: {
-    width: wp(30),
-    height: wp(30),
-    borderRadius: wp(15),
-    borderWidth: 4,
-    borderColor: PURPLE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatar: { width: wp(22), height: wp(22), borderRadius: wp(11) },
-  inputActive: {
-    borderColor: '#B832F9',
-    borderWidth: 1.5,
-    backgroundColor: '#fff',
-  },
-  cameraBtn: {
-    position: 'absolute',
-    bottom: hp(0.8),
-    right: wp(1.5),
-    backgroundColor: PURPLE,
-    width: wp(8),
-    height: wp(8),
-    borderRadius: wp(4),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  form: { paddingHorizontal: wp(5) },
-  label: {
-    marginTop: hp(1.8),
-    marginBottom: hp(0.8),
-    color: '#444',
-    fontSize: wp(3.8),
-  },
-  inputBox: {
-    backgroundColor: '#FAFAFA',
-    borderRadius: 28,
-    paddingHorizontal: wp(4),
-    minHeight: hp(6),
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#eee',
-  },
-  input: {
-    flex: 1,
-    fontSize: wp(4),
-    color: '#000', // ✅ ADD
-  },
-  genderRow: { flexDirection: 'row', marginTop: hp(1) },
-  genderItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: wp(6),
-  },
-  radio: {
-    width: wp(4.5),
-    height: wp(4.5),
-    borderRadius: wp(2.25),
-    borderWidth: 2,
-    borderColor: '#ccc',
-    marginRight: wp(2),
-  },
-  radioActive: { borderColor: PURPLE },
-  radioDot: {
-    width: wp(2),
-    height: wp(2),
-    borderRadius: wp(1),
-    backgroundColor: PURPLE,
-    alignSelf: 'center',
-    marginTop: 3,
-  },
-  accordionRow: {
-    marginTop: hp(3),
-    paddingVertical: hp(1.8),
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  accordionTitle: {
-    fontSize: wp(4),
-    fontWeight: '600',
-    color: '#000', // ✅ ADD
-  },
-  accordionArrow: {
-    width: wp(6),
-    height: wp(6),
-    borderRadius: wp(3),
-    backgroundColor: PURPLE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  generalContainer: { marginTop: hp(1.5) },
-  selectInput: {
-    minHeight: hp(6),
-    backgroundColor: '#FAFAFA',
-    borderRadius: 25,
-    paddingHorizontal: wp(4),
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#eee',
-    marginBottom: hp(1.5),
-  },
-  galleryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  galleryItem: {
-    width: wp(44),
-    height: wp(44),
-    borderRadius: 16,
-    marginBottom: hp(1.5),
-    backgroundColor: '#F2F2F2',
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  galleryImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  emptyGallery: { borderWidth: 1, borderStyle: 'dashed', borderColor: '#ccc' },
-  galleryTouch: { width: '100%', height: '100%' },
-  deleteBtn: {
-    position: 'absolute',
-    top: hp(1),
-    right: wp(2),
-    backgroundColor: '#000',
-    width: wp(6),
-    height: wp(6),
-    borderRadius: wp(3),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyLifestyleBox: { alignItems: 'center', paddingVertical: hp(3) },
-  emptyText: { color: '#999', marginBottom: hp(1.2), fontSize: wp(3.5) },
-  addNowBtn: {
-    paddingHorizontal: wp(6),
-    paddingVertical: hp(1),
-    borderRadius: 20,
-    backgroundColor: PURPLE,
-  },
-  addNowText: { color: '#fff', fontWeight: '600', fontSize: wp(3.8) },
-  scrollContent: { paddingBottom: hp(10) },
-  bottomFixed: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingVertical: hp(1.5),
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  uploadLoader: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 100,
-  },
-});
+  return StyleSheet.create({
+    flex: { flex: 1 },
+
+    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.xl },
+    headerTitle: { marginLeft: spacing.sm },
+
+    avatarSection: { alignItems: 'center', marginVertical: spacing.xxl },
+    avatarRing: {
+      width: moderateScale(112),
+      height: moderateScale(112),
+      borderRadius: moderateScale(56),
+      borderWidth: 4,
+      borderColor: PURPLE,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatar: { width: moderateScale(82), height: moderateScale(82), borderRadius: moderateScale(41) },
+
+    inputActive: { borderColor: PURPLE, borderWidth: 1.5, backgroundColor: colors.card },
+
+    cameraBtn: {
+      position: 'absolute',
+      bottom: spacing.xxs,
+      right: spacing.xs,
+      backgroundColor: PURPLE,
+      width: moderateScale(30),
+      height: moderateScale(30),
+      borderRadius: moderateScale(15),
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    form: { paddingHorizontal: spacing.lg },
+    label: { marginTop: spacing.md, marginBottom: spacing.xs, color: colors.textSecondary },
+
+    inputBox: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.pill,
+      paddingHorizontal: spacing.md,
+      minHeight: moderateScale(48),
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+
+    dobText: { flex: 1 },
+
+    input: { flex: 1, fontSize: theme.fontSizes.base, color: colors.text },
+
+    genderRow: { flexDirection: 'row', marginTop: spacing.sm },
+    genderItem: { flexDirection: 'row', alignItems: 'center', marginRight: spacing.xxl },
+
+    radio: {
+      width: moderateScale(17),
+      height: moderateScale(17),
+      borderRadius: moderateScale(9),
+      borderWidth: 2,
+      borderColor: colors.border,
+      marginRight: spacing.sm,
+    },
+
+    radioActive: { borderColor: PURPLE },
+    radioDot: {
+      width: moderateScale(8),
+      height: moderateScale(8),
+      borderRadius: moderateScale(4),
+      backgroundColor: PURPLE,
+      alignSelf: 'center',
+      marginTop: 3,
+    },
+
+    accordionRow: {
+      marginTop: spacing.xxl,
+      paddingVertical: spacing.md,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.divider,
+    },
+
+    accordionTitle: {},
+
+    accordionArrow: {
+      width: moderateScale(24),
+      height: moderateScale(24),
+      borderRadius: moderateScale(12),
+      backgroundColor: PURPLE,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    generalContainer: { marginTop: spacing.sm },
+
+    selectInput: {
+      minHeight: moderateScale(48),
+      backgroundColor: colors.surface,
+      borderRadius: radius.xl,
+      paddingHorizontal: spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: spacing.sm,
+    },
+
+    galleryWrap: { marginTop: spacing.md },
+
+    galleryGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+
+    galleryItem: {
+      width: width * 0.44,
+      height: width * 0.44,
+      borderRadius: radius.lg,
+      marginBottom: spacing.sm,
+      backgroundColor: colors.surface,
+      overflow: 'hidden',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    galleryImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+    emptyGallery: { borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border },
+    galleryTouch: { width: '100%', height: '100%' },
+
+    deleteBtn: {
+      position: 'absolute',
+      top: spacing.sm,
+      right: spacing.xs,
+      backgroundColor: '#000',
+      width: moderateScale(24),
+      height: moderateScale(24),
+      borderRadius: moderateScale(12),
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    emptyLifestyleBox: { alignItems: 'center', paddingVertical: spacing.xl },
+    emptyText: { marginBottom: spacing.sm },
+
+    addNowBtn: { paddingHorizontal: spacing.xl, paddingVertical: spacing.sm, borderRadius: radius.xl, backgroundColor: PURPLE },
+    addNowText: { color: '#fff' },
+
+    scrollContent: { paddingBottom: height * 0.1 },
+
+    bottomFixed: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.background,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOpacity: 0.05,
+      shadowRadius: 5,
+      elevation: 5,
+    },
+
+    uploadLoader: {
+      position: 'absolute',
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: moderateScale(100),
+    },
+    uploadOverlay: {
+  ...StyleSheet.absoluteFillObject,
+  backgroundColor: 'rgba(0,0,0,0.35)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  zIndex: 999,
+},
+  });
+};
